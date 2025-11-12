@@ -3,7 +3,7 @@ import { Search, Filter, Bookmark, ChevronDown, ChevronRight, ExternalLink, File
 
 const CompassWireframes = () => {
   const [currentScreen, setCurrentScreen] = useState('home');
-  const [expandedCamp, setExpandedCamp] = useState(null);
+  const [expandedCamp, setExpandedCamp] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   // Home Screen
