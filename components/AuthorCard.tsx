@@ -61,26 +61,26 @@ export default function AuthorCard({ author, query }: AuthorCardProps) {
       </div>
 
       {/* Citations */}
-      <div className="mb-3">
-        <div className="text-xs font-semibold text-gray-500 mb-2">
-          {(author?.citations?.length || 3)} CITATIONS
+      {author?.sources && author.sources.length > 0 && (
+        <div className="mb-3">
+          <div className="text-xs font-semibold text-gray-500 mb-2">
+            {author.sources.length} SOURCE{author.sources.length > 1 ? 'S' : ''}
+          </div>
+          <div className="space-y-2">
+            {author.sources.slice(0, 5).map((source: any, index: number) => (
+              <div key={index} className="flex items-center gap-2 text-sm">
+                <FileText className="w-4 h-4 text-gray-400" />
+                <span className="flex-1 truncate">{source.title} ({source.type}, {source.year})</span>
+                {source.url && (
+                  <a href={source.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-4 h-4 text-blue-600 cursor-pointer hover:text-blue-800" />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="space-y-2">
-          {(author?.citations || [
-            { title: 'AI Transformation Playbook', type: 'Blog', year: '2024', url: '#' },
-            { title: 'Stanford Lecture Series', type: 'Video', year: '2024', url: '#' },
-            { title: 'Workforce Development in AI Era', type: 'Paper', year: '2024', url: '#' },
-          ]).slice(0, 5).map((citation: any, index: number) => (
-            <div key={index} className="flex items-center gap-2 text-sm">
-              <FileText className="w-4 h-4 text-gray-400" />
-              <span className="flex-1 truncate">{citation.title} ({citation.type}, {citation.year})</span>
-              <a href={citation.url || '#'} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-4 h-4 text-blue-600 cursor-pointer" />
-              </a>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
       <Link
         href={`/author/${author?.id || '1'}`}

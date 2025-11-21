@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compass v3 - Beta (32 Authors)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f8f9fa;
+            color: #1a1a1a;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: #6366f1;
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            background: white;
+            padding: 0 32px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            gap: 32px;
+        }
+
+        .tab {
+            padding: 16px 0;
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: #6366f1;
+            border-bottom-color: #6366f1;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 120px);
+            background: #f8f9fa;
+        }
+
+        /* Left Panel */
+        .left-panel {
+            width: 400px;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 8px;
+            background: #f3f4f6;
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            background: white;
+            color: #6366f1;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Browse Mode */
+        .browse-mode {
+            display: block;
+        }
+
+        .browse-mode.hidden {
+            display: none;
+        }
+
+        .simple-stats {
+            background: #f9fafb;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .simple-stats-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #6366f1;
+        }
+
+        .simple-stats-label {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        /* Curation Mode */
+        .curation-mode {
+            display: none;
+        }
+
+        .curation-mode.active {
+            display: block;
+        }
+
+        .curation-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .curation-subtitle {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+
+        .url-input-section {
+            background: #f9fafb;
+            border: 2px dashed #d1d5db;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .url-textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            margin-bottom: 12px;
+        }
+
+        .url-textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .url-input-help {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+        }
+
+        .progress-section {
+            padding: 12px 16px;
+            background: #fef3c7;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 1px solid #fbbf24;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .progress-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #92400e;
+        }
+
+        .progress-count {
+            font-size: 13px;
+            color: #92400e;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #fffbeb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #f59e0b;
+            transition: width 0.3s;
+        }
+
+        /* Scrollable Content */
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 24px 24px;
+        }
+
+        /* Author Cards - Simplified */
+        .author-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .author-card:hover {
+            border-color: #6366f1;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+        }
+
+        .author-card.active {
+            border-color: #6366f1;
+            background: #eef2ff;
+        }
+
+        .author-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .author-org {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .author-meta {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-domain {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-camp {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Queue Items */
+        .queue-section {
+            margin-top: 16px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .queue-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .queue-item:hover {
+            border-color: #6366f1;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+        }
+
+        .queue-item.active {
+            border-color: #6366f1;
+            background: #eef2ff;
+        }
+
+        .queue-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .queue-item-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a1a1a;
+            line-height: 1.4;
+            flex: 1;
+            margin-right: 8px;
+        }
+
+        .queue-status {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .status-ready {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-analyzing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-approved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .queue-item-url {
+            font-size: 11px;
+            color: #6b7280;
+            word-break: break-all;
+        }
+
+        /* Right Panel */
+        .right-panel {
+            flex: 1;
+            background: #f9fafb;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 32px;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 8px;
+        }
+
+        .empty-subtitle {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        /* Review Panel - Simplified */
+        .review-panel {
+            display: none;
+        }
+
+        .review-panel.active {
+            display: block;
+        }
+
+        .source-header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .source-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .source-url {
+            font-size: 12px;
+            color: #6b7280;
+            word-break: break-all;
+        }
+
+        .review-section {
+            margin-bottom: 20px;
+        }
+
+        .review-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+        }
+
+        .review-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 10px;
+        }
+
+        .review-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .review-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .review-value {
+            font-size: 14px;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        .confidence-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .confidence-high {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .confidence-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .confidence-low {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .edit-btn {
+            background: none;
+            border: none;
+            color: #6366f1;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .edit-btn:hover {
+            background: #eef2ff;
+        }
+
+        /* Action Bar */
+        .action-bar {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            position: sticky;
+            bottom: 32px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .btn-secondary {
+            flex: 1;
+            background: white;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #fef2f2;
+        }
+
+        .btn-accept {
+            flex: 2;
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-accept:hover {
+            background: #059669;
+        }
+
+        /* Author Profile - Simplified */
+        .author-profile {
+            display: none;
+        }
+
+        .author-profile.active {
+            display: block;
+        }
+
+        .profile-header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .profile-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .profile-org {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+
+        .profile-badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .info-message {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            font-size: 13px;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">Compass</div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+        <div class="tab">Search & Discovery</div>
+        <div class="tab">Results View</div>
+        <div class="tab active">Author Index</div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <!-- Mode Toggle -->
+                <div class="mode-toggle">
+                    <button class="toggle-btn active" onclick="switchMode('browse')">
+                        Browse Authors
+                    </button>
+                    <button class="toggle-btn" onclick="switchMode('curation')">
+                        Add Sources
+                    </button>
+                </div>
+
+                <!-- Browse Mode Controls -->
+                <div class="browse-mode" id="browseControls">
+                    <div class="simple-stats">
+                        <div class="simple-stats-number">32</div>
+                        <div class="simple-stats-label">Authors in Database</div>
+                    </div>
+                </div>
+
+                <!-- Curation Mode Controls -->
+                <div class="curation-mode" id="curationControls">
+                    <div class="curation-title">Add New Sources</div>
+                    <div class="curation-subtitle">Paste URLs for AI classification</div>
+                    
+                    <div class="url-input-section">
+                        <textarea 
+                            class="url-textarea" 
+                            id="urlInput"
+                            placeholder="Paste URLs here (one per line):
+
+https://example.com/article-1
+https://example.com/article-2"
+                        ></textarea>
+                        <div class="url-input-help">
+                            💡 Paste up to 10 URLs at once
+                        </div>
+                        <button class="btn-primary" onclick="startBatchAnalysis()">
+                            Analyze URLs
+                        </button>
+                    </div>
+
+                    <div class="progress-section" id="progressSection" style="display: none;">
+                        <div class="progress-header">
+                            <span class="progress-title">Progress</span>
+                            <span class="progress-count" id="progressCount">0 of 0</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="panel-content">
+                <!-- Browse Mode: Author List -->
+                <div class="browse-mode" id="authorList">
+                    <div class="author-card active" onclick="showAuthorProfile('mollick')">
+                        <div class="author-name">Ethan Mollick</div>
+                        <div class="author-org">Wharton School</div>
+                        <div class="author-meta">
+                            <span class="badge badge-domain">Technology</span>
+                        </div>
+                    </div>
+
+                    <div class="author-card" onclick="showAuthorProfile()">
+                        <div class="author-name">Cal Newport</div>
+                        <div class="author-org">Georgetown University</div>
+                        <div class="author-meta">
+                            <span class="badge badge-domain">Workers</span>
+                        </div>
+                    </div>
+
+                    <div class="author-card" onclick="showAuthorProfile()">
+                        <div class="author-name">Andrew Ng</div>
+                        <div class="author-org">Stanford / DeepLearning.AI</div>
+                        <div class="author-meta">
+                            <span class="badge badge-domain">Technology</span>
+                        </div>
+                    </div>
+
+                    <div class="author-card" onclick="showAuthorProfile()">
+                        <div class="author-name">Timnit Gebru</div>
+                        <div class="author-org">DAIR Institute</div>
+                        <div class="author-meta">
+                            <span class="badge badge-domain">Society</span>
+                        </div>
+                    </div>
+
+                    <div class="author-card" onclick="showAuthorProfile()">
+                        <div class="author-name">Demis Hassabis</div>
+                        <div class="author-org">Google DeepMind</div>
+                        <div class="author-meta">
+                            <span class="badge badge-domain">Technology</span>
+                        </div>
+                    </div>
+
+                    <div class="author-card" onclick="showAuthorProfile()">
+                        <div class="author-name">Kate Crawford</div>
+                        <div class="author-org">USC / AI Now Institute</div>
+                        <div class="author-meta">
+                            <span class="badge badge-domain">Society</span>
+                        </div>
+                    </div>
+
+                    <div class="author-card" onclick="showAuthorProfile()">
+                        <div class="author-name">Yann LeCun</div>
+                        <div class="author-org">Meta / NYU</div>
+                        <div class="author-meta">
+                            <span class="badge badge-domain">Technology</span>
+                        </div>
+                    </div>
+
+                    <div class="author-card" onclick="showAuthorProfile()">
+                        <div class="author-name">Fei-Fei Li</div>
+                        <div class="author-org">Stanford HAI</div>
+                        <div class="author-meta">
+                            <span class="badge badge-domain">Technology</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Curation Mode: Queue List -->
+                <div class="curation-mode" id="queueList">
+                    <div class="queue-section" id="queueEmpty">
+                        <div style="text-align: center; padding: 48px 16px; color: #9ca3af;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">📋</div>
+                            <div style="font-size: 13px; font-weight: 500;">No sources in queue</div>
+                            <div style="font-size: 12px; margin-top: 4px;">Paste URLs above to start</div>
+                        </div>
+                    </div>
+
+                    <div id="queueItems" style="display: none;">
+                        <div class="section-title">Queue (3)</div>
+                        
+                        <div class="queue-item active" onclick="showReview(1)">
+                            <div class="queue-item-header">
+                                <div class="queue-item-title">Centaurs and Cyborgs on the Jagged Frontier</div>
+                                <span class="queue-status status-ready">Ready</span>
+                            </div>
+                            <div class="queue-item-url">oneusefulthing.org/p/centaurs...</div>
+                        </div>
+
+                        <div class="queue-item" onclick="showReview(2)">
+                            <div class="queue-item-header">
+                                <div class="queue-item-title">The Future of AI in the Workplace</div>
+                                <span class="queue-status status-ready">Ready</span>
+                            </div>
+                            <div class="queue-item-url">hbr.org/2024/future-of-work...</div>
+                        </div>
+
+                        <div class="queue-item">
+                            <div class="queue-item-header">
+                                <div class="queue-item-title">Analyzing content...</div>
+                                <span class="queue-status status-analyzing">Analyzing</span>
+                            </div>
+                            <div class="queue-item-url">techcrunch.com/ai-regulation...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon">👤</div>
+                <div class="empty-title">Select an author or source</div>
+                <div class="empty-subtitle">Choose from the list on the left</div>
+            </div>
+
+            <!-- Author Profile View -->
+            <div class="author-profile active" id="authorProfile">
+                <div class="profile-header">
+                    <div class="profile-name">Ethan Mollick</div>
+                    <div class="profile-org">Wharton School, University of Pennsylvania</div>
+                    <div class="profile-badges">
+                        <span class="badge badge-domain">Technology</span>
+                    </div>
+                    <div class="info-message">
+                        📊 Source details and metrics will appear here once added through the Curation Mode
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Panel -->
+            <div class="review-panel" id="reviewPanel">
+                <!-- Source Header -->
+                <div class="source-header">
+                    <div class="source-title">Centaurs and Cyborgs on the Jagged Frontier</div>
+                    <div class="source-url">https://www.oneusefulthing.org/p/centaurs-and-cyborgs-on-the-jagged</div>
+                </div>
+
+                <!-- Author Information -->
+                <div class="review-section">
+                    <div class="review-section-title">Author</div>
+                    
+                    <div class="review-card">
+                        <div class="review-card-header">
+                            <div>
+                                <div class="review-label">Name</div>
+                                <div class="review-value">Ethan Mollick</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="confidence-badge confidence-high">95%</span>
+                                <button class="edit-btn">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-card">
+                        <div class="review-card-header">
+                            <div>
+                                <div class="review-label">Organization</div>
+                                <div class="review-value">Wharton School</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="confidence-badge confidence-high">92%</span>
+                                <button class="edit-btn">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Classification -->
+                <div class="review-section">
+                    <div class="review-section-title">Classification</div>
+                    
+                    <div class="review-card">
+                        <div class="review-card-header">
+                            <div>
+                                <div class="review-label">Domain</div>
+                                <div class="review-value">Technology</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="confidence-badge confidence-high">89%</span>
+                                <button class="edit-btn">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-card">
+                        <div class="review-card-header">
+                            <div>
+                                <div class="review-label">Camp</div>
+                                <div class="review-value">Optimistic Transformationalists</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="confidence-badge confidence-medium">76%</span>
+                                <button class="edit-btn">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="action-bar">
+                    <button class="btn-secondary" onclick="rejectSource()">
+                        Reject
+                    </button>
+                    <button class="btn-accept" onclick="acceptSource()">
+                        Accept & Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'browse';
+        let currentQueueIndex = 0;
+        let totalQueueItems = 0;
+
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Update toggle buttons
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (mode === 'browse') {
+                document.getElementById('browseControls').classList.remove('hidden');
+                document.getElementById('authorList').style.display = 'block';
+                document.getElementById('curationControls').classList.remove('active');
+                document.getElementById('queueList').style.display = 'none';
+                
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('authorProfile').classList.add('active');
+                document.getElementById('reviewPanel').classList.remove('active');
+            } else {
+                document.getElementById('browseControls').classList.add('hidden');
+                document.getElementById('authorList').style.display = 'none';
+                document.getElementById('curationControls').classList.add('active');
+                document.getElementById('queueList').style.display = 'block';
+                
+                const hasQueue = document.getElementById('queueItems').style.display === 'none';
+                if (hasQueue) {
+                    document.getElementById('emptyState').style.display = 'block';
+                    document.getElementById('authorProfile').classList.remove('active');
+                    document.getElementById('reviewPanel').classList.remove('active');
+                } else {
+                    document.getElementById('emptyState').style.display = 'none';
+                    document.getElementById('authorProfile').classList.remove('active');
+                    document.getElementById('reviewPanel').classList.add('active');
+                }
+            }
+        }
+
+        function startBatchAnalysis() {
+            const urlInput = document.getElementById('urlInput').value.trim();
+            if (!urlInput) {
+                alert('Please paste at least one URL');
+                return;
+            }
+
+            document.getElementById('queueEmpty').style.display = 'none';
+            document.getElementById('queueItems').style.display = 'block';
+            document.getElementById('progressSection').style.display = 'block';
+            
+            totalQueueItems = 3;
+            currentQueueIndex = 0;
+            updateProgress();
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('reviewPanel').classList.add('active');
+            document.getElementById('urlInput').value = '';
+        }
+
+        function updateProgress() {
+            const percent = (currentQueueIndex / totalQueueItems) * 100;
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressCount').textContent = currentQueueIndex + ' of ' + totalQueueItems;
+        }
+
+        function showReview(index) {
+            document.querySelectorAll('.queue-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('reviewPanel').classList.add('active');
+        }
+
+        function acceptSource() {
+            currentQueueIndex++;
+            updateProgress();
+            
+            const activeItem = document.querySelector('.queue-item.active');
+            if (activeItem) {
+                const status = activeItem.querySelector('.queue-status');
+                status.textContent = 'Approved';
+                status.className = 'queue-status status-approved';
+                
+                const nextItem = activeItem.nextElementSibling;
+                if (nextItem && nextItem.classList.contains('queue-item')) {
+                    nextItem.click();
+                } else {
+                    alert('All sources reviewed! ✓');
+                    document.getElementById('emptyState').style.display = 'block';
+                    document.getElementById('reviewPanel').classList.remove('active');
+                }
+            }
+        }
+
+        function rejectSource() {
+            if (confirm('Reject this source?')) {
+                currentQueueIndex++;
+                updateProgress();
+                
+                const activeItem = document.querySelector('.queue-item.active');
+                if (activeItem) {
+                    const nextItem = activeItem.nextElementSibling;
+                    activeItem.remove();
+                    
+                    if (nextItem && nextItem.classList.contains('queue-item')) {
+                        nextItem.click();
+                    } else {
+                        document.getElementById('emptyState').style.display = 'block';
+                        document.getElementById('reviewPanel').classList.remove('active');
+                    }
+                }
+            }
+        }
+
+        function showAuthorProfile() {
+            document.querySelectorAll('.author-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('authorProfile').classList.add('active');
+            document.getElementById('reviewPanel').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

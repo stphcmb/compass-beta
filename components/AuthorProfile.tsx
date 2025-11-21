@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { getThoughtLeaderById } from '@/lib/api/thought-leaders'
 
 interface AuthorProfileProps {
@@ -39,38 +40,48 @@ export default function AuthorProfile({ authorId }: AuthorProfileProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg border p-6 mb-6">
-      <Button
+    <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <button
         onClick={() => router.back()}
-        variant="outline"
-        className="mb-4"
+        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6"
       >
-        ← Back
-      </Button>
-      
-      <div className="mb-4">
-        <h1 className="text-3xl font-bold mb-2">{author.name}</h1>
-        <div className="text-gray-600 mb-2">{author.affiliation}</div>
-        <div className="flex gap-2">
-          <span className="px-2 py-1 rounded text-xs bg-gray-200">
-            {author.credibility_tier}
-          </span>
-          <span className="px-2 py-1 rounded text-xs bg-gray-200">
-            {author.author_type}
-          </span>
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </button>
+
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">{author.name}</h1>
+        <div className="text-gray-500 mb-3">
+          {author.header_affiliation || author.primary_affiliation || 'Independent'}
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {author.credibility_tier && (
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+              {author.credibility_tier}
+            </span>
+          )}
+          {author.author_type && (
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+              {author.author_type}
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Position Summary</h2>
-        <p className="text-gray-700">{author.position_summary || 'No position summary available.'}</p>
-      </div>
+      {author.notes && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Notes</h2>
+          <p className="text-gray-700">{author.notes}</p>
+        </div>
+      )}
 
-      <div>
-        <h2 className="text-lg font-semibold mb-2">Camp Affiliations</h2>
-        <ul className="space-y-2">
-          {/* Will be populated with actual camp data */}
-        </ul>
+      <div className="pt-4 border-t border-gray-200">
+        <Link
+          href="/authors"
+          className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+        >
+          View all authors →
+        </Link>
       </div>
     </div>
   )

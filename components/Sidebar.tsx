@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Bookmark, Clock, Search as SearchIcon, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { Bookmark, Clock, Search as SearchIcon, ChevronRight, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 export default function Sidebar() {
@@ -108,8 +109,32 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 fixed left-0 top-0 h-screen bg-white border-r border-gray-200 p-4 overflow-y-auto">
-      <h2 className="text-lg font-bold mb-4">Compass</h2>
-      
+      <Link href="/" className="text-lg font-bold mb-4 block text-indigo-600 hover:text-indigo-800">
+        Compass
+      </Link>
+
+      {/* Navigation */}
+      <nav className="mb-6 space-y-1">
+        <Link
+          href="/"
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            pathname === '/' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          <SearchIcon className="w-4 h-4" />
+          Search
+        </Link>
+        <Link
+          href="/authors"
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            pathname === '/authors' || pathname.startsWith('/author/') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Author Index
+        </Link>
+      </nav>
+
       {isResultsPage && (
         <>
           <button 

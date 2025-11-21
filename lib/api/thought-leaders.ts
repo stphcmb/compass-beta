@@ -83,6 +83,15 @@ export async function getTaxonomyCamps(): Promise<TaxonomyCamp[]> {
   }
 }
 
+// Map domain_id to domain name
+const DOMAIN_MAP: Record<number, string> = {
+  1: 'Technology',
+  2: 'Society',
+  3: 'Business',
+  4: 'Policy & Regulation',
+  5: 'Workers'
+}
+
 /**
  * Fetch camps with their associated authors
  */
@@ -95,32 +104,26 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
   try {
     console.log('🔍 getCampsWithAuthors called with:', { query, domain })
 
-    // Build the query with new structure: camps → dimensions → domains
-    let campsQuery = supabase
+    // Query camps with camp_authors and authors (using domain_id directly)
+    const { data, error } = await supabase
       .from('camps')
       .select(`
         *,
-        dimensions (
-          name,
-          domains (
-            name
-          )
-        ),
         camp_authors (
           author_id,
           relevance,
           authors (
             id,
             name,
-            affiliation,
-            position_summary,
+            header_affiliation,
+            primary_affiliation,
             credibility_tier,
-            author_type
+            author_type,
+            notes,
+            sources
           )
         )
       `)
-
-    const { data, error } = await campsQuery
 
     if (error) {
       console.error('Error fetching camps with authors:', error)
@@ -132,20 +135,21 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
     // Transform the data to match expected format
     let camps = (data || []).map((camp: any) => ({
       id: camp.id,
-      name: camp.name,
+      name: camp.label || camp.name,
       positionSummary: camp.description,
-      domain: camp.dimensions?.domains?.name || 'Unknown',
-      dimension: camp.dimensions?.name, // Add dimension info
+      domain: DOMAIN_MAP[camp.domain_id] || 'Unknown',
+      code: camp.code,
       authorCount: camp.camp_authors?.length || 0,
       authors: camp.camp_authors?.map((mapping: any) => ({
         id: mapping.authors?.id,
         name: mapping.authors?.name,
-        affiliation: mapping.authors?.affiliation,
-        positionSummary: mapping.authors?.position_summary,
+        affiliation: mapping.authors?.header_affiliation || mapping.authors?.primary_affiliation,
+        positionSummary: mapping.authors?.notes,
         credibilityTier: mapping.authors?.credibility_tier,
         authorType: mapping.authors?.author_type,
-        relevance: mapping.relevance
-      })) || []
+        relevance: mapping.relevance,
+        sources: mapping.authors?.sources || []
+      })).filter((a: any) => a.id) || []
     }))
 
     // Add domain filter if provided
@@ -159,11 +163,18 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
       const queryLower = query.toLowerCase().trim()
       console.log('  Applying query filter:', queryLower)
 
-      // Split query into individual words for better matching
-      const queryWords = queryLower.split(/\s+/).filter(word => word.length > 2) // Filter out words < 3 chars
+      // Semantic query expansion - map common phrases to relevant keywords
+      const expandedTerms = expandQuerySemantics(queryLower)
+      console.log('  Expanded terms:', expandedTerms)
+
+      // Split query into individual words and add expanded terms
+      const queryWords = [
+        ...queryLower.split(/\s+/).filter(word => word.length > 2),
+        ...expandedTerms
+      ]
 
       camps = camps.filter((camp: any) => {
-        const campText = `${camp.name} ${camp.positionSummary}`.toLowerCase()
+        const campText = `${camp.name} ${camp.positionSummary} ${camp.code || ''}`.toLowerCase()
 
         // Check if camp text contains any of the query words
         const campMatches = queryWords.some(word => campText.includes(word))
@@ -261,29 +272,25 @@ export async function getCampsByDomain(domain: string): Promise<TaxonomyCamp[]> 
   }
 
   try {
+    // Find domain_id from domain name
+    const domainId = Object.entries(DOMAIN_MAP).find(([_, name]) => name === domain)?.[0]
+
+    if (!domainId) {
+      console.warn('Unknown domain:', domain)
+      return []
+    }
+
     const { data, error } = await supabase
       .from('camps')
-      .select(`
-        *,
-        dimensions (
-          name,
-          domains!inner (
-            name
-          )
-        )
-      `)
+      .select('*')
+      .eq('domain_id', parseInt(domainId))
 
     if (error) {
       console.error('Error fetching camps by domain:', error)
       return []
     }
 
-    // Filter by domain name
-    const filtered = data?.filter((camp: any) =>
-      camp.dimensions?.domains?.name === domain
-    ) || []
-
-    return filtered
+    return data || []
   } catch (error) {
     console.error('Error in getCampsByDomain:', error)
     return []
@@ -294,27 +301,8 @@ export async function getCampsByDomain(domain: string): Promise<TaxonomyCamp[]> 
  * Get all unique domains
  */
 export async function getDomains(): Promise<string[]> {
-  if (!supabase) {
-    console.warn('Supabase not configured')
-    return []
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('domains')
-      .select('name')
-      .order('display_order', { ascending: true })
-
-    if (error) {
-      console.error('Error fetching domains:', error)
-      return []
-    }
-
-    return data?.map((d: any) => d.name) || []
-  } catch (error) {
-    console.error('Error in getDomains:', error)
-    return []
-  }
+  // Return domains from the static map (ordered by domain_id)
+  return Object.values(DOMAIN_MAP)
 }
 
 /**
@@ -331,11 +319,6 @@ export async function getDomainStats(): Promise<Record<string, { campsCount: num
       .from('camps')
       .select(`
         *,
-        dimensions (
-          domains (
-            name
-          )
-        ),
         camp_authors (count)
       `)
 
@@ -347,7 +330,7 @@ export async function getDomainStats(): Promise<Record<string, { campsCount: num
     const stats: Record<string, { campsCount: number; authorsCount: number }> = {}
 
     data?.forEach((camp: any) => {
-      const domain = camp.dimensions?.domains?.name
+      const domain = DOMAIN_MAP[camp.domain_id]
       if (!domain) return
 
       if (!stats[domain]) {
@@ -483,4 +466,65 @@ function getRelevanceColor(relevance?: string): string {
   if (relevanceLower.includes('moderate') || relevanceLower.includes('partial')) return 'yellow'
 
   return 'gray'
+}
+
+/**
+ * Semantic query expansion - maps common phrases/concepts to relevant keywords
+ * This helps users find results even when their query doesn't exactly match camp names
+ */
+function expandQuerySemantics(query: string): string[] {
+  const expansions: string[] = []
+  const q = query.toLowerCase()
+
+  // AI skepticism / criticism patterns
+  if (q.includes('bubble') || q.includes('hype') || q.includes('overhyped') || q.includes('overrated')) {
+    expansions.push('realist', 'skeptic', 'grounding', 'limitation', 'critical')
+  }
+
+  // AI optimism patterns
+  if (q.includes('optimis') || q.includes('bull') || q.includes('promising') || q.includes('potential')) {
+    expansions.push('utopian', 'maximalist', 'scaling', 'optimist', 'progress')
+  }
+
+  // Safety and risk patterns
+  if (q.includes('danger') || q.includes('risk') || q.includes('threat') || q.includes('doom') || q.includes('existential')) {
+    expansions.push('safety', 'risk', 'ethical', 'steward', 'alignment', 'regulation')
+  }
+
+  // Scaling debate
+  if (q.includes('scale') || q.includes('bigger') || q.includes('larger') || q.includes('more data') || q.includes('more compute')) {
+    expansions.push('scaling', 'maximalist', 'grounding', 'realist')
+  }
+
+  // Jobs and work
+  if (q.includes('job') || q.includes('work') || q.includes('employ') || q.includes('replace') || q.includes('automat')) {
+    expansions.push('displacement', 'collaboration', 'worker', 'human')
+  }
+
+  // Regulation patterns
+  if (q.includes('regulat') || q.includes('govern') || q.includes('law') || q.includes('policy') || q.includes('control')) {
+    expansions.push('regulation', 'governance', 'interventionist', 'adaptive', 'innovation')
+  }
+
+  // Open source patterns
+  if (q.includes('open') || q.includes('democratiz') || q.includes('access')) {
+    expansions.push('open', 'builder', 'hugging')
+  }
+
+  // Enterprise/business patterns
+  if (q.includes('enterprise') || q.includes('business') || q.includes('company') || q.includes('adopt')) {
+    expansions.push('adoption', 'evolution', 'business', 'builder', 'tech')
+  }
+
+  // Ethics patterns
+  if (q.includes('ethic') || q.includes('bias') || q.includes('fair') || q.includes('discriminat')) {
+    expansions.push('ethical', 'steward', 'justice', 'fairness')
+  }
+
+  // AGI patterns
+  if (q.includes('agi') || q.includes('general intelligence') || q.includes('superintelligen')) {
+    expansions.push('scaling', 'maximalist', 'safety', 'alignment')
+  }
+
+  return expansions
 }

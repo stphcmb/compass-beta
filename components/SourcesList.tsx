@@ -1,76 +1,103 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ExternalLink } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { ExternalLink, FileText } from 'lucide-react'
+import { getThoughtLeaderById } from '@/lib/api/thought-leaders'
 
 interface SourcesListProps {
   authorId: string
 }
 
+interface Source {
+  title: string
+  type: string
+  year: string
+  url?: string
+}
+
 export default function SourcesList({ authorId }: SourcesListProps) {
-  const [sources, setSources] = useState<any[]>([])
+  const [sources, setSources] = useState<Source[]>([])
+  const [authorName, setAuthorName] = useState<string>('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!supabase) {
-      console.warn('Supabase not configured')
-      return
-    }
-
-    const fetchSources = async () => {
+    const fetchAuthorSources = async () => {
+      setLoading(true)
       try {
-        if (!supabase) return
-        const twelveMonthsAgo = new Date()
-        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
-
-        const { data } = await supabase
-          .from('sources')
-          .select('*')
-          .eq('author_id', authorId)
-          .gte('published_date', twelveMonthsAgo.toISOString())
-          .order('published_date', { ascending: false })
-        
-        if (data) setSources(data)
+        const author = await getThoughtLeaderById(authorId)
+        if (author) {
+          setAuthorName(author.name)
+          setSources(author.sources || [])
+        }
       } catch (error) {
         console.error('Error fetching sources:', error)
+      } finally {
+        setLoading(false)
       }
     }
 
-    fetchSources()
+    fetchAuthorSources()
   }, [authorId])
 
-  return (
-    <div className="bg-white rounded-lg border p-6">
-      <h2 className="text-xl font-semibold mb-4">All Sources</h2>
-      <div className="space-y-4">
-        {sources.map((source) => (
-          <div key={source.id} className="border-b pb-4 last:border-b-0">
-            <div className="flex items-start justify-between mb-2">
-              <a
-                href={source.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-lg font-semibold hover:underline flex items-center gap-2"
-              >
-                {source.title}
-                <ExternalLink className="w-4 h-4 text-gray-400" />
-              </a>
-              <span className="px-2 py-1 rounded text-xs bg-gray-200">
-                {source.type}
-              </span>
-            </div>
-            <div className="text-sm text-gray-500 mb-2">
-              {new Date(source.published_date).toLocaleDateString()}
-            </div>
-            <p className="text-sm text-gray-700 mb-2">
-              {source.summary?.substring(0, 200)}...
-            </p>
-            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">
-              {source.domain}
-            </span>
-          </div>
-        ))}
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="text-center text-gray-500">Loading sources...</div>
       </div>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        All Sources {sources.length > 0 && `(${sources.length})`}
+      </h2>
+
+      {sources.length > 0 ? (
+        <div className="space-y-3">
+          {sources.map((source, index) => (
+            <div
+              key={index}
+              className="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3 flex-1">
+                  <FileText className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 mb-1">
+                      {source.title}
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-500">
+                      <span className="px-2 py-0.5 bg-gray-100 rounded text-xs">
+                        {source.type}
+                      </span>
+                      <span>{source.year}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {source.url && (
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 text-sm rounded-md hover:bg-indigo-100 font-medium ml-4"
+                  >
+                    Open
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-gray-500">
+          <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <div className="font-medium mb-1">No sources available</div>
+          <div className="text-sm">Sources will appear here once added</div>
+        </div>
+      )}
     </div>
   )
 }
