@@ -7,6 +7,7 @@ export interface ThoughtLeader {
   position_summary?: string
   credibility_tier?: string
   author_type?: string
+  sources?: any[]
   created_at?: string
   updated_at?: string
 }
