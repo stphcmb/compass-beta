@@ -6,7 +6,6 @@ import SearchBar from '@/components/SearchBar'
 import SuggestedTopics from '@/components/SuggestedTopics'
 import DiscoverByDomain from '@/components/DiscoverByDomain'
 import WhiteSpacePanel from '@/components/WhiteSpacePanel'
-import TrendingDiscourse from '@/components/TrendingDiscourse'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
@@ -36,7 +35,6 @@ export default function Home() {
           <h2 className="text-2xl md:text-3xl font-bold mb-5 text-gray-800">Discovery & Inspiration</h2>
           <DiscoverByDomain />
           <WhiteSpacePanel />
-          <TrendingDiscourse />
         </div>
       </main>
     </div>

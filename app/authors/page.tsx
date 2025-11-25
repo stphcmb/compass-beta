@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { getThoughtLeaders, getDomains } from '@/lib/api/thought-leaders'
+import { Search } from 'lucide-react'
+import { getThoughtLeaders } from '@/lib/api/thought-leaders'
+import { getCampsWithAuthors } from '@/lib/api/thought-leaders'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
@@ -16,22 +18,26 @@ const DOMAIN_COLORS: Record<string, string> = {
   'Workers': 'bg-orange-100 text-orange-700',
 }
 
+type SortOption = 'alpha' | 'domain' | 'camp'
+
 export default function AuthorIndexPage() {
   const [authors, setAuthors] = useState<any[]>([])
-  const [domains, setDomains] = useState<string[]>([])
+  const [camps, setCamps] = useState<any[]>([])
   const [selectedAuthor, setSelectedAuthor] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<SortOption>('alpha')
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const [authorsData, domainsData] = await Promise.all([
+        const [authorsData, campsData] = await Promise.all([
           getThoughtLeaders(),
-          getDomains()
+          getCampsWithAuthors()
         ])
         setAuthors(authorsData)
-        setDomains(domainsData)
+        setCamps(campsData)
         if (authorsData.length > 0) {
           setSelectedAuthor(authorsData[0])
         }
@@ -45,6 +51,123 @@ export default function AuthorIndexPage() {
     fetchData()
   }, [])
 
+  // Get author camps
+  const getAuthorCamps = (authorId: string) => {
+    return camps
+      .filter(camp => camp.authors?.some((a: any) => a.id === authorId))
+      .map(camp => ({ name: camp.name, domain: camp.domain }))
+  }
+
+  // Get author domain from camps
+  const getAuthorDomain = (authorId: string) => {
+    const authorCamps = getAuthorCamps(authorId)
+    return authorCamps.length > 0 ? authorCamps[0].domain : null
+  }
+
+  // Filter and sort authors
+  const processedAuthors = useMemo(() => {
+    let filtered = authors
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(author =>
+        author.name.toLowerCase().includes(query) ||
+        author.header_affiliation?.toLowerCase().includes(query) ||
+        author.primary_affiliation?.toLowerCase().includes(query)
+      )
+    }
+
+    // Sort authors
+    if (sortBy === 'alpha') {
+      return filtered.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortBy === 'domain') {
+      return filtered.sort((a, b) => {
+        const domainA = getAuthorDomain(a.id) || 'zzz'
+        const domainB = getAuthorDomain(b.id) || 'zzz'
+        if (domainA === domainB) {
+          return a.name.localeCompare(b.name)
+        }
+        return domainA.localeCompare(domainB)
+      })
+    } else if (sortBy === 'camp') {
+      return filtered.sort((a, b) => {
+        const campsA = getAuthorCamps(a.id)
+        const campsB = getAuthorCamps(b.id)
+        const campNameA = campsA.length > 0 ? campsA[0].name : 'zzz'
+        const campNameB = campsB.length > 0 ? campsB[0].name : 'zzz'
+        if (campNameA === campNameB) {
+          return a.name.localeCompare(b.name)
+        }
+        return campNameA.localeCompare(campNameB)
+      })
+    }
+
+    return filtered
+  }, [authors, searchQuery, sortBy, camps])
+
+  // Group authors by first letter (for alphabetical view)
+  const authorsByLetter = useMemo(() => {
+    if (sortBy !== 'alpha') return {}
+
+    const grouped: Record<string, any[]> = {}
+    processedAuthors.forEach(author => {
+      const letter = author.name[0].toUpperCase()
+      if (!grouped[letter]) {
+        grouped[letter] = []
+      }
+      grouped[letter].push(author)
+    })
+    return grouped
+  }, [processedAuthors, sortBy])
+
+  // Group authors by domain
+  const authorsByDomain = useMemo(() => {
+    if (sortBy !== 'domain') return {}
+
+    const grouped: Record<string, any[]> = {}
+    processedAuthors.forEach(author => {
+      const domain = getAuthorDomain(author.id) || 'Unknown'
+      if (!grouped[domain]) {
+        grouped[domain] = []
+      }
+      grouped[domain].push(author)
+    })
+    return grouped
+  }, [processedAuthors, sortBy])
+
+  // Group authors by camp
+  const authorsByCamp = useMemo(() => {
+    if (sortBy !== 'camp') return {}
+
+    const grouped: Record<string, any[]> = {}
+    processedAuthors.forEach(author => {
+      const authorCamps = getAuthorCamps(author.id)
+      if (authorCamps.length === 0) {
+        if (!grouped['No Camp']) {
+          grouped['No Camp'] = []
+        }
+        grouped['No Camp'].push(author)
+      } else {
+        authorCamps.forEach(camp => {
+          if (!grouped[camp.name]) {
+            grouped[camp.name] = []
+          }
+          if (!grouped[camp.name].find(a => a.id === author.id)) {
+            grouped[camp.name].push(author)
+          }
+        })
+      }
+    })
+    return grouped
+  }, [processedAuthors, sortBy])
+
+  // Get available letters for A-Z navigation
+  const availableLetters = useMemo(() => {
+    const letters = new Set(authors.map(a => a.name[0].toUpperCase()))
+    return Array.from(letters).sort()
+  }, [authors])
+
   if (loading) {
     return (
       <div className="h-screen bg-gray-50 flex">
@@ -56,6 +179,8 @@ export default function AuthorIndexPage() {
     )
   }
 
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+
   return (
     <div className="h-screen bg-gray-50 flex">
       <Sidebar />
@@ -64,37 +189,138 @@ export default function AuthorIndexPage() {
         <div className="w-[400px] bg-white border-r border-gray-200 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="p-5 border-b border-gray-200">
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center">
+            {/* Search Bar */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name or affiliation..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Stats */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center mb-4">
               <div className="text-4xl font-bold text-indigo-500">{authors.length}</div>
               <div className="text-sm text-gray-500 mt-1">Authors in Database</div>
             </div>
+
+            {/* Sort Options */}
+            <div className="flex items-center gap-2 mb-4">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Sort by:</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="alpha">Alphabetical (A-Z)</option>
+                <option value="domain">By Domain</option>
+                <option value="camp">By Camp</option>
+              </select>
+            </div>
+
+            {/* A-Z Navigation (only for alphabetical view) */}
+            {sortBy === 'alpha' && (
+              <div className="flex flex-wrap gap-1 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                {alphabet.map(letter => {
+                  const isAvailable = availableLetters.includes(letter)
+                  return (
+                    <button
+                      key={letter}
+                      disabled={!isAvailable}
+                      onClick={() => {
+                        if (isAvailable) {
+                          const element = document.getElementById(`letter-${letter}`)
+                          element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }
+                      }}
+                      className={`w-7 h-7 flex items-center justify-center text-xs font-semibold rounded transition-colors ${
+                        isAvailable
+                          ? 'bg-white border border-gray-300 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-500 cursor-pointer'
+                          : 'bg-white border border-gray-200 text-gray-300 cursor-not-allowed'
+                      }`}
+                    >
+                      {letter}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Author List */}
           <div className="flex-1 overflow-y-auto p-4">
-            {authors.map((author) => (
-              <div
-                key={author.id}
-                onClick={() => setSelectedAuthor(author)}
-                className={`p-4 rounded-lg border mb-2 cursor-pointer transition-all ${
-                  selectedAuthor?.id === author.id
-                    ? 'border-indigo-500 bg-indigo-50'
-                    : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm'
-                }`}
-              >
-                <div className="font-semibold text-gray-900 text-sm">{author.name}</div>
-                <div className="text-xs text-gray-500 mb-2">
-                  {author.header_affiliation || author.primary_affiliation || 'Independent'}
-                </div>
-                <div className="flex gap-1 flex-wrap">
-                  {author.credibility_tier && (
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                      {author.credibility_tier}
-                    </span>
-                  )}
-                </div>
+            {sortBy === 'alpha' && (
+              <>
+                {Object.keys(authorsByLetter).sort().map(letter => (
+                  <div key={letter} id={`letter-${letter}`} className="mb-6">
+                    <div className="text-lg font-bold text-indigo-600 pb-2 mb-3 border-b-2 border-gray-200">
+                      {letter}
+                    </div>
+                    {authorsByLetter[letter].map((author) => (
+                      <AuthorCard
+                        key={author.id}
+                        author={author}
+                        camps={getAuthorCamps(author.id)}
+                        isSelected={selectedAuthor?.id === author.id}
+                        onClick={() => setSelectedAuthor(author)}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </>
+            )}
+
+            {sortBy === 'domain' && (
+              <>
+                {Object.keys(authorsByDomain).sort().map(domain => (
+                  <div key={domain} className="mb-6">
+                    <div className="text-sm font-bold text-gray-700 pb-2 mb-3 border-b border-gray-200">
+                      {domain}
+                    </div>
+                    {authorsByDomain[domain].map((author) => (
+                      <AuthorCard
+                        key={author.id}
+                        author={author}
+                        camps={getAuthorCamps(author.id)}
+                        isSelected={selectedAuthor?.id === author.id}
+                        onClick={() => setSelectedAuthor(author)}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </>
+            )}
+
+            {sortBy === 'camp' && (
+              <>
+                {Object.keys(authorsByCamp).sort().map(camp => (
+                  <div key={camp} className="mb-6">
+                    <div className="text-sm font-bold text-gray-700 pb-2 mb-3 border-b border-gray-200">
+                      {camp}
+                    </div>
+                    {authorsByCamp[camp].map((author) => (
+                      <AuthorCard
+                        key={author.id}
+                        author={author}
+                        camps={getAuthorCamps(author.id)}
+                        isSelected={selectedAuthor?.id === author.id}
+                        onClick={() => setSelectedAuthor(author)}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </>
+            )}
+
+            {processedAuthors.length === 0 && (
+              <div className="text-center py-10 text-gray-500">
+                <div className="text-2xl mb-2">🔍</div>
+                <div className="text-sm">No authors found</div>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -119,6 +345,16 @@ export default function AuthorIndexPage() {
                       {selectedAuthor.author_type}
                     </span>
                   )}
+                  {getAuthorCamps(selectedAuthor.id).map((camp, idx) => (
+                    <span
+                      key={idx}
+                      className={`px-2 py-1 text-xs rounded font-medium ${
+                        DOMAIN_COLORS[camp.domain] || 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {camp.name}
+                    </span>
+                  ))}
                 </div>
 
                 {selectedAuthor.notes && (
@@ -189,6 +425,47 @@ export default function AuthorIndexPage() {
           )}
         </div>
       </main>
+    </div>
+  )
+}
+
+// Author Card Component
+function AuthorCard({ author, camps, isSelected, onClick }: {
+  author: any
+  camps: any[]
+  isSelected: boolean
+  onClick: () => void
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className={`p-4 rounded-lg border mb-2 cursor-pointer transition-all ${
+        isSelected
+          ? 'border-indigo-500 bg-indigo-50'
+          : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm'
+      }`}
+    >
+      <div className="font-semibold text-gray-900 text-sm mb-1">{author.name}</div>
+      <div className="text-xs text-gray-500 mb-2">
+        {author.header_affiliation || author.primary_affiliation || 'Independent'}
+      </div>
+      <div className="flex gap-1 flex-wrap">
+        {camps.slice(0, 2).map((camp, idx) => (
+          <span
+            key={idx}
+            className={`px-2 py-0.5 text-xs rounded font-medium ${
+              DOMAIN_COLORS[camp.domain] || 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {camp.name}
+          </span>
+        ))}
+        {camps.length > 2 && (
+          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+            +{camps.length - 2}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
