@@ -120,7 +120,9 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
             credibility_tier,
             author_type,
             notes,
-            sources
+            sources,
+            key_quote,
+            quote_source_url
           )
         )
       `)
@@ -148,7 +150,9 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
         credibilityTier: mapping.authors?.credibility_tier,
         authorType: mapping.authors?.author_type,
         relevance: mapping.relevance,
-        sources: mapping.authors?.sources || []
+        sources: mapping.authors?.sources || [],
+        key_quote: mapping.authors?.key_quote,
+        quote_source_url: mapping.authors?.quote_source_url
       })).filter((a: any) => a.id) || []
     }))
 
@@ -173,16 +177,31 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
         ...expandedTerms
       ]
 
+      // Also check for multi-word phrases (for queries like "AI is a bubble")
+      const queryPhrases = extractPhrases(queryLower)
+      console.log('  Query phrases:', queryPhrases)
+
       camps = camps.filter((camp: any) => {
         const campText = `${camp.name} ${camp.positionSummary} ${camp.code || ''}`.toLowerCase()
 
-        // Check if camp text contains any of the query words
-        const campMatches = queryWords.some(word => campText.includes(word))
+        // Check if camp text contains any of the query words or phrases
+        const campMatches = queryWords.some(word => campText.includes(word)) ||
+          queryPhrases.some(phrase => campText.includes(phrase))
 
-        // Check if any author matches
+        // Check if any author matches (including sources and notes)
         const authorMatches = camp.authors.some((author: any) => {
-          const authorText = `${author.name || ''} ${author.affiliation || ''} ${author.positionSummary || ''}`.toLowerCase()
-          return queryWords.some(word => authorText.includes(word))
+          // Build searchable text from author data including sources
+          let authorText = `${author.name || ''} ${author.affiliation || ''} ${author.positionSummary || ''}`.toLowerCase()
+
+          // Add source titles to searchable text
+          if (author.sources && Array.isArray(author.sources)) {
+            const sourceTitles = author.sources.map((s: any) => s.title || '').join(' ')
+            authorText += ' ' + sourceTitles.toLowerCase()
+          }
+
+          // Check for word matches or phrase matches
+          return queryWords.some(word => authorText.includes(word)) ||
+            queryPhrases.some(phrase => authorText.includes(phrase))
         })
 
         return campMatches || authorMatches
@@ -478,7 +497,10 @@ function expandQuerySemantics(query: string): string[] {
 
   // AI skepticism / criticism patterns
   if (q.includes('bubble') || q.includes('hype') || q.includes('overhyped') || q.includes('overrated')) {
-    expansions.push('realist', 'skeptic', 'grounding', 'limitation', 'critical')
+    expansions.push('realist', 'skeptic', 'grounding', 'limitation', 'critical', 'bubble')
+  }
+  if (q.includes('not a bubble') || q.includes('not hype')) {
+    expansions.push('maximalist', 'optimist', 'progress', 'potential')
   }
 
   // AI optimism patterns
@@ -527,4 +549,31 @@ function expandQuerySemantics(query: string): string[] {
   }
 
   return expansions
+}
+
+/**
+ * Extract meaningful phrases from a query for phrase matching
+ * This helps match multi-word queries like "AI is a bubble" or "AI will replace workers"
+ */
+function extractPhrases(query: string): string[] {
+  const phrases: string[] = []
+
+  // Return the full query as a phrase if it's longer than 3 words
+  const words = query.trim().split(/\s+/)
+  if (words.length >= 3) {
+    phrases.push(query)
+  }
+
+  // Extract common meaningful phrases (3-6 words)
+  for (let i = 0; i < words.length - 2; i++) {
+    const phrase3 = words.slice(i, i + 3).join(' ')
+    const phrase4 = words.slice(i, i + 4).join(' ')
+    const phrase5 = words.slice(i, i + 5).join(' ')
+
+    if (phrase3.length > 8) phrases.push(phrase3)
+    if (i < words.length - 3 && phrase4.length > 10) phrases.push(phrase4)
+    if (i < words.length - 4 && phrase5.length > 12) phrases.push(phrase5)
+  }
+
+  return phrases
 }

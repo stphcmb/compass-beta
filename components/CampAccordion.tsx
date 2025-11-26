@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
 import AuthorCard from './AuthorCard'
 import { getCampsWithAuthors } from '@/lib/api/thought-leaders'
 
@@ -13,7 +12,6 @@ interface CampAccordionProps {
 }
 
 export default function CampAccordion({ query, domain, camp, relevanceFilter }: CampAccordionProps) {
-  const [expandedCamp, setExpandedCamp] = useState<string | null>(null)
   const [camps, setCamps] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -81,7 +79,7 @@ export default function CampAccordion({ query, domain, camp, relevanceFilter }: 
     : camps
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       {relevanceFilter && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
           <div className="text-sm text-blue-800">
@@ -94,63 +92,47 @@ export default function CampAccordion({ query, domain, camp, relevanceFilter }: 
       )}
 
       {filteredCamps.map((camp) => {
-        const isExpanded = expandedCamp === camp.id
         const hasRelevanceMatch = relevanceFilter && camp.authors.length > 0
 
         return (
           <div
             key={camp.id}
-            className={`bg-white rounded-lg shadow transition-all ${
-              hasRelevanceMatch ? 'ring-2 ring-blue-400 ring-offset-2' : ''
+            className={`transition-all ${
+              hasRelevanceMatch ? 'ring-2 ring-blue-400 ring-offset-2 rounded-lg' : ''
             }`}
           >
-            <div
-              className="p-4 cursor-pointer hover:bg-gray-50 flex items-center justify-between"
-              onClick={() => setExpandedCamp(isExpanded ? null : camp.id)}
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  {isExpanded ? (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  )}
-                  <h3 className="font-bold text-lg">{camp.name}</h3>
-                  {camp.domain && (
-                    <span className={`px-2 py-1 ${getDomainBadgeClass(camp.domain)} text-xs rounded-full`}>
-                      {camp.domain}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-600 ml-8">
-                  {camp.positionSummary}
-                </p>
+            {/* Camp Header - Always Visible */}
+            <div className="mb-4">
+              <div className="flex items-center gap-3 mb-2">
+                {camp.domain && (
+                  <span className={`px-3 py-1 ${getDomainBadgeClass(camp.domain)} text-sm font-semibold rounded-full`}>
+                    {camp.domain}
+                  </span>
+                )}
+                <h3 className="font-bold text-2xl text-gray-800">
+                  {camp.name}
+                </h3>
+                <span className="text-sm text-gray-500 ml-auto">
+                  {camp.authorCount} {camp.authorCount === 1 ? 'author' : 'authors'}
+                </span>
               </div>
-              <div className="text-sm text-gray-500">{camp.authorCount} authors</div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {camp.positionSummary}
+              </p>
             </div>
 
-            {isExpanded && (
-              <div className="border-t border-gray-200 p-4 space-y-4">
-                {camp.authors && camp.authors.length > 0 ? (
-                  <>
-                    {camp.authors.map((author: any) => (
-                      <AuthorCard key={author.id} author={author} query={query} />
-                    ))}
-                    {camp.authors.length > 3 && (
-                      <div className="text-center py-2">
-                        <button className="text-sm text-gray-600 hover:text-gray-900">
-                          Show {camp.authorCount - camp.authors.length} more authors in this camp
-                        </button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-sm text-gray-500 text-center py-4">
-                    No authors found for this camp
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Authors Grid - Always Visible */}
+            <div className="grid grid-cols-1 gap-4 pb-6 border-b border-gray-200 last:border-b-0">
+              {camp.authors && camp.authors.length > 0 ? (
+                camp.authors.map((author: any) => (
+                  <AuthorCard key={author.id} author={author} query={query} />
+                ))
+              ) : (
+                <div className="text-sm text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
+                  No authors found for this camp
+                </div>
+              )}
+            </div>
           </div>
         )
       })}
