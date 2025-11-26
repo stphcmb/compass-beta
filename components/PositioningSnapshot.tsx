@@ -46,9 +46,42 @@ export default function PositioningSnapshot({ query, domain, camp, selectedRelev
   }, [query, domain])
 
   const handleSave = async () => {
-    // TODO: Implement save functionality
-    setIsSaved(true)
-    setTimeout(() => setIsSaved(false), 2000)
+    try {
+      // Save to localStorage
+      const savedSearches = JSON.parse(localStorage.getItem('savedSearches') || '[]')
+
+      const newSearch = {
+        id: `saved-${Date.now()}`,
+        query,
+        domain,
+        camp,
+        created_at: new Date().toISOString(),
+        filters: {
+          ...(domain && { domain }),
+          ...(camp && { camp })
+        }
+      }
+
+      // Check if this search already exists
+      const exists = savedSearches.some((s: any) =>
+        s.query === query && s.domain === domain && s.camp === camp
+      )
+
+      if (!exists) {
+        savedSearches.unshift(newSearch)
+        localStorage.setItem('savedSearches', JSON.stringify(savedSearches))
+
+        // Dispatch custom event to notify Sidebar
+        window.dispatchEvent(new CustomEvent('saved-search-created', {
+          detail: newSearch
+        }))
+      }
+
+      setIsSaved(true)
+      setTimeout(() => setIsSaved(false), 2000)
+    } catch (error) {
+      console.error('Error saving search:', error)
+    }
   }
 
   if (loading) {

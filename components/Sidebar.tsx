@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Bookmark, Clock, Search as SearchIcon, ChevronRight, Users } from 'lucide-react'
+import { Bookmark, Clock, Search as SearchIcon, ChevronRight, Users, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 export default function Sidebar() {
@@ -34,30 +34,47 @@ export default function Sidebar() {
     return `${days}d ago`
   }
 
-  const fetchRecentSearches = async () => {
+  const fetchRecentSearches = () => {
     try {
-      if (!supabase) return
-      const { data } = await supabase
-        .from('search_history')
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(10)
-      if (data) setRecentSearches(data)
+      const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+      setRecentSearches(recent.slice(0, 10))
     } catch (error) {
       console.error('Error fetching recent searches:', error)
+      setRecentSearches([])
     }
   }
 
-  const fetchSavedSearches = async () => {
+  const fetchSavedSearches = () => {
     try {
-      if (!supabase) return
-      const { data } = await supabase
-        .from('saved_searches')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (data) setSavedSearches(data)
+      const saved = JSON.parse(localStorage.getItem('savedSearches') || '[]')
+      setSavedSearches(saved)
     } catch (error) {
       console.error('Error fetching saved searches:', error)
+      setSavedSearches([])
+    }
+  }
+
+  const addToRecentSearches = (query: string) => {
+    if (!query) return
+    try {
+      const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+
+      // Remove if already exists
+      const filtered = recent.filter((s: any) => s.query !== query)
+
+      // Add to beginning
+      filtered.unshift({
+        id: `recent-${Date.now()}`,
+        query,
+        timestamp: new Date().toISOString()
+      })
+
+      // Keep only last 20
+      const limited = filtered.slice(0, 20)
+      localStorage.setItem('recentSearches', JSON.stringify(limited))
+      setRecentSearches(limited.slice(0, 10))
+    } catch (error) {
+      console.error('Error adding to recent searches:', error)
     }
   }
 
@@ -65,41 +82,42 @@ export default function Sidebar() {
     // Only run data and window-dependent effects after mount
     if (!mounted) return
 
-    // If Supabase isn't configured, show engaging placeholders
-    if (!supabase) {
-      setRecentSearches([
-        { id: 'r1', query: 'AI and reskilling workers', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
-        { id: 'r2', query: 'Enterprise AI transformation', timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString() },
-        { id: 'r3', query: 'Agentic workflows in ops', timestamp: new Date(Date.now() - 1000 * 60 * 240).toISOString() },
-      ])
-      setSavedSearches([
-        { id: 's1', query: 'Future of knowledge work', filters: { domain: 'Workers', dateRange: 'Last 12 months' } },
-        { id: 's2', query: 'Regulatory compliance for proprietary models', filters: { domain: 'Policy & Regulation' } },
-      ])
-    } else {
-      fetchRecentSearches()
-      fetchSavedSearches()
-    }
+    // Load from localStorage
+    fetchRecentSearches()
+    fetchSavedSearches()
 
-    // Listen for new saved search events and optimistically add
+    // Listen for new saved search events
     const onSaved = (e: Event) => {
       const ev = e as CustomEvent<{ query: string; filters?: any; created_at?: string }>
       if (ev?.detail?.query) {
         setLastSaved(ev.detail.query)
-        setSavedSearches((prev) => [
-          { id: `local-${Date.now()}`, query: ev.detail.query, filters: ev.detail.filters, created_at: ev.detail.created_at },
-          ...prev,
-        ])
+        fetchSavedSearches() // Refresh from localStorage
       }
-      // If connected, also refresh from backend to pick up IDs
-      if (supabase) fetchSavedSearches()
     }
     window.addEventListener('saved-search-created', onSaved as EventListener)
     return () => window.removeEventListener('saved-search-created', onSaved as EventListener)
   }, [mounted])
 
+  // Track when user performs a search
+  useEffect(() => {
+    if (!mounted || !currentQuery) return
+    addToRecentSearches(currentQuery)
+  }, [currentQuery, mounted])
+
   const handleSearchClick = (query: string) => {
     router.push(`/results?q=${encodeURIComponent(query)}`)
+  }
+
+  const deleteSavedSearch = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    try {
+      const saved = JSON.parse(localStorage.getItem('savedSearches') || '[]')
+      const filtered = saved.filter((s: any) => s.id !== id)
+      localStorage.setItem('savedSearches', JSON.stringify(filtered))
+      setSavedSearches(filtered)
+    } catch (error) {
+      console.error('Error deleting saved search:', error)
+    }
   }
 
   if (!mounted) {
@@ -199,33 +217,43 @@ export default function Sidebar() {
             <div className="text-sm text-gray-500">No saved searches</div>
           ) : (
             savedSearches.map((search) => (
-              <button
-                key={search.id}
-                onClick={() => handleSearchClick(search.query)}
-                className="w-full text-left p-2 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition-colors"
-              >
-                <div className="flex items-start gap-2">
-                  <Bookmark className="w-4 h-4 text-blue-700 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-gray-800 truncate">
-                      {search.query}
-                    </div>
-                    {search.filters && (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {Object.entries(search.filters).map(([key, value]: any, idx: number) => (
-                          <span
-                            key={idx}
-                            className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/70 border border-blue-200 text-blue-800"
-                          >
-                            {key}: {String(value)}
-                          </span>
-                        ))}
+              <div key={search.id} className="relative group">
+                <button
+                  onClick={() => handleSearchClick(search.query)}
+                  className="w-full text-left p-2 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition-colors"
+                >
+                  <div className="flex items-start gap-2">
+                    <Bookmark className="w-4 h-4 text-blue-700 mt-0.5" />
+                    <div className="flex-1 min-w-0 pr-6">
+                      <div className="text-sm text-gray-800 truncate">
+                        {search.query}
                       </div>
-                    )}
+                      {search.filters && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {Object.entries(search.filters).map(([key, value]: any, idx: number) => (
+                            value && (
+                              <span
+                                key={idx}
+                                className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/70 border border-blue-200 text-blue-800"
+                              >
+                                {key}: {String(value)}
+                              </span>
+                            )
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-blue-700" />
                   </div>
-                  <ChevronRight className="w-4 h-4 text-blue-700" />
-                </div>
-              </button>
+                </button>
+                <button
+                  onClick={(e) => deleteSavedSearch(e, search.id)}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
+                  title="Delete saved search"
+                >
+                  <X className="w-3 h-3 text-red-600" />
+                </button>
+              </div>
             ))
           )}
         </div>
