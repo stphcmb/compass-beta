@@ -83,13 +83,13 @@ export async function getTaxonomyCamps(): Promise<TaxonomyCamp[]> {
   }
 }
 
-// Map domain_id to domain name
+// Map domain_id to display names (updated to V2 naming)
 const DOMAIN_MAP: Record<number, string> = {
-  1: 'Technology',
-  2: 'Society',
-  3: 'Business',
-  4: 'Policy & Regulation',
-  5: 'Workers'
+  1: 'AI Technical Capabilities',
+  2: 'AI & Society',
+  3: 'Enterprise AI Adoption',
+  4: 'AI Governance & Oversight',
+  5: 'Future of Work'
 }
 
 /**
@@ -137,7 +137,7 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
     // Transform the data to match expected format
     let camps = (data || []).map((camp: any) => ({
       id: camp.id,
-      name: camp.label || camp.name,
+      name: camp.label,
       positionSummary: camp.description,
       domain: DOMAIN_MAP[camp.domain_id] || 'Unknown',
       code: camp.code,
@@ -291,7 +291,7 @@ export async function getCampsByDomain(domain: string): Promise<TaxonomyCamp[]> 
   }
 
   try {
-    // Find domain_id from domain name
+    // Find domain_id from display name
     const domainId = Object.entries(DOMAIN_MAP).find(([_, name]) => name === domain)?.[0]
 
     if (!domainId) {
@@ -317,10 +317,58 @@ export async function getCampsByDomain(domain: string): Promise<TaxonomyCamp[]> 
 }
 
 /**
+ * Get all camps for all domains (for showing complete slider even with empty camps)
+ */
+export async function getAllCampsByDomain(): Promise<Record<string, any[]>> {
+  if (!supabase) {
+    console.warn('Supabase not configured')
+    return {}
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('camps')
+      .select('*')
+      .order('domain_id', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching all camps:', error)
+      return {}
+    }
+
+    // Group camps by domain
+    const campsByDomain: Record<string, any[]> = {}
+
+    data?.forEach((camp: any) => {
+      const domain = DOMAIN_MAP[camp.domain_id]
+      if (domain) {
+        if (!campsByDomain[domain]) {
+          campsByDomain[domain] = []
+        }
+        campsByDomain[domain].push({
+          id: camp.id,
+          name: camp.label,
+          positionSummary: camp.description,
+          domain,
+          code: camp.code,
+          authorCount: 0, // Will be filled by getCampsWithAuthors
+          authors: []
+        })
+      }
+    })
+
+    return campsByDomain
+  } catch (error) {
+    console.error('Error in getAllCampsByDomain:', error)
+    return {}
+  }
+}
+
+/**
  * Get all unique domains
  */
 export async function getDomains(): Promise<string[]> {
-  // Return domains from the static map (ordered by domain_id)
+  // Return display domain names
   return Object.values(DOMAIN_MAP)
 }
 
