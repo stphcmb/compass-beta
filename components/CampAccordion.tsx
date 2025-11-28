@@ -204,7 +204,7 @@ export default function CampAccordion({
     const filteredDomainCamps = filteredCampsByDomain[domainName] || []
 
     // Create a map of camp IDs to filtered camps for quick lookup
-    const filteredCampMap = filteredDomainCamps.reduce((map, camp) => {
+    const filteredCampMap = filteredDomainCamps.reduce((map: Record<string, any>, camp: any) => {
       map[camp.id] = camp
       return map
     }, {} as Record<string, any>)
