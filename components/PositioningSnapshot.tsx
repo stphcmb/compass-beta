@@ -21,7 +21,8 @@ export default function PositioningSnapshot({ query, domain, camp, selectedRelev
     challenging: 0,
     emerging: 0,
     totalCamps: 0,
-    totalAuthors: 0
+    totalAuthors: 0,
+    domains: [] as string[]
   })
   const [opportunities, setOpportunities] = useState<string[]>([])
 
@@ -44,6 +45,14 @@ export default function PositioningSnapshot({ query, domain, camp, selectedRelev
 
     fetchData()
   }, [query, domain])
+
+  const handleDomainClick = (domainName: string) => {
+    const domainId = `domain-${domainName.toLowerCase().replace(/\s+/g, '-')}`
+    const element = document.getElementById(domainId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
 
   const handleSave = async () => {
     try {
@@ -93,81 +102,125 @@ export default function PositioningSnapshot({ query, domain, camp, selectedRelev
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Positioning Snapshot</h2>
-        <button 
-          onClick={handleSave}
-          className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
-        >
-          <Bookmark className="w-4 h-4" />
-          {isSaved ? 'Saved!' : 'Save Search'}
-        </button>
+    <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-[15px] font-semibold mb-1">Who agrees with your thesis?</h2>
+          <p className="text-[13px] text-gray-600">Click to filter authors by their stance</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {query && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-md text-[12px] text-gray-600">
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              &quot;{query}&quot;
+            </div>
+          )}
+          <button
+            onClick={handleSave}
+            className="text-[13px] text-gray-600 hover:text-gray-900 flex items-center gap-1.5"
+          >
+            <Bookmark className="w-4 h-4" />
+            {isSaved ? 'Saved!' : 'Save Search'}
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-4 gap-3 mb-4">
         <button
           onClick={() => onRelevanceClick?.('strong')}
-          className={`text-center p-4 rounded transition-all cursor-pointer hover:shadow-md ${
+          className={`p-4 rounded-lg transition-all cursor-pointer border-2 ${
             selectedRelevance === 'strong'
-              ? 'bg-green-100 ring-2 ring-green-500 shadow-lg'
-              : 'bg-green-50 hover:bg-green-100'
+              ? 'bg-emerald-50 border-emerald-500 shadow-md'
+              : 'bg-emerald-50 border-transparent hover:border-emerald-200 hover:shadow-sm'
           }`}
         >
-          <div className="text-2xl font-bold text-green-700">{metrics.stronglyAligned}</div>
-          <div className="text-sm text-gray-600">Strong Alignment</div>
-          {selectedRelevance === 'strong' && (
-            <div className="text-xs text-green-600 mt-1">✓ Filtering</div>
-          )}
+          <div className="text-[32px] font-bold text-emerald-600 leading-none mb-1.5">{metrics.stronglyAligned}</div>
+          <div className="text-[13px] font-semibold text-emerald-700 mb-0.5">Agree</div>
+          <div className="text-[11px] text-emerald-600 opacity-75">Support your view</div>
         </button>
         <button
           onClick={() => onRelevanceClick?.('partial')}
-          className={`text-center p-4 rounded transition-all cursor-pointer hover:shadow-md ${
+          className={`p-4 rounded-lg transition-all cursor-pointer border-2 ${
             selectedRelevance === 'partial'
-              ? 'bg-yellow-100 ring-2 ring-yellow-500 shadow-lg'
-              : 'bg-yellow-50 hover:bg-yellow-100'
+              ? 'bg-amber-50 border-amber-500 shadow-md'
+              : 'bg-amber-50 border-transparent hover:border-amber-200 hover:shadow-sm'
           }`}
         >
-          <div className="text-2xl font-bold text-yellow-700">{metrics.partiallyAligned}</div>
-          <div className="text-sm text-gray-600">Partial Alignment</div>
-          {selectedRelevance === 'partial' && (
-            <div className="text-xs text-yellow-600 mt-1">✓ Filtering</div>
-          )}
+          <div className="text-[32px] font-bold text-amber-600 leading-none mb-1.5">{metrics.partiallyAligned}</div>
+          <div className="text-[13px] font-semibold text-amber-700 mb-0.5">Partially Agree</div>
+          <div className="text-[11px] text-amber-600 opacity-75">With some caveats</div>
         </button>
         <button
           onClick={() => onRelevanceClick?.('challenges')}
-          className={`text-center p-4 rounded transition-all cursor-pointer hover:shadow-md ${
+          className={`p-4 rounded-lg transition-all cursor-pointer border-2 ${
             selectedRelevance === 'challenges'
-              ? 'bg-red-100 ring-2 ring-red-500 shadow-lg'
-              : 'bg-red-50 hover:bg-red-100'
+              ? 'bg-red-50 border-red-500 shadow-md'
+              : 'bg-red-50 border-transparent hover:border-red-200 hover:shadow-sm'
           }`}
         >
-          <div className="text-2xl font-bold text-red-700">{metrics.challenging}</div>
-          <div className="text-sm text-gray-600">Challenge Your View</div>
-          {selectedRelevance === 'challenges' && (
-            <div className="text-xs text-red-600 mt-1">✓ Filtering</div>
-          )}
+          <div className="text-[32px] font-bold text-red-600 leading-none mb-1.5">{metrics.challenging}</div>
+          <div className="text-[13px] font-semibold text-red-700 mb-0.5">Disagree</div>
+          <div className="text-[11px] text-red-600 opacity-75">Challenge your view</div>
         </button>
         <button
           onClick={() => onRelevanceClick?.('emerging')}
-          className={`text-center p-4 rounded transition-all cursor-pointer hover:shadow-md ${
+          className={`p-4 rounded-lg transition-all cursor-pointer border-2 ${
             selectedRelevance === 'emerging'
-              ? 'bg-purple-100 ring-2 ring-purple-500 shadow-lg'
-              : 'bg-purple-50 hover:bg-purple-100'
+              ? 'bg-violet-50 border-violet-500 shadow-md'
+              : 'bg-violet-50 border-transparent hover:border-violet-200 hover:shadow-sm'
           }`}
         >
-          <div className="text-2xl font-bold text-purple-700">{metrics.emerging}</div>
-          <div className="text-sm text-gray-600">Emerging Views</div>
-          {selectedRelevance === 'emerging' && (
-            <div className="text-xs text-purple-600 mt-1">✓ Filtering</div>
-          )}
+          <div className="text-[32px] font-bold text-violet-600 leading-none mb-1.5">{metrics.emerging}</div>
+          <div className="text-[13px] font-semibold text-violet-700 mb-0.5">New Voices</div>
+          <div className="text-[11px] text-violet-600 opacity-75">Emerging perspectives</div>
         </button>
       </div>
 
-      {opportunities.length > 0 && (
-        <div className="mt-4 p-4 bg-blue-50 rounded">
-          <h3 className="font-semibold text-sm mb-2">💡 White Space Opportunities</h3>
-          <ul className="text-sm text-gray-700 space-y-1">
+      {selectedRelevance && (
+        <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[13px] text-gray-700">
+              Showing <strong className="text-emerald-700">
+                {selectedRelevance === 'strong' && `${metrics.stronglyAligned} authors who agree`}
+                {selectedRelevance === 'partial' && `${metrics.partiallyAligned} authors who partially agree`}
+                {selectedRelevance === 'challenges' && `${metrics.challenging} authors who disagree`}
+                {selectedRelevance === 'emerging' && `${metrics.emerging} new voices`}
+              </strong> across {metrics.domains.length} {metrics.domains.length === 1 ? 'domain' : 'domains'}:
+            </span>
+            <button
+              onClick={() => onRelevanceClick?.(selectedRelevance)}
+              className="text-[12px] text-gray-500 hover:text-gray-800 flex items-center gap-1"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6 6 18"></path>
+                <path d="m6 6 12 12"></path>
+              </svg>
+              Clear
+            </button>
+          </div>
+          {metrics.domains.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {metrics.domains.map((domainName) => (
+                <button
+                  key={domainName}
+                  onClick={() => handleDomainClick(domainName)}
+                  className="px-2.5 py-1 bg-white border border-gray-300 rounded-md text-[12px] text-gray-700 hover:bg-indigo-50 hover:border-indigo-400 hover:text-indigo-700 transition-colors"
+                >
+                  {domainName}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {opportunities.length > 0 && !selectedRelevance && (
+        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+          <h3 className="font-semibold text-[13px] mb-2 text-blue-900">💡 White Space Opportunities</h3>
+          <ul className="text-[13px] text-blue-800 space-y-1">
             {opportunities.map((opp, index) => (
               <li key={index}>• {opp}</li>
             ))}

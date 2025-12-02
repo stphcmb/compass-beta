@@ -288,7 +288,7 @@ export default function CampAccordion({
         const hasMore = allAuthors.length > 3
 
         return (
-          <div key={domainName} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div key={domainName} id={`domain-${domainName.toLowerCase().replace(/\s+/g, '-')}`} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             {/* Domain Header */}
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-start gap-3.5 mb-3">

@@ -112,6 +112,9 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
         camp_authors (
           author_id,
           relevance,
+          key_quote,
+          quote_source_url,
+          why_it_matters,
           authors (
             id,
             name,
@@ -120,9 +123,7 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
             credibility_tier,
             author_type,
             notes,
-            sources,
-            key_quote,
-            quote_source_url
+            sources
           )
         )
       `)
@@ -146,13 +147,13 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
         id: mapping.authors?.id,
         name: mapping.authors?.name,
         affiliation: mapping.authors?.header_affiliation || mapping.authors?.primary_affiliation,
-        positionSummary: mapping.authors?.notes,
+        positionSummary: mapping.why_it_matters || mapping.authors?.notes,  // Now from camp_authors, fallback to authors.notes
         credibilityTier: mapping.authors?.credibility_tier,
         authorType: mapping.authors?.author_type,
         relevance: mapping.relevance,
         sources: mapping.authors?.sources || [],
-        key_quote: mapping.authors?.key_quote,
-        quote_source_url: mapping.authors?.quote_source_url
+        key_quote: mapping.key_quote,  // Now from camp_authors, not authors
+        quote_source_url: mapping.quote_source_url  // Now from camp_authors, not authors
       })).filter((a: any) => a.id) || []
     }))
 
@@ -427,12 +428,16 @@ export async function getPositioningMetrics(query?: string, domain?: string) {
       challenging: 0,
       emerging: 0,
       totalCamps: 0,
-      totalAuthors: 0
+      totalAuthors: 0,
+      domains: []
     }
   }
 
   try {
     const camps = await getCampsWithAuthors(query, domain)
+
+    // Get unique domains
+    const uniqueDomains = Array.from(new Set(camps.map((c: any) => c.domain).filter(Boolean)))
 
     const metrics = {
       stronglyAligned: 0,
@@ -440,7 +445,8 @@ export async function getPositioningMetrics(query?: string, domain?: string) {
       challenging: 0,
       emerging: 0,
       totalCamps: camps.length,
-      totalAuthors: 0
+      totalAuthors: 0,
+      domains: uniqueDomains
     }
 
     // Count authors and their relevance relationships
@@ -479,7 +485,8 @@ export async function getPositioningMetrics(query?: string, domain?: string) {
       challenging: 0,
       emerging: 0,
       totalCamps: 0,
-      totalAuthors: 0
+      totalAuthors: 0,
+      domains: []
     }
   }
 }

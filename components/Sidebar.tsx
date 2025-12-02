@@ -108,6 +108,27 @@ export default function Sidebar() {
     router.push(`/results?q=${encodeURIComponent(query)}`)
   }
 
+  const deleteRecentSearch = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    try {
+      const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+      const filtered = recent.filter((s: any) => s.id !== id)
+      localStorage.setItem('recentSearches', JSON.stringify(filtered))
+      setRecentSearches(filtered.slice(0, 10))
+    } catch (error) {
+      console.error('Error deleting recent search:', error)
+    }
+  }
+
+  const clearAllRecentSearches = () => {
+    try {
+      localStorage.setItem('recentSearches', '[]')
+      setRecentSearches([])
+    } catch (error) {
+      console.error('Error clearing recent searches:', error)
+    }
+  }
+
   const deleteSavedSearch = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     try {
@@ -117,6 +138,15 @@ export default function Sidebar() {
       setSavedSearches(filtered)
     } catch (error) {
       console.error('Error deleting saved search:', error)
+    }
+  }
+
+  const clearAllSavedSearches = () => {
+    try {
+      localStorage.setItem('savedSearches', '[]')
+      setSavedSearches([])
+    } catch (error) {
+      console.error('Error clearing saved searches:', error)
     }
   }
 
@@ -173,32 +203,51 @@ export default function Sidebar() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-gray-600">Recent Searches</h3>
-          <span className="text-xs text-gray-500">{recentSearches.length}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">{recentSearches.length}</span>
+            {recentSearches.length > 0 && (
+              <button
+                onClick={clearAllRecentSearches}
+                className="text-xs text-red-600 hover:text-red-800 hover:underline"
+                title="Clear all recent searches"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
         </div>
         <div className="space-y-2">
           {recentSearches.length === 0 ? (
             <div className="text-sm text-gray-500">No recent searches</div>
           ) : (
             recentSearches.map((search) => (
-              <button
-                key={search.id}
-                onClick={() => handleSearchClick(search.query)}
-                className="w-full text-left p-2 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
-              >
-                <div className="flex items-start gap-2">
-                  <SearchIcon className="w-4 h-4 text-gray-400 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-gray-800 truncate">
-                      {search.query}
+              <div key={search.id} className="relative group">
+                <button
+                  onClick={() => handleSearchClick(search.query)}
+                  className="w-full text-left p-2 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
+                >
+                  <div className="flex items-start gap-2">
+                    <SearchIcon className="w-4 h-4 text-gray-400 mt-0.5" />
+                    <div className="flex-1 min-w-0 pr-6">
+                      <div className="text-sm text-gray-800 truncate">
+                        {search.query}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        <span>{timeAgo(search.timestamp)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                      <Clock className="w-3 h-3" />
-                      <span>{timeAgo(search.timestamp)}</span>
-                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </div>
-              </button>
+                </button>
+                <button
+                  onClick={(e) => deleteRecentSearch(e, search.id)}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
+                  title="Delete recent search"
+                >
+                  <X className="w-3 h-3 text-red-600" />
+                </button>
+              </div>
             ))
           )}
         </div>
@@ -207,7 +256,18 @@ export default function Sidebar() {
       <div>
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-sm font-semibold text-gray-600">Saved Searches</h3>
-          <span className="text-xs text-gray-500">{savedSearches.length}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">{savedSearches.length}</span>
+            {savedSearches.length > 0 && (
+              <button
+                onClick={clearAllSavedSearches}
+                className="text-xs text-red-600 hover:text-red-800 hover:underline"
+                title="Clear all saved searches"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
         </div>
         {lastSaved && (
           <div className="text-xs text-gray-500 mb-2">Last saved: <span className="text-gray-800">{lastSaved}</span></div>
