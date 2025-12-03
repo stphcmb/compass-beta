@@ -32,12 +32,12 @@ export default function AuthorIndexPage() {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const [authorsData, campsData] = await Promise.all([
+        const [authorsData, result] = await Promise.all([
           getThoughtLeaders(),
           getCampsWithAuthors()
         ])
         setAuthors(authorsData)
-        setCamps(campsData)
+        setCamps(result.camps)
         if (authorsData.length > 0) {
           setSelectedAuthor(authorsData[0])
         }

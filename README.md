@@ -41,6 +41,7 @@ cp .env.local.example .env.local
 Edit `.env.local` and add your Supabase credentials:
 - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
+- `N8N_QUERY_EXPANSION_URL` (Optional): Your n8n webhook URL for query expansion
 
 3. Run the development server:
 ```bash
@@ -142,15 +143,55 @@ components/
 lib/
   supabase.ts              # Supabase client
   utils.ts                 # Utility functions
+  api/
+    thought-leaders.ts     # Data access for camps & authors
+    search-expansion.ts    # n8n query expansion service
 ```
 
 ## Core Features
 
 - **Search & Discovery**: Full-text search across authors and perspectives
+- **Query Expansion**: Optional n8n integration for AI-powered query expansion
 - **Camp Taxonomy**: Organize authors by philosophical camps (e.g., AI Safety, Accelerationism)
 - **Author Profiles**: Detailed author pages with quotes, sources, and camp affiliations
 - **Domain Navigation**: Browse content across different domains (Ethics, Governance, etc.)
 - **Positioning Intelligence**: Analyze thought leadership positions in AI discourse
+
+### Query Expansion (n8n Integration)
+
+Compass supports optional query expansion via an n8n webhook to improve search relevance:
+
+**Setup:**
+1. Create an n8n workflow with:
+   - A Webhook trigger node that accepts `{ "query": "your search" }`
+   - Query expansion logic (e.g., LLM-powered synonym generation)
+   - A "Respond to Webhook" node returning:
+     ```json
+     {
+       "queries": [
+         {
+           "query": "expanded query 1",
+           "role": "core",
+           "priority": 1,
+           "hits": 0
+         }
+       ],
+       "results": []
+     }
+     ```
+2. Add your webhook URLs to `.env.local`:
+   ```
+   # Production webhook
+   N8N_QUERY_EXPANSION_URL=https://your-n8n-instance.com/webhook/your-id
+
+   # Test webhook (optional - takes precedence for local testing)
+   N8N_QUERY_EXPANSION_TEST_URL=https://your-n8n-instance.com/webhook-test/your-id
+   ```
+
+**Behavior:**
+- If configured, Compass calls n8n for query expansion (5s timeout)
+- Falls back to local semantic expansion if n8n is unavailable or returns errors
+- Server-side only - webhook URL is never exposed to the browser
 
 ## Database
 

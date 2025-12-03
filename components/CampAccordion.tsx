@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import AuthorCard from './AuthorCard'
-import { getCampsWithAuthors, getAllCampsByDomain } from '@/lib/api/thought-leaders'
 
 interface CampAccordionProps {
   query: string
@@ -86,6 +85,7 @@ export default function CampAccordion({
 }: CampAccordionProps) {
   const [camps, setCamps] = useState<any[]>([])
   const [allCampsByDomain, setAllCampsByDomain] = useState<Record<string, any[]>>({})
+  const [expandedQueries, setExpandedQueries] = useState<any[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedCampPerDomain, setSelectedCampPerDomain] = useState<Record<string, string>>({})
   const [expandedAuthors, setExpandedAuthors] = useState<Record<string, boolean>>({})
@@ -107,17 +107,28 @@ export default function CampAccordion({
       console.log('🎯 CampAccordion: Fetching camps with query:', query, 'domain:', domain, 'relevanceFilter:', relevanceFilter)
       setLoading(true)
       try {
-        // Fetch both: all camps for structure AND camps with authors for filtering
-        const [allCamps, filteredCamps] = await Promise.all([
-          getAllCampsByDomain(),
-          getCampsWithAuthors(query, domain)
-        ])
+        // Call API route instead of direct function call (for server-side env vars)
+        const params = new URLSearchParams({
+          fetchAll: 'true',
+          ...(query && { query }),
+          ...(domain && { domain })
+        })
+
+        const response = await fetch(`/api/camps?${params}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch camps')
+        }
+
+        const data = await response.json()
+        const { allCamps, filteredCamps, expandedQueries: expandedQueriesData } = data
 
         console.log('🎯 CampAccordion: All camps:', Object.keys(allCamps).length, 'domains')
         console.log('🎯 CampAccordion: Filtered camps:', filteredCamps.length)
+        console.log('🎯 CampAccordion: Expanded queries:', expandedQueriesData)
 
         setAllCampsByDomain(allCamps)
         setCamps(filteredCamps)
+        setExpandedQueries(expandedQueriesData)
       } catch (error) {
         console.error('Error fetching camps:', error)
       } finally {
@@ -136,14 +147,8 @@ export default function CampAccordion({
     )
   }
 
-  // Don't show "no camps" message if we have allCampsByDomain - we'll show empty camps
-  if (camps.length === 0 && Object.keys(allCampsByDomain).length === 0) {
-    return (
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-600">
-        No camps found. Try adjusting your search or domain filters.
-      </div>
-    )
-  }
+  // Show "no camps" message but still allow expanded queries to display
+  const noCampsFound = camps.length === 0 && Object.keys(allCampsByDomain).length === 0
 
   // Filter camps based on all filters
   let filteredCamps = camps
@@ -245,7 +250,14 @@ export default function CampAccordion({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-      {Object.entries(campsByDomain).map(([domainName, domainCamps]) => {
+      {/* Show "no camps" message if needed */}
+      {noCampsFound && (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-600">
+          No camps found. Try adjusting your search or domain filters.
+        </div>
+      )}
+
+      {!noCampsFound && Object.entries(campsByDomain).map(([domainName, domainCamps]) => {
         const camps = domainCamps as any[]
         const selectedCamp = selectedCampPerDomain[domainName]
         const isExpanded = expandedAuthors[domainName]
@@ -293,8 +305,8 @@ export default function CampAccordion({
           return (a.name || '').localeCompare(b.name || '')
         })
 
-        const displayAuthors = isExpanded ? allAuthors : allAuthors.slice(0, 3)
-        const hasMore = allAuthors.length > 3
+        const displayAuthors = isExpanded ? allAuthors : allAuthors.slice(0, 4)
+        const hasMore = allAuthors.length > 4
 
         return (
           <div
@@ -438,6 +450,8 @@ export default function CampAccordion({
                           className={`flex-1 flex flex-col items-center justify-center transition-all relative ${
                             selectedCamp === camp.id ? 'ring-2 ring-inset ring-gray-900' : ''
                           } ${
+                            camp.authorCount === 0 ? 'opacity-40' : ''
+                          } ${
                             idx === 0 ? 'bg-gradient-to-b from-pink-200 to-pink-300' :
                             idx === camps.length - 1 ? 'bg-gradient-to-b from-green-200 to-green-300' :
                             'bg-gradient-to-b from-amber-200 to-amber-300'
@@ -496,7 +510,7 @@ export default function CampAccordion({
                           color: 'var(--color-charcoal)'
                         }}
                       >
-                        {isExpanded ? 'Show Less' : `Show ${allAuthors.length - 3} More Authors`}
+                        {isExpanded ? 'Show Less' : `Show ${allAuthors.length - 4} More Authors`}
                       </button>
                     </div>
                   )}

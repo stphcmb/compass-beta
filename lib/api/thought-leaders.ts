@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { ThoughtLeader, TaxonomyCamp, AuthorCampMapping } from '@/lib/database-types'
+import { expandQuery, extractSearchTerms } from '@/lib/api/search-expansion'
 
 /**
  * Fetch all thought leaders (authors)
@@ -94,17 +95,18 @@ const DOMAIN_MAP: Record<number, string> = {
 
 /**
  * Fetch camps with their associated authors
+ * Returns both camps and expanded queries (if query expansion was used)
  */
-export async function getCampsWithAuthors(query?: string, domain?: string) {
+export async function getCampsWithAuthors(query?: string, domain?: string): Promise<{ camps: any[], expandedQueries: any[] | null }> {
   if (!supabase) {
     console.warn('Supabase not configured')
-    return []
+    return { camps: [], expandedQueries: null }
   }
 
   try {
     console.log('🔍 getCampsWithAuthors called with:', { query, domain })
 
-    // Query camps with camp_authors and authors (using domain_id directly)
+    // Query camps with camp_authors and authors
     const { data, error } = await supabase
       .from('camps')
       .select(`
@@ -129,8 +131,8 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
       `)
 
     if (error) {
-      console.error('Error fetching camps with authors:', error)
-      return []
+      console.error('Error fetching camp_authors:', error)
+      return { camps: [], expandedQueries: null }
     }
 
     console.log('  Fetched camps from DB:', data?.length || 0)
@@ -147,13 +149,13 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
         id: mapping.authors?.id,
         name: mapping.authors?.name,
         affiliation: mapping.authors?.header_affiliation || mapping.authors?.primary_affiliation,
-        positionSummary: mapping.why_it_matters || mapping.authors?.notes,  // Now from camp_authors, fallback to authors.notes
+        positionSummary: mapping.why_it_matters || mapping.authors?.notes,
         credibilityTier: mapping.authors?.credibility_tier,
         authorType: mapping.authors?.author_type,
         relevance: mapping.relevance,
         sources: mapping.authors?.sources || [],
-        key_quote: mapping.key_quote,  // Now from camp_authors, not authors
-        quote_source_url: mapping.quote_source_url  // Now from camp_authors, not authors
+        key_quote: mapping.key_quote,
+        quote_source_url: mapping.quote_source_url
       })).filter((a: any) => a.id) || []
     }))
 
@@ -164,23 +166,58 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
     }
 
     // Apply query filter if provided
+    let expandedQueriesResult: any[] | null = null
     if (query && query.trim()) {
       const queryLower = query.toLowerCase().trim()
       console.log('  Applying query filter:', queryLower)
 
-      // Semantic query expansion - map common phrases to relevant keywords
-      const expandedTerms = expandQuerySemantics(queryLower)
-      console.log('  Expanded terms:', expandedTerms)
+      let queryWords: string[] = []
+      let queryPhrases: string[] = []
 
-      // Split query into individual words and add expanded terms
-      const queryWords = [
-        ...queryLower.split(/\s+/).filter(word => word.length > 2),
-        ...expandedTerms
-      ]
+      // Try n8n query expansion first
+      const expandedQueries = await expandQuery(queryLower)
 
-      // Also check for multi-word phrases (for queries like "AI is a bubble")
-      const queryPhrases = extractPhrases(queryLower)
-      console.log('  Query phrases:', queryPhrases)
+      // Store for return value
+      if (expandedQueries && expandedQueries.length > 0) {
+        expandedQueriesResult = expandedQueries
+      }
+
+      if (expandedQueries && expandedQueries.length > 0) {
+        // Use n8n expanded queries
+        console.log('  Using n8n expanded queries:', expandedQueries.map(eq => eq.query))
+        const n8nTerms = extractSearchTerms(expandedQueries)
+        queryWords = n8nTerms
+
+        // Add the original query terms as well
+        queryWords.push(...queryLower.split(/\s+/).filter(word => word.length > 2))
+
+        // Extract phrases from expanded queries
+        expandedQueries.forEach(eq => {
+          const phrases = extractPhrases(eq.query.toLowerCase())
+          queryPhrases.push(...phrases)
+        })
+
+        // Also include original query phrases
+        queryPhrases.push(...extractPhrases(queryLower))
+
+      } else {
+        // Fallback to local semantic expansion
+        console.log('  Falling back to local query expansion')
+        const expandedTerms = expandQuerySemantics(queryLower)
+        console.log('  Expanded terms:', expandedTerms)
+
+        // Split query into individual words and add expanded terms
+        queryWords = [
+          ...queryLower.split(/\s+/).filter(word => word.length > 2),
+          ...expandedTerms
+        ]
+
+        // Also check for multi-word phrases (for queries like "AI is a bubble")
+        queryPhrases = extractPhrases(queryLower)
+      }
+
+      console.log('  Query words:', queryWords.slice(0, 10), queryWords.length > 10 ? `... (${queryWords.length} total)` : '')
+      console.log('  Query phrases:', queryPhrases.slice(0, 5), queryPhrases.length > 5 ? `... (${queryPhrases.length} total)` : '')
 
       camps = camps.filter((camp: any) => {
         const campText = `${camp.name} ${camp.positionSummary} ${camp.code || ''}`.toLowerCase()
@@ -212,10 +249,10 @@ export async function getCampsWithAuthors(query?: string, domain?: string) {
     }
 
     console.log('✅ Returning camps:', camps.length)
-    return camps
+    return { camps, expandedQueries: expandedQueriesResult }
   } catch (error) {
     console.error('Error in getCampsWithAuthors:', error)
-    return []
+    return { camps: [], expandedQueries: null }
   }
 }
 
@@ -434,7 +471,8 @@ export async function getPositioningMetrics(query?: string, domain?: string) {
   }
 
   try {
-    const camps = await getCampsWithAuthors(query, domain)
+    const result = await getCampsWithAuthors(query, domain)
+    const camps = result.camps
 
     // Get unique domains
     const uniqueDomains = Array.from(new Set(camps.map((c: any) => c.domain).filter(Boolean)))
@@ -501,7 +539,8 @@ export async function getWhiteSpaceOpportunities(query?: string, domain?: string
   }
 
   try {
-    const camps = await getCampsWithAuthors(query, domain)
+    const result = await getCampsWithAuthors(query, domain)
+    const camps = result.camps
     const opportunities: string[] = []
 
     // Analyze camp distribution

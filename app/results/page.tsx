@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import SearchBar from '@/components/SearchBar'
 import PositioningSnapshot from '@/components/PositioningSnapshot'
 import CampAccordion from '@/components/CampAccordion'
 import BackToTop from '@/components/BackToTop'
+import ExpandedQueries from '@/components/ExpandedQueries'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
@@ -32,11 +33,39 @@ export default function ResultsPage({
 
   const mainRef = useRef<HTMLElement>(null)
   const [selectedRelevance, setSelectedRelevance] = useState<string | null>(null)
+  const [expandedQueries, setExpandedQueries] = useState<any[] | null>(null)
+  const [loadingQueries, setLoadingQueries] = useState(false)
 
   const handleRelevanceClick = (relevance: string) => {
     // Toggle: if clicking same one, deselect; otherwise select new one
     setSelectedRelevance(prev => prev === relevance ? null : relevance)
   }
+
+  // Fetch expanded queries when query changes
+  useEffect(() => {
+    const fetchExpandedQueries = async () => {
+      if (!query || !query.trim()) {
+        setExpandedQueries(null)
+        return
+      }
+
+      setLoadingQueries(true)
+      try {
+        const params = new URLSearchParams({ query })
+        const response = await fetch(`/api/camps?${params}`)
+        if (response.ok) {
+          const data = await response.json()
+          setExpandedQueries(data.expandedQueries || null)
+        }
+      } catch (error) {
+        console.error('Error fetching expanded queries:', error)
+      } finally {
+        setLoadingQueries(false)
+      }
+    }
+
+    fetchExpandedQueries()
+  }, [query])
 
   return (
     <div className="h-screen bg-gray-50 flex">
@@ -46,6 +75,14 @@ export default function ResultsPage({
           <div className="mb-6">
             <SearchBar initialQuery={query} showEdit={true} />
           </div>
+
+          {/* Show expanded queries beneath search bar */}
+          {query && expandedQueries && expandedQueries.length > 0 && (
+            <div className="mb-4">
+              <ExpandedQueries queries={expandedQueries} originalQuery={query} />
+            </div>
+          )}
+
           <PositioningSnapshot
             query={query}
             domain={domain}
