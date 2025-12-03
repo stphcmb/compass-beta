@@ -6,7 +6,7 @@ import SearchBar from '@/components/SearchBar'
 import PositioningSnapshot from '@/components/PositioningSnapshot'
 import CampAccordion from '@/components/CampAccordion'
 import BackToTop from '@/components/BackToTop'
-import ExpandedQueries from '@/components/ExpandedQueries'
+import { ExpandedQueries } from '@/components/search-expansion'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 

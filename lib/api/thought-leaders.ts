@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { ThoughtLeader, TaxonomyCamp, AuthorCampMapping } from '@/lib/database-types'
-import { expandQuery, extractSearchTerms } from '@/lib/api/search-expansion'
+import { expandQuery, extractSearchTerms } from '@/lib/search-expansion'
 
 /**
  * Fetch all thought leaders (authors)
