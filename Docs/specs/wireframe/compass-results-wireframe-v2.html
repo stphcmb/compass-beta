@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compass Results - Wireframe v2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Core palette - clean modern SaaS */
+      --bg-page: #fafafa;
+      --bg-card: #ffffff;
+      --bg-muted: #f4f4f5;
+      --bg-hover: #f0f0f1;
+      
+      --text-primary: #18181b;
+      --text-secondary: #52525b;
+      --text-muted: #a1a1aa;
+      
+      --border: #e4e4e7;
+      --border-hover: #d4d4d8;
+      
+      /* Semantic colors - agreement levels */
+      --agrees: #059669;
+      --agrees-bg: #ecfdf5;
+      --agrees-border: #a7f3d0;
+      
+      --mixed: #d97706;
+      --mixed-bg: #fffbeb;
+      --mixed-border: #fde68a;
+      
+      --disagrees: #dc2626;
+      --disagrees-bg: #fef2f2;
+      --disagrees-border: #fecaca;
+      
+      --new-voice: #7c3aed;
+      --new-voice-bg: #f5f3ff;
+      --new-voice-border: #ddd6fe;
+      
+      /* Slider bar gradient */
+      --bar-cautious: #fecdd3;
+      --bar-balanced: #fef3c7;
+      --bar-optimistic: #bbf7d0;
+      
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.5;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ==================== HEADER ==================== */
+    .header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--text-primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--text-primary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg {
+      width: 16px;
+      height: 16px;
+      color: white;
+    }
+
+    .search-bar {
+      flex: 1;
+      max-width: 560px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .search-bar:focus-within {
+      border-color: var(--text-primary);
+      box-shadow: 0 0 0 3px rgba(24,24,27,0.08);
+    }
+
+    .search-bar svg {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .search-bar input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .search-bar input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-btn {
+      background: var(--text-primary);
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .search-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* ==================== MAIN LAYOUT ==================== */
+    .main-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 24px;
+    }
+
+    /* ==================== SIDEBAR ==================== */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sidebar-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .saved-search {
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      transition: background 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .saved-search svg {
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+    }
+
+    .saved-search:hover {
+      background: var(--bg-muted);
+    }
+
+    .saved-search.active {
+      background: var(--bg-muted);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* ==================== RESULTS AREA ==================== */
+    .results-area {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ==================== RESULTS SUMMARY ==================== */
+    .results-summary {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+    }
+
+    .summary-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .summary-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .summary-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .query-tag {
+      background: var(--bg-muted);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .query-tag svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* Agreement Cards - Clickable filters */
+    .agreement-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .agreement-card {
+      padding: 16px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 2px solid transparent;
+      position: relative;
+    }
+
+    .agreement-card:hover {
+      transform: translateY(-1px);
+    }
+
+    .agreement-card.active {
+      border-color: currentColor;
+    }
+
+    .agreement-card.agrees {
+      background: var(--agrees-bg);
+      color: var(--agrees);
+    }
+
+    .agreement-card.mixed {
+      background: var(--mixed-bg);
+      color: var(--mixed);
+    }
+
+    .agreement-card.disagrees {
+      background: var(--disagrees-bg);
+      color: var(--disagrees);
+    }
+
+    .agreement-card.new-voice {
+      background: var(--new-voice-bg);
+      color: var(--new-voice);
+    }
+
+    .card-count {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .card-label {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .card-hint {
+      font-size: 11px;
+      opacity: 0.75;
+      margin-top: 2px;
+    }
+
+    /* Active filter banner */
+    .filter-banner {
+      margin-top: 16px;
+      padding: 10px 14px;
+      background: var(--bg-muted);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .filter-banner strong {
+      color: var(--agrees);
+    }
+
+    .clear-filter {
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .clear-filter:hover {
+      color: var(--text-primary);
+    }
+
+    .clear-filter svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ==================== DOMAIN SECTION ==================== */
+    .domain-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .domain-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .domain-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .domain-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      background: var(--bg-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .domain-icon svg {
+      width: 20px;
+      height: 20px;
+      color: var(--text-secondary);
+    }
+
+    .domain-info {
+      flex: 1;
+    }
+
+    .domain-name {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .domain-count {
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--bg-muted);
+      padding: 2px 8px;
+      border-radius: 10px;
+      color: var(--text-muted);
+    }
+
+    .domain-question {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ==================== VIEWPOINT SLIDER ==================== */
+    .slider-container {
+      padding: 16px 24px 20px;
+      background: var(--bg-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .slider-question {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .slider-bar {
+      display: flex;
+      height: 52px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--border);
+      position: relative;
+    }
+
+    .slider-segment {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+      min-width: 0;
+    }
+
+    .slider-segment:not(:last-child) {
+      border-right: 1px solid rgba(255,255,255,0.5);
+    }
+
+    .slider-segment:hover {
+      filter: brightness(0.97);
+    }
+
+    .slider-segment.active {
+      box-shadow: inset 0 0 0 2px var(--text-primary);
+    }
+
+    /* Gradient backgrounds for slider */
+    .slider-segment.cautious {
+      background: linear-gradient(180deg, #fecdd3 0%, #fda4af 100%);
+    }
+    
+    .slider-segment.balanced {
+      background: linear-gradient(180deg, #fef3c7 0%, #fde68a 100%);
+    }
+    
+    .slider-segment.optimistic {
+      background: linear-gradient(180deg, #bbf7d0 0%, #86efac 100%);
+    }
+
+    .segment-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: center;
+      line-height: 1.3;
+      padding: 0 8px;
+    }
+
+    .segment-count {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Slider endpoints */
+    .slider-endpoints {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .slider-endpoints span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Tooltip on hover */
+    .segment-tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text-primary);
+      color: white;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.4;
+      max-width: 220px;
+      text-align: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.15s;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .segment-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--text-primary);
+    }
+
+    .slider-segment:hover .segment-tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* ==================== AUTHORS GRID ==================== */
+    .authors-container {
+      padding: 20px 24px;
+    }
+
+    .authors-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .author-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      transition: all 0.15s;
+    }
+
+    .author-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-md);
+    }
+
+    .author-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .author-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .author-name:hover {
+      text-decoration: underline;
+    }
+
+    /* Agreement badges - clear language */
+    .agreement-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .agreement-badge.agrees {
+      background: var(--agrees-bg);
+      color: var(--agrees);
+      border: 1px solid var(--agrees-border);
+    }
+
+    .agreement-badge.mixed {
+      background: var(--mixed-bg);
+      color: var(--mixed);
+      border: 1px solid var(--mixed-border);
+    }
+
+    .agreement-badge.disagrees {
+      background: var(--disagrees-bg);
+      color: var(--disagrees);
+      border: 1px solid var(--disagrees-border);
+    }
+
+    .author-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .author-viewpoint {
+      font-size: 11px;
+      color: var(--text-secondary);
+      padding: 5px 10px;
+      background: var(--bg-muted);
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+      display: inline-block;
+    }
+
+    .why-section {
+      margin-bottom: 12px;
+    }
+
+    .why-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .why-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .quote-block {
+      background: var(--bg-muted);
+      border-left: 3px solid var(--border-hover);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .quote-text {
+      font-size: 12px;
+      font-style: italic;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .source-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    .source-link:hover {
+      color: var(--text-primary);
+    }
+
+    .source-link svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* Show more */
+    .show-more-row {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding-top: 8px;
+    }
+
+    .show-more-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .show-more-btn:hover {
+      background: var(--bg-muted);
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+    }
+
+    /* ==================== DIMENSION TABS (Enterprise) ==================== */
+    .dimension-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+
+    .dimension-tab {
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s;
+    }
+
+    .dimension-tab:hover {
+      color: var(--text-secondary);
+      background: var(--bg-muted);
+    }
+
+    .dimension-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--text-primary);
+    }
+
+    /* ==================== RESPONSIVE ==================== */
+    @media (max-width: 1100px) {
+      .authors-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .agreement-cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 800px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        display: none;
+      }
+      .authors-grid {
+        grid-template-columns: 1fr;
+      }
+      .agreement-cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="header">
+    <div class="header-content">
+      <a href="#" class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+          </svg>
+        </div>
+        Compass
+      </a>
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input type="text" placeholder="Paste your thesis or search by keywords..." value="safety alignment">
+        <button class="search-btn">Search</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN ==================== -->
+  <main class="main-container">
+    
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Recent</div>
+        <div class="saved-search active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          safety alignment
+        </div>
+        <div class="saved-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          enterprise AI adoption
+        </div>
+        <div class="saved-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          job displacement
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <div class="sidebar-title">Saved</div>
+        <div class="saved-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+          </svg>
+          AI governance
+        </div>
+        <div class="saved-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+          </svg>
+          human-AI collaboration
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==================== RESULTS ==================== -->
+    <div class="results-area">
+      
+      <!-- ==================== RESULTS SUMMARY ==================== -->
+      <section class="results-summary">
+        <div class="summary-top">
+          <div>
+            <h2 class="summary-title">Who agrees with your thesis?</h2>
+            <p class="summary-subtitle">Click to filter authors by their stance</p>
+          </div>
+          <div class="query-tag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            "safety alignment"
+          </div>
+        </div>
+        
+        <div class="agreement-cards">
+          <div class="agreement-card agrees active">
+            <div class="card-count">24</div>
+            <div class="card-label">Agree</div>
+            <div class="card-hint">Support your view</div>
+          </div>
+          
+          <div class="agreement-card mixed">
+            <div class="card-count">12</div>
+            <div class="card-label">Partially Agree</div>
+            <div class="card-hint">With some caveats</div>
+          </div>
+          
+          <div class="agreement-card disagrees">
+            <div class="card-count">8</div>
+            <div class="card-label">Disagree</div>
+            <div class="card-hint">Challenge your view</div>
+          </div>
+          
+          <div class="agreement-card new-voice">
+            <div class="card-count">5</div>
+            <div class="card-label">New Voices</div>
+            <div class="card-hint">Emerging perspectives</div>
+          </div>
+        </div>
+
+        <div class="filter-banner">
+          <span>Showing <strong>24 authors who agree</strong> across 4 topics</span>
+          <span class="clear-filter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+            Clear
+          </span>
+        </div>
+      </section>
+
+      <!-- ==================== DOMAIN: AI PROGRESS ==================== -->
+      <section class="domain-section">
+        <div class="domain-header">
+          <div class="domain-top">
+            <div class="domain-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v4"></path>
+                <path d="m6.8 14-3.5 2"></path>
+                <path d="m20.7 16-3.5-2"></path>
+                <path d="M6.8 10 3.3 8"></path>
+                <path d="m20.7 8-3.5 2"></path>
+                <path d="m9 22 3-8 3 8"></path>
+                <path d="M8 22h8"></path>
+                <path d="M12 2a4 4 0 0 0-4 4c0 1.5.8 2.8 2 3.4"></path>
+                <path d="M12 2a4 4 0 0 1 4 4c0 1.5-.8 2.8-2 3.4"></path>
+              </svg>
+            </div>
+            <div class="domain-info">
+              <h3 class="domain-name">
+                AI Technical Capabilities
+                <span class="domain-count">12 authors</span>
+              </h3>
+              <p class="domain-question">What's technically possible with AI and what are its limits?</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Viewpoint Slider -->
+        <div class="slider-container">
+          <div class="slider-question">Where do thinkers stand on AI's path forward?</div>
+          <div class="slider-bar">
+            <div class="slider-segment cautious">
+              <div class="segment-tooltip">Current AI needs fundamental breakthroughs beyond just scaling. Reasoning, world models, and embodiment are missing.</div>
+              <span class="segment-label">Needs New Approaches</span>
+              <span class="segment-count">7 authors</span>
+            </div>
+            <div class="slider-segment optimistic active">
+              <div class="segment-tooltip">Bigger models + more data will continue driving progress toward AGI. The current path has long runway.</div>
+              <span class="segment-label">Scaling Will Deliver</span>
+              <span class="segment-count">5 authors</span>
+            </div>
+          </div>
+          <div class="slider-endpoints">
+            <span>← More architectural changes needed</span>
+            <span>Current approach will work →</span>
+          </div>
+        </div>
+
+        <!-- Authors -->
+        <div class="authors-container">
+          <div class="authors-grid">
+            
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Yann LeCun</span>
+                <span class="agreement-badge agrees">Agrees</span>
+              </div>
+              <div class="author-meta">Chief AI Scientist, Meta • Seminal Thinker</div>
+              <div class="author-viewpoint">Needs New Approaches</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Leading voice arguing LLMs lack true understanding without world models and embodied reasoning.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"Auto-regressive LLMs are doomed. They cannot plan, reason, or understand the physical world."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Meta AI Blog • Mar 2024
+              </a>
+            </div>
+
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Gary Marcus</span>
+                <span class="agreement-badge agrees">Agrees</span>
+              </div>
+              <div class="author-meta">Professor Emeritus, NYU • Major Voice</div>
+              <div class="author-viewpoint">Needs New Approaches</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Prominent critic emphasizing need for hybrid systems with symbolic reasoning.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"Deep learning alone will never get us to general intelligence—we need hybrid systems."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Substack • Apr 2024
+              </a>
+            </div>
+
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Sam Altman</span>
+                <span class="agreement-badge mixed">Partial</span>
+              </div>
+              <div class="author-meta">CEO, OpenAI • Seminal Thinker</div>
+              <div class="author-viewpoint">Scaling Will Deliver</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Believes scaling works but acknowledges safety alignment is critical concern.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"We need to get alignment right. The stakes are too high to move fast and break things."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                OpenAI Blog • Feb 2024
+              </a>
+            </div>
+
+            <div class="show-more-row">
+              <button class="show-more-btn">Show 9 more authors</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== DOMAIN: GOVERNANCE ==================== -->
+      <section class="domain-section">
+        <div class="domain-header">
+          <div class="domain-top">
+            <div class="domain-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+              </svg>
+            </div>
+            <div class="domain-info">
+              <h3 class="domain-name">
+                AI Governance & Oversight
+                <span class="domain-count">8 authors</span>
+              </h3>
+              <p class="domain-question">Who should control AI development and how fast should we regulate?</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="slider-container">
+          <div class="slider-question">How much regulation does AI need?</div>
+          <div class="slider-bar">
+            <div class="slider-segment cautious active">
+              <div class="segment-tooltip">Strong government oversight needed NOW. AI risks are too high to wait.</div>
+              <span class="segment-label">Regulate Now</span>
+              <span class="segment-count">4 authors</span>
+            </div>
+            <div class="slider-segment balanced">
+              <div class="segment-tooltip">Light-touch rules that evolve with the technology. Balance innovation with safety.</div>
+              <span class="segment-label">Evolve Together</span>
+              <span class="segment-count">3 authors</span>
+            </div>
+            <div class="slider-segment optimistic">
+              <div class="segment-tooltip">Government is too slow. Let industry self-regulate and innovate freely.</div>
+              <span class="segment-label">Let Industry Lead</span>
+              <span class="segment-count">1 author</span>
+            </div>
+          </div>
+          <div class="slider-endpoints">
+            <span>← More government control</span>
+            <span>Less regulation →</span>
+          </div>
+        </div>
+
+        <div class="authors-container">
+          <div class="authors-grid">
+            
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Timnit Gebru</span>
+                <span class="agreement-badge agrees">Agrees</span>
+              </div>
+              <div class="author-meta">Founder, DAIR Institute • Major Voice</div>
+              <div class="author-viewpoint">Regulate Now</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Advocates for accountability frameworks before deployment, not after harm occurs.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"We cannot wait for disasters to regulate. AI systems need proactive governance now."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                DAIR Institute • Jan 2024
+              </a>
+            </div>
+
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Yoshua Bengio</span>
+                <span class="agreement-badge agrees">Agrees</span>
+              </div>
+              <div class="author-meta">Scientific Director, Mila • Seminal Thinker</div>
+              <div class="author-viewpoint">Regulate Now</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Deep learning pioneer now advocating for stronger safety measures.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"The AI community must take existential risks seriously. Self-regulation is not enough."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Nature • Dec 2023
+              </a>
+            </div>
+
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Stuart Russell</span>
+                <span class="agreement-badge agrees">Agrees</span>
+              </div>
+              <div class="author-meta">Professor, UC Berkeley • Seminal Thinker</div>
+              <div class="author-viewpoint">Evolve Together</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Advocates for beneficial AI through human-compatible design principles.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"We need AI systems that are provably beneficial—uncertainty about human preferences is key."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Human Compatible (Book) • 2019
+              </a>
+            </div>
+
+            <div class="show-more-row">
+              <button class="show-more-btn">Show 5 more authors</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== DOMAIN: SOCIETY ==================== -->
+      <section class="domain-section">
+        <div class="domain-header">
+          <div class="domain-top">
+            <div class="domain-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+                <path d="M2 12h20"></path>
+              </svg>
+            </div>
+            <div class="domain-info">
+              <h3 class="domain-name">
+                AI & Society
+                <span class="domain-count">6 authors</span>
+              </h3>
+              <p class="domain-question">What are AI's consequences for truth, knowledge, and social cohesion?</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="slider-container">
+          <div class="slider-question">How should we approach AI's social impact?</div>
+          <div class="slider-bar">
+            <div class="slider-segment cautious active">
+              <div class="segment-tooltip">Prioritize safety, accountability, and addressing AI's power imbalances and misinformation risks.</div>
+              <span class="segment-label">Safety First</span>
+              <span class="segment-count">4 authors</span>
+            </div>
+            <div class="slider-segment balanced">
+              <div class="segment-tooltip">Balance progress with responsibility. Acknowledge limits while iterating carefully.</div>
+              <span class="segment-label">Iterate Responsibly</span>
+              <span class="segment-count">2 authors</span>
+            </div>
+            <div class="slider-segment optimistic">
+              <div class="segment-tooltip">AI democratizes knowledge and breaks barriers. Prioritize speed and scale.</div>
+              <span class="segment-label">Democratize Fast</span>
+              <span class="segment-count">0 authors</span>
+            </div>
+          </div>
+          <div class="slider-endpoints">
+            <span>← More caution needed</span>
+            <span>Move faster →</span>
+          </div>
+        </div>
+
+        <div class="authors-container">
+          <div class="authors-grid">
+            
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Emily Bender</span>
+                <span class="agreement-badge agrees">Agrees</span>
+              </div>
+              <div class="author-meta">Professor, U of Washington • Major Voice</div>
+              <div class="author-viewpoint">Safety First</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Co-author of "Stochastic Parrots" paper, key critic of LLM claims about understanding.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"We need to be clear-eyed about what these systems can and cannot do."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                ACL Conference • Jun 2024
+              </a>
+            </div>
+
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Andrej Karpathy</span>
+                <span class="agreement-badge mixed">Partial</span>
+              </div>
+              <div class="author-meta">Former AI Director, Tesla • Seminal Thinker</div>
+              <div class="author-viewpoint">Iterate Responsibly</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Balances technical optimism with grounded understanding of current limitations.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"LLMs are the new operating system. But we need to understand what they actually do."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                YouTube • May 2024
+              </a>
+            </div>
+
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Kate Crawford</span>
+                <span class="agreement-badge agrees">Agrees</span>
+              </div>
+              <div class="author-meta">Research Professor, USC • Major Voice</div>
+              <div class="author-viewpoint">Safety First</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Documents AI's material costs and social impacts in "Atlas of AI".</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"AI is neither artificial nor intelligent. It's made from natural resources and human labor."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Atlas of AI (Book) • 2021
+              </a>
+            </div>
+
+            <div class="show-more-row">
+              <button class="show-more-btn">Show 3 more authors</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== DOMAIN: ENTERPRISE (with tabs) ==================== -->
+      <section class="domain-section">
+        <div class="domain-header">
+          <div class="domain-top">
+            <div class="domain-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="16" height="20" x="4" y="2" rx="2" ry="2"></rect>
+                <path d="M9 22v-4h6v4"></path>
+                <path d="M8 6h.01"></path>
+                <path d="M16 6h.01"></path>
+                <path d="M12 6h.01"></path>
+                <path d="M12 10h.01"></path>
+                <path d="M12 14h.01"></path>
+                <path d="M16 10h.01"></path>
+                <path d="M16 14h.01"></path>
+                <path d="M8 10h.01"></path>
+                <path d="M8 14h.01"></path>
+              </svg>
+            </div>
+            <div class="domain-info">
+              <h3 class="domain-name">
+                Enterprise AI Adoption
+                <span class="domain-count">4 authors</span>
+              </h3>
+              <p class="domain-question">How should organizations integrate AI into their operations?</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dimension Tabs -->
+        <div class="dimension-tabs">
+          <div class="dimension-tab active">How to adopt?</div>
+          <div class="dimension-tab">How to measure?</div>
+          <div class="dimension-tab">How to translate?</div>
+        </div>
+        
+        <div class="slider-container">
+          <div class="slider-question">What should lead: technology or people?</div>
+          <div class="slider-bar">
+            <div class="slider-segment cautious">
+              <div class="segment-tooltip">Build the tech infrastructure first. Culture and process will follow success.</div>
+              <span class="segment-label">Technology Leads</span>
+              <span class="segment-count">1 author</span>
+            </div>
+            <div class="slider-segment optimistic active">
+              <div class="segment-tooltip">People, process, and tech must evolve together. Augment, don't replace.</div>
+              <span class="segment-label">Evolve Together</span>
+              <span class="segment-count">3 authors</span>
+            </div>
+          </div>
+          <div class="slider-endpoints">
+            <span>← Build first, train later</span>
+            <span>Transform together →</span>
+          </div>
+        </div>
+
+        <div class="authors-container">
+          <div class="authors-grid">
+            
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Erik Brynjolfsson</span>
+                <span class="agreement-badge agrees">Agrees</span>
+              </div>
+              <div class="author-meta">Director, Stanford Digital Economy Lab • Seminal Thinker</div>
+              <div class="author-viewpoint">Evolve Together</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Research shows organizational redesign is critical for AI productivity gains.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"The productivity paradox shows technology alone isn't enough. You need process reinvention."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Stanford HAI • Mar 2024
+              </a>
+            </div>
+
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Andrew Ng</span>
+                <span class="agreement-badge agrees">Agrees</span>
+              </div>
+              <div class="author-meta">Founder, DeepLearning.AI • Seminal Thinker</div>
+              <div class="author-viewpoint">Evolve Together</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Advocates for practical AI adoption through upskilling and organizational learning.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"AI is the new electricity. But you need to rewire the building, not just plug it in."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                The Batch Newsletter • Apr 2024
+              </a>
+            </div>
+
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Satya Nadella</span>
+                <span class="agreement-badge mixed">Partial</span>
+              </div>
+              <div class="author-meta">CEO, Microsoft • Seminal Thinker</div>
+              <div class="author-viewpoint">Evolve Together</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Leading enterprise AI at scale, emphasizing Copilot as augmentation.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"We're at an inflection point. AI must empower every person and organization."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Microsoft Ignite • Nov 2023
+              </a>
+            </div>
+
+            <div class="show-more-row">
+              <button class="show-more-btn">Show 1 more author</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== DOMAIN: FUTURE OF WORK ==================== -->
+      <section class="domain-section">
+        <div class="domain-header">
+          <div class="domain-top">
+            <div class="domain-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <div class="domain-info">
+              <h3 class="domain-name">
+                Future of Work
+                <span class="domain-count">2 authors</span>
+              </h3>
+              <p class="domain-question">How will AI affect jobs, skills, and the workforce?</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="slider-container">
+          <div class="slider-question">Will AI replace or augment workers?</div>
+          <div class="slider-bar">
+            <div class="slider-segment cautious">
+              <div class="segment-tooltip">Major job displacement is coming. Individual reskilling won't be enough—we need policy intervention.</div>
+              <span class="segment-label">Jobs Will Disappear</span>
+              <span class="segment-count">0 authors</span>
+            </div>
+            <div class="slider-segment optimistic active">
+              <div class="segment-tooltip">AI augments human capability. Workers become AI orchestrators. Mass upskilling is possible.</div>
+              <span class="segment-label">Humans + AI Together</span>
+              <span class="segment-count">2 authors</span>
+            </div>
+          </div>
+          <div class="slider-endpoints">
+            <span>← Displacement ahead</span>
+            <span>Augmentation wins →</span>
+          </div>
+        </div>
+
+        <div class="authors-container">
+          <div class="authors-grid">
+            
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Ethan Mollick</span>
+                <span class="agreement-badge agrees">Agrees</span>
+              </div>
+              <div class="author-meta">Professor, Wharton • Major Voice</div>
+              <div class="author-viewpoint">Humans + AI Together</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Leading researcher on practical AI integration in knowledge work.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"The question isn't AI vs humans. It's humans with AI vs humans without AI."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                One Useful Thing • May 2024
+              </a>
+            </div>
+
+            <div class="author-card">
+              <div class="author-top">
+                <span class="author-name">Stanford HAI</span>
+                <span class="agreement-badge mixed">Partial</span>
+              </div>
+              <div class="author-meta">Stanford University • Research Institute</div>
+              <div class="author-viewpoint">Humans + AI Together</div>
+              <div class="why-section">
+                <div class="why-label">Why this matters</div>
+                <div class="why-text">Comprehensive research on human-centered AI design.</div>
+              </div>
+              <div class="quote-block">
+                <p class="quote-text">"Human-centered AI requires designing systems that augment and empower people."</p>
+              </div>
+              <a href="#" class="source-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                HAI Annual Report • 2024
+              </a>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    // Agreement cards filter
+    document.querySelectorAll('.agreement-card').forEach(card => {
+      card.addEventListener('click', function() {
+        document.querySelectorAll('.agreement-card').forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+        
+        const label = this.querySelector('.card-label').textContent;
+        const count = this.querySelector('.card-count').textContent;
+        
+        let filterText = '';
+        if (label === 'Agree') filterText = `${count} authors who agree`;
+        else if (label === 'Partially Agree') filterText = `${count} authors who partially agree`;
+        else if (label === 'Disagree') filterText = `${count} authors who disagree`;
+        else filterText = `${count} new voices`;
+        
+        document.querySelector('.filter-banner span:first-child').innerHTML = 
+          `Showing <strong>${filterText}</strong> across 4 topics`;
+      });
+    });
+
+    // Slider segments
+    document.querySelectorAll('.slider-segment').forEach(segment => {
+      segment.addEventListener('click', function() {
+        const bar = this.closest('.slider-bar');
+        bar.querySelectorAll('.slider-segment').forEach(s => s.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    // Dimension tabs
+    document.querySelectorAll('.dimension-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        const tabs = this.closest('.dimension-tabs');
+        tabs.querySelectorAll('.dimension-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>
+
+</body>
+</html>

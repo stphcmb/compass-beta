@@ -244,7 +244,7 @@ export default function CampAccordion({
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
       {Object.entries(campsByDomain).map(([domainName, domainCamps]) => {
         const camps = domainCamps as any[]
         const selectedCamp = selectedCampPerDomain[domainName]
@@ -259,7 +259,16 @@ export default function CampAccordion({
         // Get all authors for this domain, filtered by selected camp if any
         let allAuthors = selectedCamp
           ? camps.find(c => c.id === selectedCamp)?.authors || []
-          : camps.flatMap(c => c.authors)
+          : (() => {
+              // When no camp selected, deduplicate authors by ID (show each author only once per domain)
+              const authorMap = new Map()
+              camps.flatMap(c => c.authors).forEach((author: any) => {
+                if (!authorMap.has(author.id)) {
+                  authorMap.set(author.id, author)
+                }
+              })
+              return Array.from(authorMap.values())
+            })()
 
         // Smart sorting: Sort by relevance type, then by camp name
         const relevanceOrder: Record<string, number> = {
@@ -288,18 +297,46 @@ export default function CampAccordion({
         const hasMore = allAuthors.length > 3
 
         return (
-          <div key={domainName} id={`domain-${domainName.toLowerCase().replace(/\s+/g, '-')}`} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div
+            key={domainName}
+            id={`domain-${domainName.toLowerCase().replace(/\s+/g, '-')}`}
+            className="bg-white border border-gray-200 overflow-hidden"
+            style={{
+              borderRadius: 'var(--radius-base)',
+              backgroundColor: 'var(--color-cloud)'
+            }}
+          >
             {/* Domain Header */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-start gap-3.5 mb-3">
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <div className="w-5 h-5 text-gray-600">{domainIcons[domainName]}</div>
+            <div className="border-b border-gray-200" style={{ padding: 'var(--space-6)' }}>
+              <div className="flex items-start mb-3" style={{ gap: 'var(--space-3)' }}>
+                <div
+                  className="flex items-center justify-center flex-shrink-0"
+                  style={{
+                    width: 'var(--space-10)',
+                    height: 'var(--space-10)',
+                    backgroundColor: 'var(--color-pale-gray)',
+                    borderRadius: 'var(--radius-md)'
+                  }}
+                >
+                  <div style={{ width: 'var(--space-5)', height: 'var(--space-5)', color: 'var(--color-mid-gray)' }}>
+                    {domainIcons[domainName]}
+                  </div>
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2.5">
-                      <h3 className="text-[15px] font-semibold text-gray-900">{domainName}</h3>
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[11px] font-medium rounded-full">
+                  <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-1)' }}>
+                    <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+                      {/* Domain name as H2 for proper hierarchy */}
+                      <h2 style={{ fontSize: 'var(--text-h2)', marginBottom: 0 }}>{domainName}</h2>
+                      <span
+                        className="caption font-medium"
+                        style={{
+                          padding: 'var(--space-1) var(--space-2)',
+                          backgroundColor: 'var(--color-pale-gray)',
+                          color: 'var(--color-mid-gray)',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: 'var(--text-caption)'
+                        }}
+                      >
                         {camps.reduce((sum: number, c: any) => sum + c.authorCount, 0)} authors
                       </span>
                     </div>
@@ -318,21 +355,45 @@ export default function CampAccordion({
                       </svg>
                     </button>
                   </div>
-                  <p className="text-[13px] text-gray-600 leading-relaxed">
+                  <p
+                    style={{
+                      fontSize: 'var(--text-small)',
+                      color: 'var(--color-mid-gray)',
+                      lineHeight: 'var(--leading-relaxed)',
+                      marginBottom: 0
+                    }}
+                  >
                     {domainQuestions[domainName]}
                   </p>
 
                   {/* Filtered Camp Badges - only when relevance filter is active */}
                   {relevanceFilter && campsWithFilteredAuthors.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                    <div
+                      className="border-t border-gray-100"
+                      style={{
+                        marginTop: 'var(--space-3)',
+                        paddingTop: 'var(--space-3)'
+                      }}
+                    >
+                      <div
+                        className="caption font-semibold uppercase"
+                        style={{
+                          color: 'var(--color-mid-gray)',
+                          letterSpacing: 'var(--tracking-wide)',
+                          marginBottom: 'var(--space-2)'
+                        }}
+                      >
                         Camps with matching authors
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap" style={{ gap: 'var(--space-2)' }}>
                         {campsWithFilteredAuthors.map((camp: any) => (
                           <span
                             key={camp.id}
-                            className={`px-2.5 py-1 text-[11px] font-medium rounded-full border ${getRelevanceBadgeStyles(relevanceFilter)}`}
+                            className={`caption font-medium border ${getRelevanceBadgeStyles(relevanceFilter)}`}
+                            style={{
+                              padding: 'var(--space-1) var(--space-2)',
+                              borderRadius: 'var(--radius-full)'
+                            }}
                           >
                             {camp.name} · {camp.authorCount}
                           </span>
@@ -349,20 +410,32 @@ export default function CampAccordion({
               <>
                 {/* Viewpoint Slider */}
                 {camps.length > 0 && (
-                  <div className="p-6 bg-gray-50 border-b border-gray-200">
-                    <div className="text-[12px] font-medium text-gray-600 mb-3">
+                  <div
+                    className="bg-gray-50 border-b border-gray-200"
+                    style={{ padding: 'var(--space-6)' }}
+                  >
+                    <div
+                      className="label"
+                      style={{
+                        marginBottom: 'var(--space-3)',
+                        color: 'var(--color-mid-gray)'
+                      }}
+                    >
                       {domainName === 'AI Technical Capabilities' && 'Where do thinkers stand on AI\'s path forward?'}
                       {domainName === 'AI Governance & Oversight' && 'How much regulation does AI need?'}
                       {domainName === 'AI & Society' && 'How should we approach AI\'s social impact?'}
                       {domainName === 'Enterprise AI Adoption' && 'What should lead: technology or people?'}
                       {domainName === 'Future of Work' && 'Will AI replace or augment workers?'}
                     </div>
-                    <div className="flex rounded-lg overflow-hidden bg-gray-200">
+                    <div
+                      className="flex overflow-hidden bg-gray-200"
+                      style={{ borderRadius: 'var(--radius-md)' }}
+                    >
                       {camps.map((camp: any, idx: number) => (
                         <button
                           key={camp.id}
                           onClick={() => handleCampClick(domainName, camp.id)}
-                          className={`flex-1 flex flex-col items-center justify-center transition-all relative py-3 px-2 ${
+                          className={`flex-1 flex flex-col items-center justify-center transition-all relative ${
                             selectedCamp === camp.id ? 'ring-2 ring-inset ring-gray-900' : ''
                           } ${
                             idx === 0 ? 'bg-gradient-to-b from-pink-200 to-pink-300' :
@@ -370,16 +443,31 @@ export default function CampAccordion({
                             'bg-gradient-to-b from-amber-200 to-amber-300'
                           }`}
                           style={{
+                            padding: 'var(--space-3) var(--space-2)',
                             borderRight: idx < camps.length - 1 ? '1px solid rgba(255,255,255,0.5)' : 'none'
                           }}
                         >
-                          <span className="text-[12px] font-semibold text-gray-900 text-center leading-tight mb-1">
+                          <span
+                            className="caption font-semibold text-gray-900 text-center"
+                            style={{
+                              lineHeight: 'var(--leading-tight)',
+                              marginBottom: 'var(--space-1)'
+                            }}
+                          >
                             {camp.name}
                           </span>
-                          <span className="text-[10px] text-gray-600 leading-snug text-center mb-1">
+                          <span
+                            className="caption text-gray-600 text-center"
+                            style={{
+                              lineHeight: 'var(--leading-snug)',
+                              marginBottom: 'var(--space-1)'
+                            }}
+                          >
                             {camp.positionSummary}
                           </span>
-                          <span className="text-[10px] text-gray-700 font-medium">
+                          <span
+                            className="caption text-gray-700 font-medium"
+                          >
                             {camp.authorCount} {camp.authorCount === 1 ? 'author' : 'authors'}
                           </span>
                         </button>
@@ -389,8 +477,8 @@ export default function CampAccordion({
                 )}
 
                 {/* Authors Grid */}
-                <div className="p-6">
-                  <div className="grid grid-cols-2 gap-3.5">
+                <div style={{ padding: 'var(--space-6)' }}>
+                  <div className="grid grid-cols-2" style={{ gap: 'var(--space-4)' }}>
                     {displayAuthors.map((author: any) => (
                       <AuthorCard key={author.id} author={author} query={query} />
                     ))}
@@ -398,10 +486,15 @@ export default function CampAccordion({
 
                   {/* Show More Button */}
                   {hasMore && (
-                    <div className="mt-4 text-center">
+                    <div className="text-center" style={{ marginTop: 'var(--space-4)' }}>
                       <button
                         onClick={() => toggleExpandAuthors(domainName)}
-                        className="px-5 py-2.5 border border-gray-300 rounded-lg text-[13px] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                        className="label font-medium border border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                        style={{
+                          padding: 'var(--space-2) var(--space-5)',
+                          borderRadius: 'var(--radius-md)',
+                          color: 'var(--color-charcoal)'
+                        }}
                       >
                         {isExpanded ? 'Show Less' : `Show ${allAuthors.length - 3} More Authors`}
                       </button>

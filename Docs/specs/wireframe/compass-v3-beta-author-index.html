@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compass v3 - Beta (32 Authors)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f8f9fa;
+            color: #1a1a1a;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: #6366f1;
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            background: white;
+            padding: 0 32px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            gap: 32px;
+        }
+
+        .tab {
+            padding: 16px 0;
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: #6366f1;
+            border-bottom-color: #6366f1;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 120px);
+            background: #f8f9fa;
+        }
+
+        /* Left Panel */
+        .left-panel {
+            width: 400px;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 8px;
+            background: #f3f4f6;
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            background: white;
+            color: #6366f1;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Browse Mode */
+        .browse-mode {
+            display: block;
+        }
+
+        .browse-mode.hidden {
+            display: none;
+        }
+
+        .search-bar-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .search-bar-container::before {
+            content: '';
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>');
+            background-size: contain;
+            background-repeat: no-repeat;
+            pointer-events: none;
+        }
+
+        .search-bar-input {
+            width: 100%;
+            padding: 11px 16px;
+            padding-left: 42px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 13px;
+            background: white;
+            transition: all 0.15s;
+            color: #111827;
+        }
+
+        .search-bar-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .search-bar-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .simple-stats {
+            background: #f9fafb;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .simple-stats-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #6366f1;
+        }
+
+        .simple-stats-label {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        /* Sorting Bar */
+        .sorting-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .sort-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b7280;
+        }
+
+        .sort-dropdown {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 13px;
+            background: white;
+            cursor: pointer;
+            color: #1a1a1a;
+        }
+
+        .sort-dropdown:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        /* A-Z Navigation */
+        .az-navigation {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 12px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .az-letter {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #d1d5db;
+            cursor: not-allowed;
+            transition: all 0.2s;
+        }
+
+        .az-letter.active {
+            color: #6366f1;
+            border-color: #c7d2fe;
+            cursor: pointer;
+        }
+
+        .az-letter.active:hover {
+            background: #eef2ff;
+            border-color: #6366f1;
+        }
+
+        /* Letter Sections (Alphabetical View) */
+        .letter-section {
+            margin-bottom: 20px;
+        }
+
+        .letter-header {
+            font-size: 18px;
+            font-weight: 700;
+            color: #6366f1;
+            padding: 8px 0;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        /* Curation Mode */
+        .curation-mode {
+            display: none;
+        }
+
+        .curation-mode.active {
+            display: block;
+        }
+
+        .curation-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .curation-subtitle {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+
+        .url-input-section {
+            background: #f9fafb;
+            border: 2px dashed #d1d5db;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .url-textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            margin-bottom: 12px;
+        }
+
+        .url-textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .url-input-help {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+        }
+
+        .progress-section {
+            padding: 12px 16px;
+            background: #fef3c7;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 1px solid #fbbf24;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .progress-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #92400e;
+        }
+
+        .progress-count {
+            font-size: 13px;
+            color: #92400e;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #fffbeb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #f59e0b;
+            transition: width 0.3s;
+        }
+
+        /* Scrollable Content */
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 24px 24px;
+        }
+
+        /* Author Cards - Redesigned to match screenshot */
+        .author-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .author-card:hover {
+            border-color: #d1d5db;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .author-card.active {
+            border-color: #6366f1;
+            background: #fafafa;
+        }
+
+        .author-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .author-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #4b5563;
+            flex-shrink: 0;
+        }
+
+        .author-header-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .author-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 3px;
+            letter-spacing: -0.01em;
+        }
+
+        .author-org {
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+
+        .section-content {
+            font-size: 13px;
+            color: #374151;
+            line-height: 1.6;
+        }
+
+        .why-it-matters {
+            margin-bottom: 14px;
+        }
+
+        .key-quote {
+            margin-bottom: 14px;
+            padding-left: 12px;
+            border-left: 2px solid #6366f1;
+        }
+
+        .quote-text {
+            font-style: italic;
+            color: #4b5563;
+            font-size: 12px;
+        }
+
+        .sources-list {
+            margin-bottom: 10px;
+        }
+
+        .source-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 12px;
+        }
+
+        .source-icon {
+            color: #d1d5db;
+            flex-shrink: 0;
+        }
+
+        .source-title {
+            color: #374151;
+            flex: 1;
+            font-weight: 400;
+            font-size: 12px;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .source-meta {
+            color: #9ca3af;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .source-link {
+            color: #6366f1;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            flex-shrink: 0;
+            opacity: 0.7;
+            transition: opacity 0.15s;
+        }
+
+        .source-link:hover {
+            opacity: 1;
+        }
+
+        .view-all-sources {
+            display: inline-flex;
+            align-items: center;
+            color: #6366f1;
+            font-size: 12px;
+            font-weight: 500;
+            text-decoration: none;
+            margin-top: 4px;
+            transition: color 0.15s;
+        }
+
+        .view-all-sources:hover {
+            color: #4f46e5;
+        }
+
+        .author-position {
+            font-size: 13px;
+            color: #4b5563;
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        .author-meta {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-domain {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-camp {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Positioning Snapshot */
+        .positioning-snapshot {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 28px;
+        }
+
+        .snapshot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .snapshot-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #111827;
+            letter-spacing: -0.01em;
+        }
+
+        .save-search-btn {
+            background: white;
+            border: 1px solid #d1d5db;
+            padding: 7px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .save-search-btn svg {
+            width: 13px;
+            height: 13px;
+        }
+
+        .save-search-btn:hover {
+            border-color: #6366f1;
+            color: #6366f1;
+            background: #fafafa;
+        }
+
+        .snapshot-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .snapshot-card {
+            background: #fafafa;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 16px 18px;
+            text-align: center;
+            transition: all 0.15s;
+        }
+
+        .snapshot-card:hover {
+            border-color: #d1d5db;
+        }
+
+        .snapshot-number {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: -0.02em;
+        }
+
+        .snapshot-label {
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .snapshot-strong {
+            border-color: #d1fae5;
+            background: #f0fdf4;
+        }
+
+        .snapshot-strong .snapshot-number {
+            color: #059669;
+        }
+
+        .snapshot-strong .snapshot-label {
+            color: #047857;
+        }
+
+        .snapshot-partial {
+            border-color: #fef3c7;
+            background: #fffbeb;
+        }
+
+        .snapshot-partial .snapshot-number {
+            color: #d97706;
+        }
+
+        .snapshot-partial .snapshot-label {
+            color: #b45309;
+        }
+
+        .snapshot-challenge {
+            border-color: #fee2e2;
+            background: #fef2f2;
+        }
+
+        .snapshot-challenge .snapshot-number {
+            color: #dc2626;
+        }
+
+        .snapshot-challenge .snapshot-label {
+            color: #b91c1c;
+        }
+
+        .snapshot-emerging {
+            background: #e9d5ff;
+            border: 1px solid #c084fc;
+        }
+
+        .snapshot-number {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .snapshot-strong .snapshot-number {
+            color: #065f46;
+        }
+
+        .snapshot-partial .snapshot-number {
+            color: #92400e;
+        }
+
+        .snapshot-challenge .snapshot-number {
+            color: #991b1b;
+        }
+
+        .snapshot-emerging .snapshot-number {
+            color: #6b21a8;
+        }
+
+        .snapshot-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #4b5563;
+        }
+
+        /* Camp Sections */
+        .camp-section {
+            margin-bottom: 32px;
+        }
+
+        .camp-section.camp-challenge .camp-header {
+            background: #fefaf9;
+            border-color: #fee2e2;
+        }
+
+        .camp-section.camp-challenge .camp-description {
+            background: #fefaf9;
+            border-color: #fee2e2;
+        }
+
+        .camp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: #fafafa;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px 6px 0 0;
+            margin-bottom: 0;
+        }
+
+        .camp-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .camp-header-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .camp-domain-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .camp-domain-label svg {
+            flex-shrink: 0;
+        }
+
+        .camp-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1f2937;
+            letter-spacing: -0.01em;
+        }
+
+        .camp-count {
+            font-size: 12px;
+            font-weight: 500;
+            color: #9ca3af;
+        }
+
+        .camp-description {
+            padding: 12px 20px;
+            background: #fafafa;
+            border-left: 1px solid #e5e7eb;
+            border-right: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .camp-section .author-card {
+            margin-left: 0;
+            margin-right: 0;
+        }
+
+        .camp-section .author-card:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Queue Items */
+        .queue-section {
+            margin-top: 16px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .queue-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .queue-item:hover {
+            border-color: #6366f1;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+        }
+
+        .queue-item.active {
+            border-color: #6366f1;
+            background: #eef2ff;
+        }
+
+        .queue-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .queue-item-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a1a1a;
+            line-height: 1.4;
+            flex: 1;
+            margin-right: 8px;
+        }
+
+        .queue-status {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .status-ready {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-analyzing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-approved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .queue-item-url {
+            font-size: 11px;
+            color: #6b7280;
+            word-break: break-all;
+        }
+
+        /* Right Panel */
+        .right-panel {
+            flex: 1;
+            background: #f9fafb;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 32px;
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            opacity: 0.3;
+            display: block;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 8px;
+        }
+
+        .empty-subtitle {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        /* Review Panel - Simplified */
+        .review-panel {
+            display: none;
+        }
+
+        .review-panel.active {
+            display: block;
+        }
+
+        .source-header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .source-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .source-url {
+            font-size: 12px;
+            color: #6b7280;
+            word-break: break-all;
+        }
+
+        .review-section {
+            margin-bottom: 20px;
+        }
+
+        .review-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+        }
+
+        .review-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 10px;
+        }
+
+        .review-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .review-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .review-value {
+            font-size: 14px;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        .confidence-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .confidence-high {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .confidence-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .confidence-low {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .edit-btn {
+            background: none;
+            border: none;
+            color: #6366f1;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .edit-btn:hover {
+            background: #eef2ff;
+        }
+
+        /* Action Bar */
+        .action-bar {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            position: sticky;
+            bottom: 32px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .btn-secondary {
+            flex: 1;
+            background: white;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #fef2f2;
+        }
+
+        .btn-accept {
+            flex: 2;
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-accept:hover {
+            background: #059669;
+        }
+
+        /* Author Profile - Simplified */
+        .author-profile {
+            display: none;
+        }
+
+        .author-profile.active {
+            display: block;
+        }
+
+        .profile-header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .profile-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .profile-org {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+
+        .profile-badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .info-message {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            font-size: 13px;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">Compass</div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+        <div class="tab">Search & Discovery</div>
+        <div class="tab active">Results View</div>
+        <div class="tab">Author Index</div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <!-- Mode Toggle -->
+                <div class="mode-toggle">
+                    <button class="toggle-btn active" onclick="switchMode('browse')">
+                        View Results
+                    </button>
+                    <button class="toggle-btn" onclick="switchMode('curation')">
+                        Add Sources
+                    </button>
+                </div>
+
+                <!-- Browse Mode Controls -->
+                <div class="browse-mode" id="browseControls">
+                    <!-- Search Bar (Results View) -->
+                    <div class="search-bar-container" id="resultsSearchBar">
+                        <input 
+                            type="text" 
+                            class="search-bar-input" 
+                            placeholder="Search by keywords or paste thesis..."
+                            value="AI safety and ethics"
+                        />
+                    </div>
+
+                    <!-- Author Index Controls -->
+                    <div class="author-index-controls" id="authorIndexControls" style="display: none;">
+                        <div class="simple-stats">
+                            <div class="simple-stats-number">32</div>
+                            <div class="simple-stats-label">Authors in Database</div>
+                        </div>
+
+                        <!-- Sorting Options -->
+                        <div class="sorting-bar">
+                            <label class="sort-label">Sort by:</label>
+                            <select class="sort-dropdown">
+                                <option value="alpha">Alphabetical (A-Z)</option>
+                                <option value="domain">By Domain</option>
+                                <option value="camp">By Camp</option>
+                            </select>
+                        </div>
+
+                        <!-- A-Z Navigation -->
+                        <div class="az-navigation">
+                            <button class="az-letter active">A</button>
+                            <button class="az-letter active">B</button>
+                            <button class="az-letter active">C</button>
+                            <button class="az-letter active">D</button>
+                            <button class="az-letter active">E</button>
+                            <button class="az-letter active">F</button>
+                            <button class="az-letter active">G</button>
+                            <button class="az-letter active">H</button>
+                            <button class="az-letter">I</button>
+                            <button class="az-letter">J</button>
+                            <button class="az-letter active">K</button>
+                            <button class="az-letter active">L</button>
+                            <button class="az-letter active">M</button>
+                            <button class="az-letter">N</button>
+                            <button class="az-letter">O</button>
+                            <button class="az-letter">P</button>
+                            <button class="az-letter">Q</button>
+                            <button class="az-letter">R</button>
+                            <button class="az-letter active">S</button>
+                            <button class="az-letter active">T</button>
+                            <button class="az-letter">U</button>
+                            <button class="az-letter">V</button>
+                            <button class="az-letter">W</button>
+                            <button class="az-letter">X</button>
+                            <button class="az-letter active">Y</button>
+                            <button class="az-letter">Z</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Curation Mode Controls -->
+                <div class="curation-mode" id="curationControls">
+                    <div class="curation-title">Add New Sources</div>
+                    <div class="curation-subtitle">Paste URLs for AI classification</div>
+                    
+                    <div class="url-input-section">
+                        <textarea 
+                            class="url-textarea" 
+                            id="urlInput"
+                            placeholder="Paste URLs here (one per line):
+
+https://example.com/article-1
+https://example.com/article-2"
+                        ></textarea>
+                        <div class="url-input-help">
+                            <svg style="display: inline-block; width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/>
+                                <path d="M9 18h6"/>
+                                <path d="M10 22h4"/>
+                            </svg>
+                            Paste up to 10 URLs at once
+                        </div>
+                        <button class="btn-primary" onclick="startBatchAnalysis()">
+                            Analyze URLs
+                        </button>
+                    </div>
+
+                    <div class="progress-section" id="progressSection" style="display: none;">
+                        <div class="progress-header">
+                            <span class="progress-title">Progress</span>
+                            <span class="progress-count" id="progressCount">0 of 0</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="panel-content">
+                <!-- Browse Mode: Author List with Results View -->
+                <div class="browse-mode" id="authorList">
+                    <!-- Positioning Snapshot -->
+                    <div class="positioning-snapshot">
+                        <div class="snapshot-header">
+                            <span class="snapshot-title">Positioning Snapshot</span>
+                            <button class="save-search-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                Save Search
+                            </button>
+                        </div>
+                        <div class="snapshot-grid">
+                            <div class="snapshot-card snapshot-strong">
+                                <div class="snapshot-number">37</div>
+                                <div class="snapshot-label">Strong Alignment</div>
+                            </div>
+                            <div class="snapshot-card snapshot-partial">
+                                <div class="snapshot-number">14</div>
+                                <div class="snapshot-label">Partial Alignment</div>
+                            </div>
+                            <div class="snapshot-card snapshot-challenge">
+                                <div class="snapshot-number">5</div>
+                                <div class="snapshot-label">Challenge Your View</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Camp Section: Scaling Maximalist -->
+                    <div class="camp-section">
+                        <div class="camp-header">
+                            <div class="camp-info">
+                                <div class="camp-header-stack">
+                                    <span class="camp-domain-label">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="3"/>
+                                            <path d="M12 1v6m0 6v6m5.2-14.8l-4.2 4.2m0 5.6l4.2 4.2M23 12h-6m-6 0H1m14.8 5.2l-4.2-4.2m0-5.6l-4.2-4.2"/>
+                                        </svg>
+                                        Technology Frontier
+                                    </span>
+                                    <span class="camp-name">Scaling Maximalist</span>
+                                </div>
+                            </div>
+                            <span class="camp-count">7 authors</span>
+                        </div>
+                        <div class="camp-description">Believes in strong scaling laws and rapid capability growth.</div>
+                        
+                        <div class="author-card active" onclick="showAuthorProfile('mollick')">
+                            <div class="author-card-header">
+                                <div class="author-avatar">EM</div>
+                                <div class="author-header-info">
+                                    <div class="author-name">Ethan Mollick</div>
+                                    <div class="author-org">Wharton School • Academic/Practitioner</div>
+                                </div>
+                            </div>
+                            
+                            <div class="why-it-matters">
+                                <div class="section-label">WHY IT MATTERS</div>
+                                <div class="section-content">Advocates for practical AI adoption in education and business; emphasizes hands-on experimentation and "co-intelligence" between humans and AI systems.</div>
+                            </div>
+                            
+                            <div class="key-quote">
+                                <div class="section-label">KEY QUOTE</div>
+                                <div class="section-content quote-text">"AI is not a tool, it's a co-worker. The sooner we treat it that way, the better we'll be at using it effectively."</div>
+                            </div>
+                            
+                            <div class="sources-list">
+                                <div class="section-label">3 SOURCES</div>
+                                <div class="source-item">
+                                    <svg class="source-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    <span class="source-title">Centaurs and Cyborgs on the Jagged Frontier</span>
+                                    <span class="source-meta">(Blog, 2024)</span>
+                                    <a href="#" class="source-link">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                            <polyline points="15 3 21 3 21 9"/>
+                                            <line x1="10" y1="14" x2="21" y2="3"/>
+                                        </svg>
+                                    </a>
+                                </div>
+                                <div class="source-item">
+                                    <svg class="source-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    <span class="source-title">Co-Intelligence: Living and Working with AI</span>
+                                    <span class="source-meta">(Book, 2024)</span>
+                                    <a href="#" class="source-link">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                            <polyline points="15 3 21 3 21 9"/>
+                                            <line x1="10" y1="14" x2="21" y2="3"/>
+                                        </svg>
+                                    </a>
+                                </div>
+                                <div class="source-item">
+                                    <svg class="source-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    <span class="source-title">The Practical Guide to Using AI in Education</span>
+                                    <span class="source-meta">(Paper, 2024)</span>
+                                    <a href="#" class="source-link">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                            <polyline points="15 3 21 3 21 9"/>
+                                            <line x1="10" y1="14" x2="21" y2="3"/>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <a href="#" class="view-all-sources">View all sources by Ethan Mollick →</a>
+                        </div>
+
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-card-header">
+                                <div class="author-avatar">SA</div>
+                                <div class="author-header-info">
+                                    <div class="author-name">Sam Altman</div>
+                                    <div class="author-org">OpenAI • Executive</div>
+                                </div>
+                            </div>
+                            
+                            <div class="why-it-matters">
+                                <div class="section-label">WHY IT MATTERS</div>
+                                <div class="section-content">Believes AI will be transformatively positive for humanity; advocates for scaling compute and aggressive development while managing existential risks.</div>
+                            </div>
+                            
+                            <div class="key-quote">
+                                <div class="section-label">KEY QUOTE</div>
+                                <div class="section-content quote-text">"The upside of AI is so tremendous that we have to get it right, but we also have to move fast enough to capture the benefits."</div>
+                            </div>
+                            
+                            <div class="sources-list">
+                                <div class="section-label">2 SOURCES</div>
+                                <div class="source-item">
+                                    <svg class="source-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    <span class="source-title">AI for the Next Era of Humanity</span>
+                                    <span class="source-meta">(Blog, 2024)</span>
+                                    <a href="#" class="source-link">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                            <polyline points="15 3 21 3 21 9"/>
+                                            <line x1="10" y1="14" x2="21" y2="3"/>
+                                        </svg>
+                                    </a>
+                                </div>
+                                <div class="source-item">
+                                    <svg class="source-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    <span class="source-title">Planning for AGI and Beyond</span>
+                                    <span class="source-meta">(Article, 2023)</span>
+                                    <a href="#" class="source-link">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                            <polyline points="15 3 21 3 21 9"/>
+                                            <line x1="10" y1="14" x2="21" y2="3"/>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <a href="#" class="view-all-sources">View all sources by Sam Altman →</a>
+                        </div>
+
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-card-header">
+                                <div class="author-avatar">DH</div>
+                                <div class="author-header-info">
+                                    <div class="author-name">Demis Hassabis</div>
+                                    <div class="author-org">Google DeepMind • Academic/Executive</div>
+                                </div>
+                            </div>
+                            <div class="why-it-matters">
+                                <div class="section-label">WHY IT MATTERS</div>
+                                <div class="section-content">Focuses on AGI development through scientific breakthroughs; emphasizes safety research alongside capability advancement.</div>
+                            </div>
+                            <div class="key-quote">
+                                <div class="section-label">KEY QUOTE</div>
+                                <div class="section-content quote-text">"We need to solve intelligence, and then use it to solve everything else."</div>
+                            </div>
+                            <div class="sources-list">
+                                <div class="section-label">2 SOURCES</div>
+                                <div class="source-item">
+                                    <svg class="source-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <span class="source-title">The Promise of AI for Scientific Discovery</span>
+                                    <span class="source-meta">(Paper, 2024)</span>
+                                    <a href="#" class="source-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
+                                </div>
+                                <div class="source-item">
+                                    <svg class="source-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <span class="source-title">AlphaFold and the Future of Biology</span>
+                                    <span class="source-meta">(Article, 2023)</span>
+                                    <a href="#" class="source-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
+                                </div>
+                            </div>
+                            <a href="#" class="view-all-sources">View all sources by Demis Hassabis →</a>
+                        </div>
+                    </div>
+
+                    <!-- Camp Section: Grounding Realist -->
+                    <div class="camp-section">
+                        <div class="camp-header">
+                            <div class="camp-info">
+                                <div class="camp-header-stack">
+                                    <span class="camp-domain-label">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="3"/>
+                                            <path d="M12 1v6m0 6v6m5.2-14.8l-4.2 4.2m0 5.6l4.2 4.2M23 12h-6m-6 0H1m14.8 5.2l-4.2-4.2m0-5.6l-4.2-4.2"/>
+                                        </svg>
+                                        Technology Frontier
+                                    </span>
+                                    <span class="camp-name">Grounding Realist</span>
+                                </div>
+                            </div>
+                            <span class="camp-count">4 authors</span>
+                        </div>
+                        <div class="camp-description">Skeptical of pure scaling; emphasizes new paradigms.</div>
+                        
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Yann LeCun</div>
+                            <div class="author-org">Meta / NYU</div>
+                            <div class="author-position">
+                                Skeptical of near-term AGI; argues current architectures have fundamental limitations and advocates for new approaches beyond pure scaling.
+                            </div>
+                        </div>
+
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Gary Marcus</div>
+                            <div class="author-org">NYU / Geometric Intelligence</div>
+                            <div class="author-position">
+                                Critiques deep learning hype; emphasizes need for hybrid systems combining neural networks with symbolic reasoning and structured knowledge.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Camp Section: Ethical Steward -->
+                    <div class="camp-section">
+                        <div class="camp-header">
+                            <div class="camp-info">
+                                <div class="camp-header-stack">
+                                    <span class="camp-domain-label" style="color: #be185d;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                            <circle cx="9" cy="7" r="4"/>
+                                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                        </svg>
+                                        Societal Impacts
+                                    </span>
+                                    <span class="camp-name">Ethical Steward</span>
+                                </div>
+                            </div>
+                            <span class="camp-count">5 authors</span>
+                        </div>
+                        <div class="camp-description">Centers harms, justice, and power imbalances.</div>
+                        
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Emily M. Bender</div>
+                            <div class="author-org">University of Washington</div>
+                            <div class="author-position">
+                                Critiques AI hype and "stochastic parrots"; focuses on language, meaning, and environmental/social costs of large models.
+                            </div>
+                        </div>
+
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Timnit Gebru</div>
+                            <div class="author-org">DAIR Institute</div>
+                            <div class="author-position">
+                                Champions AI ethics and accountability; researches algorithmic bias, discrimination, and power dynamics in AI development.
+                            </div>
+                        </div>
+
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Kate Crawford</div>
+                            <div class="author-org">USC / AI Now Institute</div>
+                            <div class="author-position">
+                                Examines AI's social implications; focuses on power, labor exploitation, and environmental impact of AI systems.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Camp Section: AI Accelerationist (Challenge View) -->
+                    <div class="camp-section camp-challenge">
+                        <div class="camp-header">
+                            <div class="camp-info">
+                                <div class="camp-header-stack">
+                                    <span class="camp-domain-label" style="color: #991b1b;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="3"/>
+                                            <path d="M12 1v6m0 6v6m5.2-14.8l-4.2 4.2m0 5.6l4.2 4.2M23 12h-6m-6 0H1m14.8 5.2l-4.2-4.2m0-5.6l-4.2-4.2"/>
+                                        </svg>
+                                        Technology Frontier
+                                    </span>
+                                    <span class="camp-name">AI Accelerationist</span>
+                                </div>
+                            </div>
+                            <span class="camp-count">5 authors</span>
+                        </div>
+                        <div class="camp-description">Prioritizes rapid AI development over precautionary measures; skeptical of over-regulation.</div>
+                        
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Marc Andreessen</div>
+                            <div class="author-org">Andreessen Horowitz</div>
+                            <div class="author-position">
+                                Advocates for "techno-optimism" and unrestricted AI development; argues regulation stifles innovation and economic growth.
+                            </div>
+                        </div>
+
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Yann LeCun</div>
+                            <div class="author-org">Meta / NYU</div>
+                            <div class="author-position">
+                                Dismisses existential AI risks; argues for open-source AI development and against "doomer" safety narratives.
+                            </div>
+                        </div>
+
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Guillaume Verdon</div>
+                            <div class="author-org">Extropic</div>
+                            <div class="author-position">
+                                Promotes "effective accelerationism" (e/acc); believes rapid AI progress is essential for human flourishing.
+                            </div>
+                        </div>
+
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Balaji Srinivasan</div>
+                            <div class="author-org">Former Coinbase CTO</div>
+                            <div class="author-position">
+                                Emphasizes AI's role in decentralization and technological sovereignty; skeptical of centralized AI governance.
+                            </div>
+                        </div>
+
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Emad Mostaque</div>
+                            <div class="author-org">Stability AI</div>
+                            <div class="author-position">
+                                Champions democratizing AI through open-source models; argues against concentrated control by few companies.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Author Index View: Alphabetical List -->
+                <div class="browse-mode" id="authorIndexList" style="display: none;">
+                    <!-- Letter Section: A -->
+                    <div class="letter-section">
+                        <div class="letter-header">A</div>
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Andrew Ng</div>
+                            <div class="author-org">Stanford / DeepLearning.AI</div>
+                            <div class="author-meta">
+                                <span class="badge badge-domain">Technology Frontier</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Letter Section: B -->
+                    <div class="letter-section">
+                        <div class="letter-header">B</div>
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Emily M. Bender</div>
+                            <div class="author-org">University of Washington</div>
+                            <div class="author-meta">
+                                <span class="badge" style="background: #fce7f3; color: #9f1239;">Societal Impacts</span>
+                                <span class="badge" style="background: #dcfce7; color: #166534;">Future of Work</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Letter Section: C -->
+                    <div class="letter-section">
+                        <div class="letter-header">C</div>
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Kate Crawford</div>
+                            <div class="author-org">USC / AI Now Institute</div>
+                            <div class="author-meta">
+                                <span class="badge" style="background: #fce7f3; color: #9f1239;">Societal Impacts</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Letter Section: G -->
+                    <div class="letter-section">
+                        <div class="letter-header">G</div>
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Timnit Gebru</div>
+                            <div class="author-org">DAIR Institute</div>
+                            <div class="author-meta">
+                                <span class="badge" style="background: #fce7f3; color: #9f1239;">Societal Impacts</span>
+                            </div>
+                        </div>
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Gary Marcus</div>
+                            <div class="author-org">NYU / Geometric Intelligence</div>
+                            <div class="author-meta">
+                                <span class="badge badge-domain">Technology Frontier</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Letter Section: L -->
+                    <div class="letter-section">
+                        <div class="letter-header">L</div>
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Yann LeCun</div>
+                            <div class="author-org">Meta / NYU</div>
+                            <div class="author-meta">
+                                <span class="badge badge-domain">Technology Frontier</span>
+                                <span class="badge" style="background: #fef3c7; color: #92400e; font-size: 10px;">Grounding Realist</span>
+                                <span class="badge" style="background: #fee2e2; color: #991b1b; font-size: 10px;">AI Accelerationist</span>
+                            </div>
+                        </div>
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Fei-Fei Li</div>
+                            <div class="author-org">Stanford HAI</div>
+                            <div class="author-meta">
+                                <span class="badge badge-domain">Technology Frontier</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Letter Section: M -->
+                    <div class="letter-section">
+                        <div class="letter-header">M</div>
+                        <div class="author-card active" onclick="showAuthorProfile('mollick')">
+                            <div class="author-name">Ethan Mollick</div>
+                            <div class="author-org">Wharton School</div>
+                            <div class="author-meta">
+                                <span class="badge badge-domain">Technology Frontier</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Letter Section: N -->
+                    <div class="letter-section">
+                        <div class="letter-header">N</div>
+                        <div class="author-card" onclick="showAuthorProfile()">
+                            <div class="author-name">Cal Newport</div>
+                            <div class="author-org">Georgetown University</div>
+                            <div class="author-meta">
+                                <span class="badge" style="background: #dcfce7; color: #166534;">Future of Work</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Curation Mode: Queue List -->
+                <div class="curation-mode" id="queueList">
+                    <div class="queue-section" id="queueEmpty">
+                        <div style="text-align: center; padding: 48px 16px; color: #9ca3af;">
+                            <svg style="width: 48px; height: 48px; margin: 0 auto 12px; color: #d1d5db;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                            </svg>
+                            <div style="font-size: 13px; font-weight: 500;">No sources in queue</div>
+                            <div style="font-size: 12px; margin-top: 4px;">Paste URLs above to start</div>
+                        </div>
+                    </div>
+
+                    <div id="queueItems" style="display: none;">
+                        <div class="section-title">Queue (3)</div>
+                        
+                        <div class="queue-item active" onclick="showReview(1)">
+                            <div class="queue-item-header">
+                                <div class="queue-item-title">Centaurs and Cyborgs on the Jagged Frontier</div>
+                                <span class="queue-status status-ready">Ready</span>
+                            </div>
+                            <div class="queue-item-url">oneusefulthing.org/p/centaurs...</div>
+                        </div>
+
+                        <div class="queue-item" onclick="showReview(2)">
+                            <div class="queue-item-header">
+                                <div class="queue-item-title">The Future of AI in the Workplace</div>
+                                <span class="queue-status status-ready">Ready</span>
+                            </div>
+                            <div class="queue-item-url">hbr.org/2024/future-of-work...</div>
+                        </div>
+
+                        <div class="queue-item">
+                            <div class="queue-item-header">
+                                <div class="queue-item-title">Analyzing content...</div>
+                                <span class="queue-status status-analyzing">Analyzing</span>
+                            </div>
+                            <div class="queue-item-url">techcrunch.com/ai-regulation...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <svg class="empty-icon" style="width: 64px; height: 64px; margin: 0 auto 16px; opacity: 0.3; color: #9ca3af;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <div class="empty-title">Select an author or source</div>
+                <div class="empty-subtitle">Choose from the list on the left</div>
+            </div>
+
+            <!-- Author Profile View -->
+            <div class="author-profile active" id="authorProfile">
+                <div class="profile-header">
+                    <div class="profile-name">Ethan Mollick</div>
+                    <div class="profile-org">Wharton School, University of Pennsylvania</div>
+                    <div class="profile-badges">
+                        <span class="badge badge-domain">Technology Frontier</span>
+                    </div>
+                    <div class="info-message">
+                        <svg style="display: inline-block; width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="20" x2="12" y2="10"/>
+                            <line x1="18" y1="20" x2="18" y2="4"/>
+                            <line x1="6" y1="20" x2="6" y2="16"/>
+                        </svg>
+                        Source details and metrics will appear here once added through the Curation Mode
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Panel -->
+            <div class="review-panel" id="reviewPanel">
+                <!-- Source Header -->
+                <div class="source-header">
+                    <div class="source-title">Centaurs and Cyborgs on the Jagged Frontier</div>
+                    <div class="source-url">https://www.oneusefulthing.org/p/centaurs-and-cyborgs-on-the-jagged</div>
+                </div>
+
+                <!-- Author Information -->
+                <div class="review-section">
+                    <div class="review-section-title">Author</div>
+                    
+                    <div class="review-card">
+                        <div class="review-card-header">
+                            <div>
+                                <div class="review-label">Name</div>
+                                <div class="review-value">Ethan Mollick</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="confidence-badge confidence-high">95%</span>
+                                <button class="edit-btn">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-card">
+                        <div class="review-card-header">
+                            <div>
+                                <div class="review-label">Organization</div>
+                                <div class="review-value">Wharton School</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="confidence-badge confidence-high">92%</span>
+                                <button class="edit-btn">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Classification -->
+                <div class="review-section">
+                    <div class="review-section-title">Classification</div>
+                    
+                    <div class="review-card">
+                        <div class="review-card-header">
+                            <div>
+                                <div class="review-label">Domain</div>
+                                <div class="review-value">Technology</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="confidence-badge confidence-high">89%</span>
+                                <button class="edit-btn">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-card">
+                        <div class="review-card-header">
+                            <div>
+                                <div class="review-label">Camp</div>
+                                <div class="review-value">Optimistic Transformationalists</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="confidence-badge confidence-medium">76%</span>
+                                <button class="edit-btn">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="action-bar">
+                    <button class="btn-secondary" onclick="rejectSource()">
+                        Reject
+                    </button>
+                    <button class="btn-accept" onclick="acceptSource()">
+                        Accept & Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'browse';
+        let currentTab = 'results'; // 'results' or 'authorIndex'
+        let currentQueueIndex = 0;
+        let totalQueueItems = 0;
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach((tab, index) => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                if (index === 1) { // Results View tab
+                    currentTab = 'results';
+                    showResultsView();
+                } else if (index === 2) { // Author Index tab
+                    currentTab = 'authorIndex';
+                    showAuthorIndexView();
+                }
+            });
+        });
+
+        function showResultsView() {
+            // Show search bar, hide author index controls
+            document.getElementById('resultsSearchBar').style.display = 'block';
+            document.getElementById('authorIndexControls').style.display = 'none';
+            
+            // Show camp-grouped list, hide alphabetical list
+            document.getElementById('authorList').style.display = 'block';
+            document.getElementById('authorIndexList').style.display = 'none';
+            
+            // Update toggle button text
+            document.querySelectorAll('.toggle-btn')[0].textContent = 'View Results';
+        }
+
+        function showAuthorIndexView() {
+            // Hide search bar, show author index controls
+            document.getElementById('resultsSearchBar').style.display = 'none';
+            document.getElementById('authorIndexControls').style.display = 'block';
+            
+            // Hide camp-grouped list, show alphabetical list
+            document.getElementById('authorList').style.display = 'none';
+            document.getElementById('authorIndexList').style.display = 'block';
+            
+            // Update toggle button text
+            document.querySelectorAll('.toggle-btn')[0].textContent = 'Browse Authors';
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Update toggle buttons
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (mode === 'browse') {
+                document.getElementById('browseControls').classList.remove('hidden');
+                
+                // Show appropriate browse view based on tab
+                if (currentTab === 'results') {
+                    document.getElementById('authorList').style.display = 'block';
+                    document.getElementById('authorIndexList').style.display = 'none';
+                } else {
+                    document.getElementById('authorList').style.display = 'none';
+                    document.getElementById('authorIndexList').style.display = 'block';
+                }
+                
+                document.getElementById('curationControls').classList.remove('active');
+                document.getElementById('queueList').style.display = 'none';
+                
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('authorProfile').classList.add('active');
+                document.getElementById('reviewPanel').classList.remove('active');
+            } else {
+                document.getElementById('browseControls').classList.add('hidden');
+                document.getElementById('authorList').style.display = 'none';
+                document.getElementById('authorIndexList').style.display = 'none';
+                document.getElementById('curationControls').classList.add('active');
+                document.getElementById('queueList').style.display = 'block';
+                
+                const hasQueue = document.getElementById('queueItems').style.display === 'none';
+                if (hasQueue) {
+                    document.getElementById('emptyState').style.display = 'block';
+                    document.getElementById('authorProfile').classList.remove('active');
+                    document.getElementById('reviewPanel').classList.remove('active');
+                } else {
+                    document.getElementById('emptyState').style.display = 'none';
+                    document.getElementById('authorProfile').classList.remove('active');
+                    document.getElementById('reviewPanel').classList.add('active');
+                }
+            }
+        }
+
+        function startBatchAnalysis() {
+            const urlInput = document.getElementById('urlInput').value.trim();
+            if (!urlInput) {
+                alert('Please paste at least one URL');
+                return;
+            }
+
+            document.getElementById('queueEmpty').style.display = 'none';
+            document.getElementById('queueItems').style.display = 'block';
+            document.getElementById('progressSection').style.display = 'block';
+            
+            totalQueueItems = 3;
+            currentQueueIndex = 0;
+            updateProgress();
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('reviewPanel').classList.add('active');
+            document.getElementById('urlInput').value = '';
+        }
+
+        function updateProgress() {
+            const percent = (currentQueueIndex / totalQueueItems) * 100;
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressCount').textContent = currentQueueIndex + ' of ' + totalQueueItems;
+        }
+
+        function showReview(index) {
+            document.querySelectorAll('.queue-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('reviewPanel').classList.add('active');
+        }
+
+        function acceptSource() {
+            currentQueueIndex++;
+            updateProgress();
+            
+            const activeItem = document.querySelector('.queue-item.active');
+            if (activeItem) {
+                const status = activeItem.querySelector('.queue-status');
+                status.textContent = 'Approved';
+                status.className = 'queue-status status-approved';
+                
+                const nextItem = activeItem.nextElementSibling;
+                if (nextItem && nextItem.classList.contains('queue-item')) {
+                    nextItem.click();
+                } else {
+                    alert('All sources reviewed! ✓');
+                    document.getElementById('emptyState').style.display = 'block';
+                    document.getElementById('reviewPanel').classList.remove('active');
+                }
+            }
+        }
+
+        function rejectSource() {
+            if (confirm('Reject this source?')) {
+                currentQueueIndex++;
+                updateProgress();
+                
+                const activeItem = document.querySelector('.queue-item.active');
+                if (activeItem) {
+                    const nextItem = activeItem.nextElementSibling;
+                    activeItem.remove();
+                    
+                    if (nextItem && nextItem.classList.contains('queue-item')) {
+                        nextItem.click();
+                    } else {
+                        document.getElementById('emptyState').style.display = 'block';
+                        document.getElementById('reviewPanel').classList.remove('active');
+                    }
+                }
+            }
+        }
+
+        function showAuthorProfile() {
+            document.querySelectorAll('.author-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('authorProfile').classList.add('active');
+            document.getElementById('reviewPanel').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Filter } from 'lucide-react'
+import { Search, Filter, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 
 const domains = [
-  'All Domains',
   'Business',
   'Society',
   'Workers',
@@ -33,15 +32,64 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
   const [query, setQuery] = useState(initialQuery)
   const [isEditing, setIsEditing] = useState(showEdit)
   const [showFilters, setShowFilters] = useState(false)
-  const [selectedDomain, setSelectedDomain] = useState('All Domains')
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([])
+  const [selectedCamps, setSelectedCamps] = useState<string[]>([])
+  const [selectedAuthors, setSelectedAuthors] = useState<string[]>([])
   const [selectedDateRange, setSelectedDateRange] = useState('Last 12 months')
-  const [authorName, setAuthorName] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedOnce, setSavedOnce] = useState(false)
+
+  // Data from database
+  const [camps, setCamps] = useState<string[]>([])
+  const [authors, setAuthors] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Dropdown open states
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
   useEffect(() => {
     setQuery(initialQuery)
   }, [initialQuery])
+
+  // Fetch camps and authors from database
+  useEffect(() => {
+    const fetchFilters = async () => {
+      if (!supabase) {
+        console.warn('Supabase not configured')
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      try {
+        // Fetch camps
+        const { data: campsData } = await supabase
+          .from('camps')
+          .select('label')
+          .order('label')
+
+        // Fetch authors
+        const { data: authorsData } = await supabase
+          .from('authors')
+          .select('name')
+          .order('name')
+
+        if (campsData) {
+          setCamps(campsData.map(c => c.label))
+        }
+
+        if (authorsData) {
+          setAuthors(authorsData.map(a => a.name))
+        }
+      } catch (error) {
+        console.error('Error fetching filter options:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFilters()
+  }, [])
 
   const handleQueryChange = (value: string) => {
     setQuery(value)
@@ -52,13 +100,14 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
 
   const handleSearch = () => {
     if (query.trim().length === 0 || query.length > 500) return
-    
+
     const params = new URLSearchParams()
     params.set('q', query.trim())
-    if (selectedDomain !== 'All Domains') params.set('domain', selectedDomain)
-    if (authorName) params.set('author', authorName)
+    if (selectedDomains.length > 0) params.set('domains', selectedDomains.join(','))
+    if (selectedCamps.length > 0) params.set('camps', selectedCamps.join(','))
+    if (selectedAuthors.length > 0) params.set('authors', selectedAuthors.join(','))
     if (selectedDateRange !== 'Last 12 months') params.set('date', selectedDateRange)
-    
+
     router.push(`/results?${params.toString()}`)
   }
 
@@ -67,9 +116,10 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
     setSaving(true)
     try {
       const filters = {
-        domain: selectedDomain,
+        domains: selectedDomains.length > 0 ? selectedDomains : undefined,
+        camps: selectedCamps.length > 0 ? selectedCamps : undefined,
+        authors: selectedAuthors.length > 0 ? selectedAuthors : undefined,
         dateRange: selectedDateRange,
-        authorName: authorName || undefined,
       }
       if (supabase) {
         await supabase.from('saved_searches').insert({ query: query.trim(), filters })
@@ -84,6 +134,26 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
     }
   }
 
+  // Helper functions for multi-select
+  const toggleSelection = (item: string, selected: string[], setSelected: (items: string[]) => void) => {
+    if (selected.includes(item)) {
+      setSelected(selected.filter(i => i !== item))
+    } else {
+      setSelected([...selected, item])
+    }
+  }
+
+  const clearAllFilters = () => {
+    setSelectedDomains([])
+    setSelectedCamps([])
+    setSelectedAuthors([])
+    setSelectedDateRange('Last 12 months')
+  }
+
+  const toggleDropdown = (dropdownName: string) => {
+    setOpenDropdown(openDropdown === dropdownName ? null : dropdownName)
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch()
@@ -92,20 +162,34 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
 
   if (showEdit) {
     return (
-      <div className="bg-white rounded-xl shadow p-4 flex items-center gap-3 border border-gray-100">
-        <Search className="w-5 h-5 text-blue-500" />
+      <div
+        className="flex items-center border border-gray-100"
+        style={{
+          backgroundColor: 'var(--color-cloud)',
+          borderRadius: 'var(--radius-base)',
+          padding: 'var(--space-4)',
+          gap: 'var(--space-3)',
+          boxShadow: 'var(--shadow-sm)'
+        }}
+      >
+        <Search style={{ width: 'var(--space-5)', height: 'var(--space-5)', color: 'var(--color-accent)' }} />
         <input
           type="text"
           value={query}
           onChange={(e) => handleQueryChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="flex-1 outline-none text-base"
+          className="flex-1 outline-none"
+          style={{
+            fontSize: 'var(--text-body)',
+            backgroundColor: 'transparent'
+          }}
           disabled={!isEditing}
         />
         {!isEditing && (
-          <button 
+          <button
             onClick={() => setIsEditing(true)}
-            className="text-sm text-blue-600 hover:underline"
+            className="label hover:underline"
+            style={{ color: 'var(--color-accent)' }}
           >
             Edit
           </button>
@@ -115,9 +199,18 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
   }
 
   return (
-    <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl p-6 mb-8 border border-gray-100">
-      <div className="flex items-center gap-3 mb-5">
-        <Search className="w-6 h-6 text-blue-600" />
+    <div
+      className="bg-white/95 backdrop-blur border border-gray-100"
+      style={{
+        borderRadius: 'var(--radius-base)',
+        padding: 'var(--space-6)',
+        marginBottom: 'var(--space-8)',
+        boxShadow: 'var(--shadow-lg)'
+      }}
+    >
+      {/* Main Search Input - This is the "Start Here" anchor */}
+      <div className="flex items-center" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+        <Search style={{ width: 'var(--space-6)', height: 'var(--space-6)', color: 'var(--color-accent)' }} />
         <input
           type="text"
           placeholder="Paste your thesis or search by keywords..."
@@ -125,32 +218,63 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
           onChange={(e) => handleQueryChange(e.target.value)}
           onKeyDown={handleKeyDown}
           maxLength={500}
-          className="flex-1 text-xl md:text-2xl outline-none placeholder:text-gray-400"
+          className="flex-1 outline-none"
+          style={{
+            fontSize: 'var(--text-h3)',
+            fontWeight: 'var(--weight-medium)',
+            color: 'var(--color-soft-black)',
+            backgroundColor: 'transparent'
+          }}
         />
       </div>
-      
-      <div className="flex items-center justify-between pt-5 border-t border-gray-100">
-        <div className="flex items-center gap-3">
-          <button 
+
+      <div
+        className="flex items-center justify-between border-t border-gray-100"
+        style={{ paddingTop: 'var(--space-5)' }}
+      >
+        <div className="flex items-center" style={{ gap: 'var(--space-3)' }}>
+          <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm md:text-base text-gray-700 hover:text-gray-900"
+            className="flex items-center label hover:text-gray-900"
+            style={{
+              gap: 'var(--space-2)',
+              color: 'var(--color-charcoal)'
+            }}
           >
-            <Filter className="w-4 h-4" />
+            <Filter style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
             Advanced Filters
           </button>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center" style={{ gap: 'var(--space-3)' }}>
           <button
             onClick={handleSave}
             disabled={saving || query.trim().length === 0}
-            className={`px-4 py-2 rounded-lg border transition-colors text-sm md:text-base ${savedOnce ? 'bg-green-600 text-white border-green-600 hover:bg-green-700' : 'bg-white hover:bg-gray-50 text-gray-800 border-gray-200'}`}
+            className={`label border transition-colors ${savedOnce ? 'text-white border-green-600 hover:bg-green-700' : 'hover:bg-gray-50 border-gray-200'}`}
+            style={{
+              padding: 'var(--space-2) var(--space-4)',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: savedOnce ? 'var(--color-success)' : 'white',
+              color: savedOnce ? 'white' : 'var(--color-charcoal)'
+            }}
             title={savedOnce ? 'Saved' : 'Save search'}
           >
             {savedOnce ? 'Saved' : saving ? 'Saving…' : 'Save'}
           </button>
-          <button 
+          <button
             onClick={handleSearch}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 text-sm md:text-base shadow"
+            className="label font-semibold text-white transition-all"
+            style={{
+              backgroundColor: 'var(--color-accent)',
+              padding: 'var(--space-2) var(--space-6)',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-accent)'
+            }}
           >
             Search
           </button>
@@ -158,46 +282,230 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
       </div>
 
       {showFilters && (
-        <div className="mt-5 pt-5 border-t border-gray-100 grid grid-cols-2 gap-5 text-sm md:text-base">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Domain</label>
-            <select
-              value={selectedDomain}
-              onChange={(e) => setSelectedDomain(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            >
-              {domains.map((domain) => (
-                <option key={domain} value={domain}>{domain}</option>
-              ))}
-            </select>
+        <div
+          className="border-t border-gray-100"
+          style={{
+            marginTop: 'var(--space-5)',
+            paddingTop: 'var(--space-5)'
+          }}
+        >
+          {/* Clear All Filters Button */}
+          <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-4)' }}>
+            <span className="label font-semibold" style={{ color: 'var(--color-charcoal)' }}>
+              Filter Options
+            </span>
+            {(selectedDomains.length > 0 || selectedCamps.length > 0 || selectedAuthors.length > 0 || selectedDateRange !== 'Last 12 months') && (
+              <button
+                onClick={clearAllFilters}
+                className="caption hover:underline"
+                style={{ color: 'var(--color-accent)' }}
+              >
+                Clear All Filters
+              </button>
+            )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Camp/Position</label>
-            <select className="w-full border border-gray-300 rounded px-3 py-2">
-              <option>All Camps</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Author Name</label>
-            <input 
-              type="text" 
-              placeholder="e.g., Andrew Ng"
-              value={authorName}
-              onChange={(e) => setAuthorName(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Publication Date</label>
-            <select
-              value={selectedDateRange}
-              onChange={(e) => setSelectedDateRange(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            >
-              {dateRanges.map((range) => (
-                <option key={range} value={range}>{range}</option>
-              ))}
-            </select>
+
+          <div className="grid grid-cols-2" style={{ gap: 'var(--space-4)' }}>
+            {/* Domain Dropdown */}
+            <div className="relative">
+              <label className="block label font-medium" style={{ marginBottom: 'var(--space-2)' }}>
+                Domain {selectedDomains.length > 0 && `(${selectedDomains.length})`}
+              </label>
+              <button
+                onClick={() => toggleDropdown('domains')}
+                className="w-full flex items-center justify-between border border-gray-300 hover:border-gray-400 transition-colors"
+                style={{
+                  padding: 'var(--space-2) var(--space-3)',
+                  borderRadius: 'var(--radius-base)',
+                  backgroundColor: 'white'
+                }}
+              >
+                <span className="label" style={{ color: 'var(--color-charcoal)' }}>
+                  {selectedDomains.length > 0 ? `${selectedDomains.length} selected` : 'Select domains'}
+                </span>
+                <svg
+                  className={`transition-transform ${openDropdown === 'domains' ? 'rotate-180' : ''}`}
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {openDropdown === 'domains' && (
+                <div
+                  className="absolute z-10 w-full border border-gray-300 bg-white overflow-auto"
+                  style={{
+                    marginTop: 'var(--space-1)',
+                    borderRadius: 'var(--radius-base)',
+                    maxHeight: '240px',
+                    boxShadow: 'var(--shadow-md)'
+                  }}
+                >
+                  {domains.map((domain) => (
+                    <label
+                      key={domain}
+                      className="flex items-center cursor-pointer hover:bg-gray-50"
+                      style={{ padding: 'var(--space-2) var(--space-3)' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedDomains.includes(domain)}
+                        onChange={() => toggleSelection(domain, selectedDomains, setSelectedDomains)}
+                        className="mr-2"
+                        style={{ accentColor: 'var(--color-accent)' }}
+                      />
+                      <span className="label">{domain}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Camp Dropdown */}
+            <div className="relative">
+              <label className="block label font-medium" style={{ marginBottom: 'var(--space-2)' }}>
+                Camp/Position {selectedCamps.length > 0 && `(${selectedCamps.length})`}
+              </label>
+              <button
+                onClick={() => toggleDropdown('camps')}
+                disabled={loading}
+                className="w-full flex items-center justify-between border border-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50"
+                style={{
+                  padding: 'var(--space-2) var(--space-3)',
+                  borderRadius: 'var(--radius-base)',
+                  backgroundColor: 'white'
+                }}
+              >
+                <span className="label" style={{ color: 'var(--color-charcoal)' }}>
+                  {loading ? 'Loading...' : selectedCamps.length > 0 ? `${selectedCamps.length} selected` : 'Select camps'}
+                </span>
+                <svg
+                  className={`transition-transform ${openDropdown === 'camps' ? 'rotate-180' : ''}`}
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {openDropdown === 'camps' && !loading && camps.length > 0 && (
+                <div
+                  className="absolute z-10 w-full border border-gray-300 bg-white overflow-auto"
+                  style={{
+                    marginTop: 'var(--space-1)',
+                    borderRadius: 'var(--radius-base)',
+                    maxHeight: '240px',
+                    boxShadow: 'var(--shadow-md)'
+                  }}
+                >
+                  {camps.map((camp) => (
+                    <label
+                      key={camp}
+                      className="flex items-center cursor-pointer hover:bg-gray-50"
+                      style={{ padding: 'var(--space-2) var(--space-3)' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedCamps.includes(camp)}
+                        onChange={() => toggleSelection(camp, selectedCamps, setSelectedCamps)}
+                        className="mr-2"
+                        style={{ accentColor: 'var(--color-accent)' }}
+                      />
+                      <span className="label">{camp}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Author Dropdown */}
+            <div className="relative">
+              <label className="block label font-medium" style={{ marginBottom: 'var(--space-2)' }}>
+                Author Name {selectedAuthors.length > 0 && `(${selectedAuthors.length})`}
+              </label>
+              <button
+                onClick={() => toggleDropdown('authors')}
+                disabled={loading}
+                className="w-full flex items-center justify-between border border-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50"
+                style={{
+                  padding: 'var(--space-2) var(--space-3)',
+                  borderRadius: 'var(--radius-base)',
+                  backgroundColor: 'white'
+                }}
+              >
+                <span className="label" style={{ color: 'var(--color-charcoal)' }}>
+                  {loading ? 'Loading...' : selectedAuthors.length > 0 ? `${selectedAuthors.length} selected` : 'Select authors'}
+                </span>
+                <svg
+                  className={`transition-transform ${openDropdown === 'authors' ? 'rotate-180' : ''}`}
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {openDropdown === 'authors' && !loading && authors.length > 0 && (
+                <div
+                  className="absolute z-10 w-full border border-gray-300 bg-white overflow-auto"
+                  style={{
+                    marginTop: 'var(--space-1)',
+                    borderRadius: 'var(--radius-base)',
+                    maxHeight: '240px',
+                    boxShadow: 'var(--shadow-md)'
+                  }}
+                >
+                  {authors.map((author) => (
+                    <label
+                      key={author}
+                      className="flex items-center cursor-pointer hover:bg-gray-50"
+                      style={{ padding: 'var(--space-2) var(--space-3)' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedAuthors.includes(author)}
+                        onChange={() => toggleSelection(author, selectedAuthors, setSelectedAuthors)}
+                        className="mr-2"
+                        style={{ accentColor: 'var(--color-accent)' }}
+                      />
+                      <span className="label">{author}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Publication Date Single Select */}
+            <div>
+              <label className="block label font-medium" style={{ marginBottom: 'var(--space-2)' }}>
+                Publication Date
+              </label>
+              <select
+                value={selectedDateRange}
+                onChange={(e) => setSelectedDateRange(e.target.value)}
+                className="w-full border border-gray-300 hover:border-gray-400 transition-colors label"
+                style={{
+                  padding: 'var(--space-2) var(--space-3)',
+                  borderRadius: 'var(--radius-base)',
+                  backgroundColor: 'white',
+                  color: 'var(--color-charcoal)'
+                }}
+              >
+                {dateRanges.map((range) => (
+                  <option key={range} value={range}>{range}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       )}

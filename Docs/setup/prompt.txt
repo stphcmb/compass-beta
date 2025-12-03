@@ -1,0 +1,14 @@
+Prompt 1a: refer to the @mvp_prd.md file and start building an app called Compass for me. tell me if i need to connect to any external app to make it work. 
+Prompt 1: Set up the NextJS + Supabase project following this PRD"
+Prompt 2: Here's my database with 40-50 authors and taxonomy. 
+Convert this into Supabase seed data that matches the schema
+Prompt 3: Create migration/seed scripts that populate the tables with my actual data
+
+nov28 session:
+when I type in a search such as ai will replace all jobs, an author can appear multiple times under many
+  domains. that's fine, but the quote needs to be different, as well as the why it matter fields.
+
+2 more requests. 1, you already have the why it matters field. make it consistently shown for all the author
+  cards when the author cards appear in a result page. 2, i like an icon to show the authors name. this way
+  it's more outstanding and helps navigate easier. for example, show SA for Sam Altman. you already have this
+  UI component in an earlier version of this app. 

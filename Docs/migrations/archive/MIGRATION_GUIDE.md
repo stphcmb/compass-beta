@@ -1,3 +1,9 @@
+# STATUS: DEPRECATED - Superseded by FINAL_MIGRATION_INSTRUCTIONS.md
+
+This migration guide is kept for historical reference only. Please refer to `migrations/active/FINAL_MIGRATION_INSTRUCTIONS.md` for the current migration procedures.
+
+---
+
 # Migration Guide: New Taxonomy Structure
 
 This guide will help you migrate from the old taxonomy to the new standardized structure.

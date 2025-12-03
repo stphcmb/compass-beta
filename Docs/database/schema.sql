@@ -1,3 +1,8 @@
+-- STATUS: DEPRECATED - Replaced by compass_taxonomy_schema_Nov11.sql
+-- 
+-- This schema represents the old flat structure and is kept for historical reference only.
+-- Use compass_taxonomy_schema_Nov11.sql which implements the current 3-tier taxonomy structure (domains/dimensions/camps).
+--
 -- Compass MVP Database Schema
 -- Run this in Supabase SQL Editor
 

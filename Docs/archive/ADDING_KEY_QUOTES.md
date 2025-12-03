@@ -1,3 +1,9 @@
+# STATUS: DEPRECATED - See QUOTE_ENRICHMENT_COMPLETE.md for completion status
+
+This instruction document has been superseded. Please refer to `data/completed/QUOTE_ENRICHMENT_COMPLETE.md` for completion status and final procedures.
+
+---
+
 # Adding Key Quotes to Authors
 
 ## Step 1: Add the `key_quote` column to the `authors` table

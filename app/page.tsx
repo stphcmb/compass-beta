@@ -17,22 +17,29 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 flex">
+    <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
       <Sidebar />
-      <main className="flex-1 ml-64 flex flex-col items-center justify-start p-10 overflow-y-auto">
-        <div className="max-w-3xl w-full text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-3 bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+      <main className="flex-1 ml-64 flex flex-col items-center justify-start overflow-y-auto" style={{ padding: 'var(--space-10)' }}>
+        {/* Hero Section - Clear "Start Here" Anchor */}
+        <div className="max-w-3xl w-full text-center" style={{ marginBottom: 'var(--section-spacing)' }}>
+          <h1 style={{ marginBottom: 'var(--space-3)' }}>
             Find Your Position
           </h1>
-          <p className="text-base md:text-lg text-gray-600 mb-10">
+          <p style={{
+            fontSize: 'var(--text-body)',
+            color: 'var(--color-charcoal)',
+            marginBottom: 'var(--space-10)',
+            lineHeight: 'var(--leading-relaxed)'
+          }}>
             Validate your thesis and discover where you fit in the AI discourse
           </p>
           <SearchBar initialQuery={searchQuery} onQueryChange={setSearchQuery} />
           <SuggestedTopics onTopicSelect={handleTopicSelect} />
         </div>
 
-        <div className="w-full max-w-6xl mt-12">
-          <h2 className="text-2xl md:text-3xl font-bold mb-5 text-gray-800">Discovery & Inspiration</h2>
+        {/* Discovery Section */}
+        <div className="w-full max-w-6xl" style={{ marginTop: 'var(--section-spacing)' }}>
+          <h2 style={{ marginBottom: 'var(--space-5)' }}>Discovery & Inspiration</h2>
           <DiscoverByDomain />
           <WhiteSpacePanel />
         </div>
