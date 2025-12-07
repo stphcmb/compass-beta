@@ -1,29 +1,69 @@
 'use client'
 
-// Organized by domain with descriptive queries that match camp content
+import { useMemo } from 'react'
+
+// Comprehensive list of search suggestions organized by domain and viewpoint
 const suggestedTopics = [
-  // Technology domain
+  // AI Technical Capabilities
   { label: 'Will scaling solve AI?', query: 'scaling' },
-  { label: 'AI safety & alignment', query: 'safety alignment' },
   { label: 'AGI timelines', query: 'AGI artificial general intelligence' },
+  { label: 'Transformer limitations', query: 'transformer architecture limitations' },
+  { label: 'Multimodal AI', query: 'multimodal vision language' },
+  { label: 'AI reasoning capabilities', query: 'reasoning logic symbolic' },
+  { label: 'Neural scaling laws', query: 'scaling laws compute data' },
+  { label: 'AI model interpretability', query: 'interpretability explainability transparency' },
+  { label: 'Emergent capabilities', query: 'emergence emergent abilities' },
 
-  // Society domain
-  { label: 'AI ethics & bias', query: 'ethics bias fairness' },
+  // AI Safety & Alignment
+  { label: 'AI safety & alignment', query: 'safety alignment' },
   { label: 'AI existential risk', query: 'existential risk x-risk' },
-  { label: 'AI hype vs reality', query: 'hype bubble limitations' },
+  { label: 'AI control problem', query: 'control alignment robust' },
+  { label: 'Value alignment', query: 'values human preferences alignment' },
+  { label: 'AI red teaming', query: 'red team adversarial testing' },
+  { label: 'Misalignment risks', query: 'misalignment deception mesa optimizer' },
 
-  // Business domain
+  // AI & Society
+  { label: 'AI ethics & bias', query: 'ethics bias fairness' },
+  { label: 'AI hype vs reality', query: 'hype bubble limitations' },
+  { label: 'AI transparency', query: 'transparency accountability' },
+  { label: 'AI concentration of power', query: 'power concentration monopoly' },
+  { label: 'Algorithmic fairness', query: 'fairness discrimination algorithmic' },
+  { label: 'AI & democracy', query: 'democracy governance public' },
+  { label: 'AI misinformation', query: 'misinformation deepfakes synthetic media' },
+  { label: 'AI environmental impact', query: 'environment energy carbon emissions' },
+
+  // Enterprise AI Adoption
   { label: 'Enterprise AI adoption', query: 'enterprise adoption transformation' },
+  { label: 'AI ROI & metrics', query: 'ROI metrics measurement value' },
+  { label: 'AI implementation challenges', query: 'implementation challenges integration' },
+  { label: 'AI-first companies', query: 'AI-first native strategy' },
+  { label: 'AI product design', query: 'product design UX AI-powered' },
+  { label: 'AI infrastructure', query: 'infrastructure MLOps deployment' },
+  { label: 'AI talent & skills', query: 'talent skills hiring training' },
+
+  // Developer Tools & Open Source
   { label: 'AI for developers', query: 'developer tools coding' },
   { label: 'Open source AI', query: 'open source hugging face' },
+  { label: 'AI coding assistants', query: 'copilot coding assistant developer' },
+  { label: 'Open vs closed models', query: 'open closed proprietary models' },
+  { label: 'AI model fine-tuning', query: 'fine-tuning customization adaptation' },
 
-  // Policy domain
+  // AI Governance & Policy
   { label: 'AI regulation', query: 'regulation governance policy' },
   { label: 'AI safety institutes', query: 'safety institute evaluation' },
+  { label: 'AI liability & accountability', query: 'liability accountability legal' },
+  { label: 'AI standards & benchmarks', query: 'standards benchmarks evaluation' },
+  { label: 'International AI coordination', query: 'international coordination global' },
+  { label: 'AI arms race', query: 'arms race geopolitics competition' },
 
-  // Workers domain
+  // Future of Work
   { label: 'AI & job displacement', query: 'jobs displacement automation workers' },
   { label: 'Human-AI collaboration', query: 'collaboration augmentation reskilling' },
+  { label: 'AI & creativity', query: 'creativity artists designers creative' },
+  { label: 'AI & education', query: 'education learning teaching' },
+  { label: 'AI workplace transformation', query: 'workplace transformation productivity' },
+  { label: 'Universal basic income', query: 'UBI basic income automation' },
+  { label: 'AI skills gap', query: 'skills gap training workforce' },
 ]
 
 interface SuggestedTopicsProps {
@@ -31,8 +71,11 @@ interface SuggestedTopicsProps {
 }
 
 export default function SuggestedTopics({ onTopicSelect }: SuggestedTopicsProps) {
-  // Show a random selection of 6 topics
-  const displayTopics = suggestedTopics.slice(0, 8)
+  // Randomly select 8 topics on each render (refreshes on page visit)
+  const displayTopics = useMemo(() => {
+    const shuffled = [...suggestedTopics].sort(() => Math.random() - 0.5)
+    return shuffled.slice(0, 8)
+  }, [])
 
   return (
     <div className="text-center">

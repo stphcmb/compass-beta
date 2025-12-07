@@ -68,12 +68,14 @@ New to the project? Read these in order:
 | [0004](adr/0004-author-deduplication-strategy.md) | Author Deduplication Strategy | Accepted |
 | [0005](adr/0005-design-system-standards.md) | Design System Standards | Accepted |
 | [0006](adr/0006-search-expansion-module.md) | Search Expansion Module | Accepted |
+| [0007](adr/0007-mini-brain-architecture.md) | Mini Brain Architecture | Accepted |
 
 ### Specifications
 
 | Document | Purpose |
 |----------|---------|
 | [mvp_prd.md](specs/mvp_prd.md) | MVP product requirements |
+| [mvp-minibrain-prd.md](specs/wireframe/mvp-minibrain-prd.md) | Mini Brain feature requirements |
 | [cursor_rules_mvp.md](specs/cursor_rules_mvp.md) | AI assistant coding guidelines |
 
 ### Database Documentation
@@ -152,6 +154,8 @@ compass/
 │
 ├── lib/                                         # Utilities and helpers
 │   ├── search-expansion/                       # Search expansion module
+│   │   └── README.md                          # Module documentation
+│   ├── mini-brain/                             # Mini Brain editorial analysis
 │   │   └── README.md                          # Module documentation
 │   └── README.md                               # (To be created)
 │
