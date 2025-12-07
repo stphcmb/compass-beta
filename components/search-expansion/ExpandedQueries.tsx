@@ -42,12 +42,14 @@ export default function ExpandedQueries({ queries, originalQuery }: ExpandedQuer
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
           <div className="text-xs text-gray-500">
-            AI expanded into {queries.length} {queries.length === 1 ? 'search' : 'searches'}
+            Expanded into {queries.length} related {queries.length === 1 ? 'term' : 'terms'}
           </div>
         </div>
-        <div className="text-[10px] text-gray-400">
-          Powered by n8n + Gemini
-        </div>
+        {coreQueries.length > 0 && (
+          <div className="text-[10px] text-gray-400">
+            Powered by n8n + Gemini
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">

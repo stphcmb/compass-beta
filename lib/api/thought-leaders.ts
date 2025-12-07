@@ -206,6 +206,15 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
         const expandedTerms = expandQuerySemantics(queryLower)
         console.log('  Expanded terms:', expandedTerms)
 
+        // Create expanded queries for UI display (semantic fallback)
+        if (expandedTerms.length > 0) {
+          expandedQueriesResult = expandedTerms.map((term, idx) => ({
+            query: term,
+            role: 'context' as const,
+            priority: 10 - idx
+          }))
+        }
+
         // Split query into individual words and add expanded terms
         queryWords = [
           ...queryLower.split(/\s+/).filter(word => word.length > 2),
@@ -477,42 +486,46 @@ export async function getPositioningMetrics(query?: string, domain?: string) {
     // Get unique domains
     const uniqueDomains = Array.from(new Set(camps.map((c: any) => c.domain).filter(Boolean)))
 
-    const metrics = {
-      stronglyAligned: 0,
-      partiallyAligned: 0,
-      challenging: 0,
-      emerging: 0,
-      totalCamps: camps.length,
-      totalAuthors: 0,
-      domains: uniqueDomains
+    // Track unique authors per positioning category
+    const authorSets = {
+      stronglyAligned: new Set<number>(),
+      partiallyAligned: new Set<number>(),
+      challenging: new Set<number>(),
+      emerging: new Set<number>()
     }
-
-    // Count authors and their relevance relationships
-    const authorIds = new Set()
+    const allAuthorIds = new Set<number>()
 
     camps.forEach((camp: any) => {
       camp.authors?.forEach((author: any) => {
-        // Count unique authors
+        // Count unique authors overall
         if (author.id) {
-          authorIds.add(author.id)
+          allAuthorIds.add(author.id)
         }
 
-        // Categorize by relevance
+        // Categorize by relevance - track unique authors per category
         const relevanceLower = (author.relevance || '').toLowerCase()
 
         if (relevanceLower.includes('strong')) {
-          metrics.stronglyAligned++
+          authorSets.stronglyAligned.add(author.id)
         } else if (relevanceLower.includes('partial')) {
-          metrics.partiallyAligned++
+          authorSets.partiallyAligned.add(author.id)
         } else if (relevanceLower.includes('challenge')) {
-          metrics.challenging++
+          authorSets.challenging.add(author.id)
         } else if (relevanceLower.includes('emerging')) {
-          metrics.emerging++
+          authorSets.emerging.add(author.id)
         }
       })
     })
 
-    metrics.totalAuthors = authorIds.size
+    const metrics = {
+      stronglyAligned: authorSets.stronglyAligned.size,
+      partiallyAligned: authorSets.partiallyAligned.size,
+      challenging: authorSets.challenging.size,
+      emerging: authorSets.emerging.size,
+      totalCamps: camps.length,
+      totalAuthors: allAuthorIds.size,
+      domains: uniqueDomains
+    }
 
     return metrics
   } catch (error) {

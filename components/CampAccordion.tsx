@@ -84,11 +84,9 @@ export default function CampAccordion({
   relevanceFilter
 }: CampAccordionProps) {
   const [camps, setCamps] = useState<any[]>([])
-  const [allCampsByDomain, setAllCampsByDomain] = useState<Record<string, any[]>>({})
   const [expandedQueries, setExpandedQueries] = useState<any[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedCampPerDomain, setSelectedCampPerDomain] = useState<Record<string, string>>({})
-  const [expandedAuthors, setExpandedAuthors] = useState<Record<string, boolean>>({})
   const [expandedDomains, setExpandedDomains] = useState<Record<string, boolean>>({})
 
   // Helper function to get relevance badge styling based on filter type
@@ -109,7 +107,6 @@ export default function CampAccordion({
       try {
         // Call API route instead of direct function call (for server-side env vars)
         const params = new URLSearchParams({
-          fetchAll: 'true',
           ...(query && { query }),
           ...(domain && { domain })
         })
@@ -120,14 +117,12 @@ export default function CampAccordion({
         }
 
         const data = await response.json()
-        const { allCamps, filteredCamps, expandedQueries: expandedQueriesData } = data
+        const { camps: fetchedCamps, expandedQueries: expandedQueriesData } = data
 
-        console.log('🎯 CampAccordion: All camps:', Object.keys(allCamps).length, 'domains')
-        console.log('🎯 CampAccordion: Filtered camps:', filteredCamps.length)
+        console.log('🎯 CampAccordion: Fetched camps:', fetchedCamps.length)
         console.log('🎯 CampAccordion: Expanded queries:', expandedQueriesData)
 
-        setAllCampsByDomain(allCamps)
-        setCamps(filteredCamps)
+        setCamps(fetchedCamps)
         setExpandedQueries(expandedQueriesData)
       } catch (error) {
         console.error('Error fetching camps:', error)
@@ -148,7 +143,7 @@ export default function CampAccordion({
   }
 
   // Show "no camps" message but still allow expanded queries to display
-  const noCampsFound = camps.length === 0 && Object.keys(allCampsByDomain).length === 0
+  const noCampsFound = camps.length === 0
 
   // Filter camps based on all filters
   let filteredCamps = camps
@@ -195,7 +190,7 @@ export default function CampAccordion({
     .filter(camp => camp.authors.length > 0) // Only show camps with matching authors
 
   // Group filtered camps by domain
-  const filteredCampsByDomain = filteredCamps.reduce((acc, camp) => {
+  const campsByDomain = filteredCamps.reduce((acc, camp) => {
     if (!acc[camp.domain]) {
       acc[camp.domain] = []
     }
@@ -203,41 +198,10 @@ export default function CampAccordion({
     return acc
   }, {} as Record<string, any[]>)
 
-  // For each domain that has authors, merge with all camps to show complete slider
-  const campsByDomain = Object.keys(filteredCampsByDomain).reduce((acc, domainName) => {
-    const allDomainCamps = allCampsByDomain[domainName] || []
-    const filteredDomainCamps = filteredCampsByDomain[domainName] || []
-
-    // Create a map of camp IDs to filtered camps for quick lookup
-    const filteredCampMap = filteredDomainCamps.reduce((map: Record<string, any>, camp: any) => {
-      map[camp.id] = camp
-      return map
-    }, {} as Record<string, any>)
-
-    // Merge: use filtered camp data if available, otherwise use empty camp from allCampsByDomain
-    const mergedCamps = allDomainCamps.map(baseCamp => {
-      const filteredCamp = filteredCampMap[baseCamp.id]
-      if (filteredCamp) {
-        return filteredCamp
-      }
-      return baseCamp // Empty camp with 0 authors
-    })
-
-    acc[domainName] = mergedCamps
-    return acc
-  }, {} as Record<string, any[]>)
-
   const handleCampClick = (domainName: string, campId: string) => {
     setSelectedCampPerDomain(prev => ({
       ...prev,
       [domainName]: prev[domainName] === campId ? '' : campId
-    }))
-  }
-
-  const toggleExpandAuthors = (domainName: string) => {
-    setExpandedAuthors(prev => ({
-      ...prev,
-      [domainName]: !prev[domainName]
     }))
   }
 
@@ -260,7 +224,6 @@ export default function CampAccordion({
       {!noCampsFound && Object.entries(campsByDomain).map(([domainName, domainCamps]) => {
         const camps = domainCamps as any[]
         const selectedCamp = selectedCampPerDomain[domainName]
-        const isExpanded = expandedAuthors[domainName]
         const isDomainExpanded = expandedDomains[domainName] !== false // Default to expanded
 
         // Calculate which camps have filtered authors (for badge display)
@@ -304,9 +267,6 @@ export default function CampAccordion({
           // Secondary sort: by author name alphabetically
           return (a.name || '').localeCompare(b.name || '')
         })
-
-        const displayAuthors = isExpanded ? allAuthors : allAuthors.slice(0, 4)
-        const hasMore = allAuthors.length > 4
 
         return (
           <div
@@ -492,28 +452,18 @@ export default function CampAccordion({
 
                 {/* Authors Grid */}
                 <div style={{ padding: 'var(--space-6)' }}>
-                  <div className="grid grid-cols-2" style={{ gap: 'var(--space-4)' }}>
-                    {displayAuthors.map((author: any) => (
+                  <div
+                    className="grid grid-cols-2 overflow-y-auto vertical-scroll"
+                    style={{
+                      gap: 'var(--space-4)',
+                      maxHeight: '600px',
+                      paddingRight: 'var(--space-2)'
+                    }}
+                  >
+                    {allAuthors.map((author: any) => (
                       <AuthorCard key={author.id} author={author} query={query} />
                     ))}
                   </div>
-
-                  {/* Show More Button */}
-                  {hasMore && (
-                    <div className="text-center" style={{ marginTop: 'var(--space-4)' }}>
-                      <button
-                        onClick={() => toggleExpandAuthors(domainName)}
-                        className="label font-medium border border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-                        style={{
-                          padding: 'var(--space-2) var(--space-5)',
-                          borderRadius: 'var(--radius-md)',
-                          color: 'var(--color-charcoal)'
-                        }}
-                      >
-                        {isExpanded ? 'Show Less' : `Show ${allAuthors.length - 4} More Authors`}
-                      </button>
-                    </div>
-                  )}
                 </div>
               </>
             )}

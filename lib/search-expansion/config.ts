@@ -13,7 +13,7 @@ import { QueryExpansionConfig } from './types'
 const DEFAULT_CONFIG: Required<QueryExpansionConfig> = {
   n8nWebhookUrl: '',
   n8nTestUrl: '',
-  timeoutMs: 5000, // 5 seconds
+  timeoutMs: 2000, // 2 seconds
   enableFallback: true,
 }
 
