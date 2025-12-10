@@ -131,11 +131,11 @@ export async function analyzeWithGemini(
   const campsContext = candidateCamps
     .map((camp) => {
       const authorsText = camp.authors
-        .map((a) => `- ${a.name}${a.affiliation ? ` (${a.affiliation})` : ''}`)
+        .map((a) => `- ID: ${a.id} | Name: ${a.name}${a.affiliation ? ` (${a.affiliation})` : ''}${a.position_summary ? ` | Position: ${a.position_summary}` : ''}`)
         .join('\n')
 
       return `Camp: "${camp.name}"
-ID: ${camp.id}
+Camp ID: ${camp.id}
 Description: ${camp.description}
 ${camp.position_summary ? `Position: ${camp.position_summary}` : ''}
 Domain: ${camp.domain || 'Unknown'}
@@ -144,47 +144,71 @@ ${authorsText}`
     })
     .join('\n\n---\n\n')
 
-  const prompt = `You are an editorial analyst helping a product marketing writer. Analyze the following text and match it to relevant thought leader camps from our canon.
+  const prompt = `You are a sharp, experienced editor helping a product marketing writer refine their content. Analyze their draft and provide specific, actionable feedback grounded in thought leaders from our canon.
 
-USER'S TEXT:
+USER'S DRAFT:
 ${text}
 
 ---
 
-CANON CAMPS (potential matches):
+THOUGHT LEADERS IN OUR CANON (potential matches):
 ${campsContext}
 
 ---
 
-TASK:
-1. Write a 2-3 sentence summary of the user's text
-2. Rank the camps by relevance to the text (score 0-100, only include camps with score >= 30)
-3. For each relevant camp, identify the top 2-3 most relevant authors
-4. Generate editorial suggestions:
-   - What perspectives ARE present in their writing
-   - What perspectives are MISSING that they should consider
+YOUR TASK:
+Act like an editorial partner, not a taxonomy classifier. Give concrete feedback a writer can act on.
 
-Return your analysis in this EXACT JSON format (no other text, just the JSON):
+1. Write an OPINIONATED editorial summary (2-3 sentences):
+   - Call out what's strong or weak about their argument
+   - Identify what perspective they're taking (even if they don't realize it)
+   - Point out key gaps, contradictions, or missed opportunities
+   - Be direct and honest - this is editorial feedback, not neutral description
+2. Identify 2-4 camps that are most relevant (score 0-100, only include >= 30)
+3. For EACH camp:
+   - Explain what this perspective means in plain language (avoid jargon like "co-evolution" - explain the actual viewpoint)
+   - Pick 2-3 specific authors and for EACH author provide:
+     * Their core belief/position on this topic (1-2 sentences, specific)
+     * Whether they AGREE, DISAGREE, or PARTIALLY align with what the user wrote
+     * An actual quote that represents their view (if you can infer it from their position summary)
+     * A source URL if available in the data
+4. Editorial feedback in plain language:
+   - What arguments/angles they're CURRENTLY using (be specific - name authors, not camps)
+   - What they're MISSING (specific gaps, name authors they should cite)
+
+CRITICAL: Use the EXACT IDs provided in the context above. For campId, use the "Camp ID" value. For authorId, use the "ID" value listed with each author. Do not make up or modify these IDs.
+
+Return ONLY valid JSON (no markdown, no extra text):
 
 {
-  "summary": "2-3 sentence summary here",
+  "summary": "What the user is arguing...",
   "rankedCamps": [
     {
-      "campId": "camp-id-here",
-      "campName": "Camp Name",
+      "campId": "exact-camp-id-from-context",
+      "campName": "Camp Label",
+      "campExplanation": "Plain language: what does this viewpoint actually mean?",
       "relevanceScore": 85,
-      "reasoning": "Why this camp is relevant to the text",
-      "topAuthorIds": ["author-id-1", "author-id-2"]
+      "reasoning": "Why this matters for their draft",
+      "topAuthors": [
+        {
+          "authorId": "exact-author-id-from-context",
+          "authorName": "Author Name",
+          "position": "Their specific belief about this topic",
+          "stance": "agrees|disagrees|partial",
+          "quote": "A representative quote or key insight",
+          "sourceUrl": "URL if available, otherwise null"
+        }
+      ]
     }
   ],
   "editorialSuggestions": {
     "presentPerspectives": [
-      "You emphasize X perspective from the Y camp",
-      "Your writing aligns with Z viewpoint"
+      "You're citing [Author]'s view that [specific point]. This strengthens your argument by...",
+      "Your emphasis on [specific theme] aligns with [Author]'s position on..."
     ],
     "missingPerspectives": [
-      "Consider adding perspective from A camp",
-      "You might want to address B viewpoint"
+      "Consider citing [Author] who argues [specific point] - this would balance your view by...",
+      "You haven't addressed [Author]'s concern about [specific issue]. Adding this would..."
     ]
   }
 }`

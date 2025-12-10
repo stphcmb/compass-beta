@@ -17,10 +17,20 @@ export interface MiniBrainAnalyzeRequest {
 }
 
 /**
- * Author in a matched camp
+ * Author in a matched camp with detailed insights
  */
 export interface MiniBrainAuthor {
+  /** Author ID for linking to author profile */
+  id?: string;
   name: string;
+  /** What this author believes about the topic */
+  position: string;
+  /** Whether they agree or disagree with the user's perspective */
+  stance: 'agrees' | 'disagrees' | 'partial';
+  /** A representative quote from this author */
+  quote?: string;
+  /** Citation or source link */
+  sourceUrl?: string;
 }
 
 /**
@@ -28,6 +38,8 @@ export interface MiniBrainAuthor {
  */
 export interface MiniBrainMatchedCamp {
   campLabel: string;
+  /** Plain language explanation of what this perspective means */
+  explanation: string;
   topAuthors: MiniBrainAuthor[];
 }
 
@@ -138,9 +150,17 @@ export interface GeminiAnalysisResult {
   rankedCamps: Array<{
     campId: string;
     campName: string;
+    campExplanation: string;
     relevanceScore: number;
     reasoning: string;
-    topAuthorIds: string[];
+    topAuthors: Array<{
+      authorId: string;
+      authorName: string;
+      position: string;
+      stance: 'agrees' | 'disagrees' | 'partial';
+      quote?: string;
+      sourceUrl?: string;
+    }>;
   }>;
   editorialSuggestions: {
     presentPerspectives: string[];

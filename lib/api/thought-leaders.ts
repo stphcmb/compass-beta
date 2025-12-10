@@ -58,6 +58,71 @@ export async function getThoughtLeaderById(id: string): Promise<ThoughtLeader | 
 }
 
 /**
+ * Fetch comprehensive author details including camps, quotes, and sources
+ */
+export async function getAuthorWithDetails(id: string): Promise<any | null> {
+  if (!supabase) {
+    console.warn('Supabase not configured')
+    return null
+  }
+
+  try {
+    // Fetch author basic data
+    const { data: author, error: authorError } = await supabase
+      .from('authors')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (authorError || !author) {
+      console.error('Error fetching author:', authorError)
+      return null
+    }
+
+    // Fetch camps this author belongs to with their quotes
+    const { data: campMappings, error: campsError } = await supabase
+      .from('camp_authors')
+      .select(`
+        relevance,
+        key_quote,
+        quote_source_url,
+        why_it_matters,
+        camps (
+          id,
+          label,
+          description,
+          domain_id
+        )
+      `)
+      .eq('author_id', id)
+
+    if (campsError) {
+      console.error('Error fetching author camps:', campsError)
+    }
+
+    // Format camps with quotes
+    const camps = (campMappings || []).map((mapping: any) => ({
+      id: mapping.camps?.id,
+      name: mapping.camps?.label,
+      description: mapping.camps?.description,
+      domain: DOMAIN_MAP[mapping.camps?.domain_id] || 'Unknown',
+      relevance: mapping.relevance,
+      quote: mapping.key_quote,
+      quoteSourceUrl: mapping.quote_source_url,
+      whyItMatters: mapping.why_it_matters,
+    })).filter((c: any) => c.id)
+
+    return {
+      ...author,
+      camps,
+    }
+  } catch (error) {
+    console.error('Error in getAuthorWithDetails:', error)
+    return null
+  }
+}
+
+/**
  * Fetch all taxonomy camps
  */
 export async function getTaxonomyCamps(): Promise<TaxonomyCamp[]> {

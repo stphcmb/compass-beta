@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Bookmark, Clock, Search as SearchIcon, ChevronRight, Users, X } from 'lucide-react'
+import { Bookmark, Clock, Search as SearchIcon, ChevronRight, Users, X, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 export default function Sidebar() {
@@ -180,6 +180,15 @@ export default function Sidebar() {
         >
           <Users className="w-4 h-4" />
           Author Index
+        </Link>
+        <Link
+          href="/mini-brain"
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            pathname === '/mini-brain' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          Mini Brain
         </Link>
       </nav>
 

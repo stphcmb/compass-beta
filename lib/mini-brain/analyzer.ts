@@ -91,34 +91,19 @@ export async function analyzeText(
     const matchedCamps: MiniBrainMatchedCamp[] = geminiAnalysis.rankedCamps
       .slice(0, maxCamps)
       .map((rankedCamp) => {
-        // Find the full camp data
-        const fullCamp = candidateCamps.find(
-          (c) => c.id === rankedCamp.campId
-        )
-
-        if (!fullCamp) {
-          return null
-        }
-
-        // Get top authors based on Gemini's selection or top 3 authors
-        const topAuthorIds = rankedCamp.topAuthorIds || []
-        const topAuthors = topAuthorIds
-          .map((authorId) => fullCamp.authors.find((a) => a.id === authorId))
-          .filter(Boolean)
-          .slice(0, 3)
-          .map((author) => ({
-            name: author!.name,
-          }))
-
-        // If Gemini didn't select authors, use top 3 from the camp
-        if (topAuthors.length === 0 && fullCamp.authors.length > 0) {
-          topAuthors.push(
-            ...fullCamp.authors.slice(0, 3).map((a) => ({ name: a.name }))
-          )
-        }
+        // Gemini now returns authors with full details
+        const topAuthors = rankedCamp.topAuthors.map((author) => ({
+          id: author.authorId || undefined,
+          name: author.authorName,
+          position: author.position,
+          stance: author.stance,
+          quote: author.quote || undefined,
+          sourceUrl: author.sourceUrl || undefined,
+        }))
 
         return {
-          campLabel: fullCamp.name,
+          campLabel: rankedCamp.campName,
+          explanation: rankedCamp.campExplanation,
           topAuthors,
         }
       })
