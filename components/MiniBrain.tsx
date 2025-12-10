@@ -83,6 +83,55 @@ export default function MiniBrain() {
     }
   }
 
+  // Parse text and linkify author mentions in brackets
+  const linkifyAuthors = (text: string) => {
+    const parts = []
+    let lastIndex = 0
+    const regex = /\[([^\]]+)\]/g
+    let match
+
+    while ((match = regex.exec(text)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index))
+      }
+
+      // Add the linked author name
+      const authorName = match[1]
+      parts.push(
+        <Link
+          key={match.index}
+          href={`/authors`}
+          style={{
+            color: 'var(--color-accent)',
+            fontWeight: 'var(--weight-semibold)',
+            textDecoration: 'underline',
+            textDecorationColor: 'rgba(99, 102, 241, 0.3)',
+            textUnderlineOffset: '2px',
+            transition: 'all var(--duration-fast) var(--ease-out)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.textDecorationColor = 'var(--color-accent)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.textDecorationColor = 'rgba(99, 102, 241, 0.3)'
+          }}
+        >
+          {authorName}
+        </Link>
+      )
+
+      lastIndex = regex.lastIndex
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex))
+    }
+
+    return parts.length > 0 ? parts : text
+  }
+
   return (
     <div style={{ maxWidth: 'var(--width-wide)' }}>
       {/* Header */}
@@ -510,7 +559,7 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
                           lineHeight: 'var(--leading-relaxed)',
                           fontWeight: 'var(--weight-medium)'
                         }}>
-                          {perspective}
+                          {linkifyAuthors(perspective)}
                         </span>
                       </li>
                     ))}
@@ -568,7 +617,7 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
                           lineHeight: 'var(--leading-relaxed)',
                           fontWeight: 'var(--weight-medium)'
                         }}>
-                          {perspective}
+                          {linkifyAuthors(perspective)}
                         </span>
                       </li>
                     ))}
