@@ -12,7 +12,7 @@
 
 Compass currently serves as a research and search tool for discovering thought leader perspectives across different AI-related domains. Users can search for camps and authors, but there's no feature to help them analyze their own writing and understand which perspectives they're emphasizing or missing.
 
-Product marketers need a tool that goes beyond search - a "content partner" that can:
+Senior execs need a tool that goes beyond search - a "content partner" that can:
 - Read their draft content (paragraphs or short essays)
 - Identify which camps/perspectives from the canon align with their writing
 - Suggest missing perspectives they should consider
