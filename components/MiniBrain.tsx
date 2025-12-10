@@ -127,7 +127,7 @@ export default function MiniBrain() {
         marginBottom: 'var(--space-6)',
         border: '1px solid var(--color-light-gray)'
       }}>
-        <label style={{
+        <label htmlFor="mini-brain-text-input" style={{
           display: 'block',
           fontSize: 'var(--text-small)',
           fontWeight: 'var(--weight-medium)',
@@ -145,9 +145,12 @@ export default function MiniBrain() {
           </span>
         </label>
         <textarea
+          id="mini-brain-text-input"
+          name="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
+          className="mini-brain-textarea"
           style={{
             width: '100%',
             height: '192px',
@@ -162,8 +165,6 @@ export default function MiniBrain() {
             outline: 'none',
             transition: 'border-color var(--duration-fast) var(--ease-out)'
           }}
-          onFocus={(e) => e.target.style.borderColor = 'var(--color-accent)'}
-          onBlur={(e) => e.target.style.borderColor = 'var(--color-light-gray)'}
           placeholder="Paste your draft here... For example:
 
 Artificial intelligence is transforming how companies approach innovation. AI-first strategies are becoming critical for competitive advantage in the market..."

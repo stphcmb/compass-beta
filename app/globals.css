@@ -256,6 +256,14 @@
   }
 
   /* ===========================
+     MINI BRAIN TEXTAREA
+     =========================== */
+
+  .mini-brain-textarea:focus {
+    border-color: var(--color-accent) !important;
+  }
+
+  /* ===========================
      SWISS PRECISION
      =========================== */
 
