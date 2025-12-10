@@ -13,6 +13,7 @@ import { analyzeWithGemini } from './gemini'
 import {
   MiniBrainAnalyzeResponse,
   MiniBrainMatchedCamp,
+  MiniBrainAuthor,
   CampWithAuthors,
 } from './types'
 
