@@ -90,15 +90,15 @@ export async function analyzeText(
     // Map Gemini's ranked camps to our response format
     const matchedCamps: MiniBrainMatchedCamp[] = geminiAnalysis.rankedCamps
       .slice(0, maxCamps)
-      .map((rankedCamp) => {
+      .map((rankedCamp): MiniBrainMatchedCamp => {
         // Gemini now returns authors with full details
-        const topAuthors = rankedCamp.topAuthors.map((author) => ({
-          id: author.authorId || undefined,
+        const topAuthors: MiniBrainAuthor[] = rankedCamp.topAuthors.map((author) => ({
+          ...(author.authorId && { id: author.authorId }),
           name: author.authorName,
           position: author.position,
           stance: author.stance,
-          quote: author.quote || undefined,
-          sourceUrl: author.sourceUrl || undefined,
+          ...(author.quote && { quote: author.quote }),
+          ...(author.sourceUrl && { sourceUrl: author.sourceUrl }),
         }))
 
         return {
@@ -107,7 +107,6 @@ export async function analyzeText(
           topAuthors,
         }
       })
-      .filter((camp): camp is MiniBrainMatchedCamp => camp !== null)
 
     return {
       summary: geminiAnalysis.summary,
