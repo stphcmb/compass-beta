@@ -156,7 +156,29 @@ ${campsContext}
 
 ---
 
+CRITICAL GUARDRAILS - READ FIRST:
+1. RELEVANCE CHECK: First assess if the user's text is actually related to AI, technology, business strategy, or topics covered in our canon.
+2. BE HONEST: If the text is about completely unrelated topics (like cooking, birthday cakes, gardening, etc.), DO NOT force connections to AI discourse.
+3. NO HALLUCINATION: If there's no genuine relevance, return a response indicating this. DO NOT make up connections between random topics and thought leadership.
+4. THRESHOLD: Only proceed with full analysis if the text has meaningful overlap with topics in our canon.
+
+---
+
 YOUR TASK:
+FIRST: Evaluate if this text is relevant to our canon's topics (AI, technology, business, organizational strategy, policy, workers, society).
+
+IF THE TEXT IS NOT RELEVANT (e.g., about birthday cakes, gardening, recipes, unrelated hobbies):
+Return this exact structure:
+{
+  "summary": "This text appears to be about [topic], which is outside the scope of our AI and technology thought leadership canon. We don't have relevant perspectives to offer on this topic.",
+  "rankedCamps": [],
+  "editorialSuggestions": {
+    "presentPerspectives": [],
+    "missingPerspectives": ["This topic is outside our canon's focus on AI, technology, and organizational strategy. If you have a draft related to these areas, we'd be happy to analyze it."]
+  }
+}
+
+IF THE TEXT IS RELEVANT:
 Act like an editorial partner, not a taxonomy classifier. Give concrete feedback a writer can act on.
 
 1. Write an OPINIONATED editorial summary (2-3 sentences):

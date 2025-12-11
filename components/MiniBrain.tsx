@@ -1,19 +1,37 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { MiniBrainAnalyzeResponse } from '@/lib/mini-brain'
-import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark } from 'lucide-react'
 
 export default function MiniBrain() {
   const [text, setText] = useState('')
   const [result, setResult] = useState<MiniBrainAnalyzeResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [savedOnce, setSavedOnce] = useState(false)
 
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const authorsRef = useRef<HTMLDivElement>(null)
   const summaryRef = useRef<HTMLDivElement>(null)
+
+  // Listen for load text events from sidebar
+  useEffect(() => {
+    const handleLoadText = (e: Event) => {
+      const ev = e as CustomEvent<{ text: string }>
+      if (ev?.detail?.text) {
+        setText(ev.detail.text)
+        setResult(null)
+        setError(null)
+        setSavedOnce(false)
+      }
+    }
+
+    window.addEventListener('load-mini-brain-text', handleLoadText as EventListener)
+    return () => window.removeEventListener('load-mini-brain-text', handleLoadText as EventListener)
+  }, [])
 
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -56,6 +74,41 @@ export default function MiniBrain() {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       handleAnalyze()
+    }
+  }
+
+  const handleSave = async () => {
+    if (!text.trim() || saving) return
+    setSaving(true)
+    try {
+      const saved = JSON.parse(localStorage.getItem('savedMiniBrainAnalyses') || '[]')
+
+      // Create preview from text (first 60 characters)
+      const preview = text.trim().substring(0, 60) + (text.trim().length > 60 ? '...' : '')
+
+      // Remove if already exists (to avoid duplicates)
+      const filtered = saved.filter((s: any) => s.text !== text.trim())
+
+      // Add to beginning
+      filtered.unshift({
+        id: `mini-brain-${Date.now()}`,
+        text: text.trim(),
+        preview,
+        timestamp: new Date().toISOString()
+      })
+
+      // Keep only last 20
+      const limited = filtered.slice(0, 20)
+      localStorage.setItem('savedMiniBrainAnalyses', JSON.stringify(limited))
+
+      setSavedOnce(true)
+      window.dispatchEvent(new CustomEvent('mini-brain-saved', {
+        detail: { text: text.trim(), preview, timestamp: new Date().toISOString() }
+      }))
+    } catch (e) {
+      console.error('Error saving mini brain analysis:', e)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -252,53 +305,89 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
         </div>
       </div>
 
-      {/* Action Button */}
-      <button
-        onClick={handleAnalyze}
-        disabled={loading || !text.trim()}
-        style={{
-          width: '100%',
-          backgroundColor: loading || !text.trim() ? 'var(--color-mid-gray)' : 'var(--color-accent)',
-          color: 'white',
-          padding: 'var(--space-4) var(--space-6)',
-          borderRadius: 'var(--radius-base)',
-          fontSize: 'var(--text-body)',
-          fontWeight: 'var(--weight-medium)',
-          border: 'none',
-          cursor: loading || !text.trim() ? 'not-allowed' : 'pointer',
-          transition: 'all var(--duration-fast) var(--ease-out)',
-          boxShadow: 'var(--shadow-sm)',
-          marginBottom: 'var(--space-6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 'var(--space-2)'
-        }}
-        onMouseEnter={(e) => {
-          if (!loading && text.trim()) {
-            e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)'
-            e.currentTarget.style.boxShadow = 'var(--shadow-base)'
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!loading && text.trim()) {
-            e.currentTarget.style.backgroundColor = 'var(--color-accent)'
-            e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
-          }
-        }}
-      >
-        {loading ? (
-          <>
-            <Loader2 style={{ width: '20px', height: '20px' }} className="animate-spin" />
-            Analyzing...
-          </>
-        ) : (
-          <>
-            <Sparkles style={{ width: '20px', height: '20px' }} />
-            Analyze with Mini Brain
-          </>
-        )}
-      </button>
+      {/* Action Buttons */}
+      <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
+        <button
+          onClick={handleSave}
+          disabled={saving || !text.trim()}
+          style={{
+            backgroundColor: savedOnce ? 'var(--color-success)' : 'white',
+            color: savedOnce ? 'white' : 'var(--color-charcoal)',
+            padding: 'var(--space-4) var(--space-6)',
+            borderRadius: 'var(--radius-base)',
+            fontSize: 'var(--text-body)',
+            fontWeight: 'var(--weight-medium)',
+            border: savedOnce ? '1px solid var(--color-success)' : '1px solid var(--color-light-gray)',
+            cursor: saving || !text.trim() ? 'not-allowed' : 'pointer',
+            transition: 'all var(--duration-fast) var(--ease-out)',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'var(--space-2)',
+            flex: '0 0 auto'
+          }}
+          onMouseEnter={(e) => {
+            if (!saving && text.trim() && !savedOnce) {
+              e.currentTarget.style.backgroundColor = 'var(--color-pale-gray)'
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!saving && text.trim() && !savedOnce) {
+              e.currentTarget.style.backgroundColor = 'white'
+            }
+          }}
+          title={savedOnce ? 'Saved' : 'Save this analysis'}
+        >
+          <Bookmark style={{ width: '18px', height: '18px' }} />
+          {savedOnce ? 'Saved' : saving ? 'Saving...' : 'Save'}
+        </button>
+        <button
+          onClick={handleAnalyze}
+          disabled={loading || !text.trim()}
+          style={{
+            flex: 1,
+            backgroundColor: loading || !text.trim() ? 'var(--color-mid-gray)' : 'var(--color-accent)',
+            color: 'white',
+            padding: 'var(--space-4) var(--space-6)',
+            borderRadius: 'var(--radius-base)',
+            fontSize: 'var(--text-body)',
+            fontWeight: 'var(--weight-medium)',
+            border: 'none',
+            cursor: loading || !text.trim() ? 'not-allowed' : 'pointer',
+            transition: 'all var(--duration-fast) var(--ease-out)',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'var(--space-2)'
+          }}
+          onMouseEnter={(e) => {
+            if (!loading && text.trim()) {
+              e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)'
+              e.currentTarget.style.boxShadow = 'var(--shadow-base)'
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!loading && text.trim()) {
+              e.currentTarget.style.backgroundColor = 'var(--color-accent)'
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
+            }
+          }}
+        >
+          {loading ? (
+            <>
+              <Loader2 style={{ width: '20px', height: '20px' }} className="animate-spin" />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Sparkles style={{ width: '20px', height: '20px' }} />
+              Analyze with Mini Brain
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Error Display */}
       {error && (
@@ -336,15 +425,12 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
       {/* Results Display */}
       {result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-          {/* Quick Navigation - Sticky */}
+          {/* Quick Navigation */}
           <div style={{
             backgroundColor: 'var(--color-cloud)',
             border: '1px solid var(--color-light-gray)',
             borderRadius: 'var(--radius-base)',
             padding: 'var(--space-5)',
-            position: 'sticky',
-            top: 'var(--space-4)',
-            zIndex: 'var(--z-sticky)',
             boxShadow: 'var(--shadow-base)'
           }}>
             <h3 style={{

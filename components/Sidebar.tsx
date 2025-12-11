@@ -12,6 +12,7 @@ export default function Sidebar() {
   const searchParams = useSearchParams()
   const [recentSearches, setRecentSearches] = useState<any[]>([])
   const [savedSearches, setSavedSearches] = useState<any[]>([])
+  const [savedMiniBrainAnalyses, setSavedMiniBrainAnalyses] = useState<any[]>([])
   const [lastSaved, setLastSaved] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
@@ -54,6 +55,16 @@ export default function Sidebar() {
     }
   }
 
+  const fetchSavedMiniBrainAnalyses = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('savedMiniBrainAnalyses') || '[]')
+      setSavedMiniBrainAnalyses(saved.slice(0, 10))
+    } catch (error) {
+      console.error('Error fetching saved mini brain analyses:', error)
+      setSavedMiniBrainAnalyses([])
+    }
+  }
+
   const addToRecentSearches = (query: string) => {
     if (!query) return
     try {
@@ -85,6 +96,7 @@ export default function Sidebar() {
     // Load from localStorage
     fetchRecentSearches()
     fetchSavedSearches()
+    fetchSavedMiniBrainAnalyses()
 
     // Listen for new saved search events
     const onSaved = (e: Event) => {
@@ -94,8 +106,21 @@ export default function Sidebar() {
         fetchSavedSearches() // Refresh from localStorage
       }
     }
+
+    // Listen for new mini brain saved events
+    const onMiniBrainSaved = (e: Event) => {
+      const ev = e as CustomEvent<{ text: string; preview?: string; timestamp?: string }>
+      if (ev?.detail?.text) {
+        fetchSavedMiniBrainAnalyses() // Refresh from localStorage
+      }
+    }
+
     window.addEventListener('saved-search-created', onSaved as EventListener)
-    return () => window.removeEventListener('saved-search-created', onSaved as EventListener)
+    window.addEventListener('mini-brain-saved', onMiniBrainSaved as EventListener)
+    return () => {
+      window.removeEventListener('saved-search-created', onSaved as EventListener)
+      window.removeEventListener('mini-brain-saved', onMiniBrainSaved as EventListener)
+    }
   }, [mounted])
 
   // Track when user performs a search
@@ -147,6 +172,36 @@ export default function Sidebar() {
       setSavedSearches([])
     } catch (error) {
       console.error('Error clearing saved searches:', error)
+    }
+  }
+
+  const handleMiniBrainAnalysisClick = (text: string) => {
+    // Navigate to mini brain page and dispatch event with text to load
+    router.push('/mini-brain')
+    // Use setTimeout to ensure navigation completes before dispatching event
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('load-mini-brain-text', { detail: { text } }))
+    }, 100)
+  }
+
+  const deleteSavedMiniBrainAnalysis = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    try {
+      const saved = JSON.parse(localStorage.getItem('savedMiniBrainAnalyses') || '[]')
+      const filtered = saved.filter((s: any) => s.id !== id)
+      localStorage.setItem('savedMiniBrainAnalyses', JSON.stringify(filtered))
+      setSavedMiniBrainAnalyses(filtered.slice(0, 10))
+    } catch (error) {
+      console.error('Error deleting saved mini brain analysis:', error)
+    }
+  }
+
+  const clearAllSavedMiniBrainAnalyses = () => {
+    try {
+      localStorage.setItem('savedMiniBrainAnalyses', '[]')
+      setSavedMiniBrainAnalyses([])
+    } catch (error) {
+      console.error('Error clearing saved mini brain analyses:', error)
     }
   }
 
@@ -262,7 +317,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div>
+      <div className="mb-6">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-sm font-semibold text-gray-600">Saved Searches</h3>
           <div className="flex items-center gap-2">
@@ -319,6 +374,59 @@ export default function Sidebar() {
                   onClick={(e) => deleteSavedSearch(e, search.id)}
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
                   title="Delete saved search"
+                >
+                  <X className="w-3 h-3 text-red-600" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-gray-600">Saved Analyses</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">{savedMiniBrainAnalyses.length}</span>
+            {savedMiniBrainAnalyses.length > 0 && (
+              <button
+                onClick={clearAllSavedMiniBrainAnalyses}
+                className="text-xs text-red-600 hover:text-red-800 hover:underline"
+                title="Clear all saved analyses"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="space-y-2">
+          {savedMiniBrainAnalyses.length === 0 ? (
+            <div className="text-sm text-gray-500">No saved analyses</div>
+          ) : (
+            savedMiniBrainAnalyses.map((analysis) => (
+              <div key={analysis.id} className="relative group">
+                <button
+                  onClick={() => handleMiniBrainAnalysisClick(analysis.text)}
+                  className="w-full text-left p-2 bg-purple-50 hover:bg-purple-100 rounded border border-purple-200 transition-colors"
+                >
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-700 mt-0.5" />
+                    <div className="flex-1 min-w-0 pr-6">
+                      <div className="text-sm text-gray-800 line-clamp-2">
+                        {analysis.preview || analysis.text}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        <span>{timeAgo(analysis.timestamp)}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-purple-700" />
+                  </div>
+                </button>
+                <button
+                  onClick={(e) => deleteSavedMiniBrainAnalysis(e, analysis.id)}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
+                  title="Delete saved analysis"
                 >
                   <X className="w-3 h-3 text-red-600" />
                 </button>

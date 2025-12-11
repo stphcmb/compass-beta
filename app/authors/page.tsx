@@ -70,6 +70,15 @@ export default function AuthorIndexPage() {
     return parts[parts.length - 1].toLowerCase()
   }
 
+  // Format name as "Last, First"
+  const formatNameLastFirst = (fullName: string) => {
+    const parts = fullName.trim().split(/\s+/)
+    if (parts.length === 1) return fullName
+    const lastName = parts[parts.length - 1]
+    const firstName = parts.slice(0, -1).join(' ')
+    return `${lastName}, ${firstName}`
+  }
+
   // Sort by last name, then first name
   const sortByLastName = (a: any, b: any) => {
     const lastNameA = getLastName(a.name)
@@ -207,108 +216,107 @@ export default function AuthorIndexPage() {
       <main className="flex-1 ml-64 flex">
         {/* Left Panel - Author List */}
         <div
-          className="w-[400px] border-r border-gray-200 flex flex-col overflow-hidden"
-          style={{ backgroundColor: 'var(--color-cloud)' }}
+          className="w-[400px] border-r flex flex-col overflow-hidden"
+          style={{
+            backgroundColor: 'var(--color-cloud)',
+            borderColor: 'var(--color-light-gray)'
+          }}
         >
-          {/* Header */}
+          {/* Sticky Search Bar */}
           <div
-            className="border-b border-gray-200"
-            style={{ padding: 'var(--space-5)' }}
+            className="sticky top-0 border-b"
+            style={{
+              zIndex: 'var(--z-sticky)',
+              backgroundColor: 'var(--color-cloud)',
+              borderColor: 'var(--color-light-gray)',
+              padding: 'var(--space-5)'
+            }}
           >
-            {/* Search Bar */}
-            <div className="relative" style={{ marginBottom: 'var(--space-4)' }}>
+            <div className="relative">
               <Search
                 style={{
                   position: 'absolute',
                   left: 'var(--space-3)',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  width: 'var(--space-4)',
-                  height: 'var(--space-4)',
+                  width: 'var(--space-5)',
+                  height: 'var(--space-5)',
                   color: 'var(--color-mid-gray)'
                 }}
               />
               <input
                 type="text"
-                placeholder="Search by name or affiliation..."
+                placeholder="Search authors..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full border border-gray-300 label"
+                className="w-full outline-none"
                 style={{
-                  paddingLeft: 'var(--space-10)',
+                  paddingLeft: 'calc(var(--space-5) + var(--space-6))',
                   paddingRight: 'var(--space-4)',
-                  paddingTop: 'var(--space-2)',
-                  paddingBottom: 'var(--space-2)',
+                  paddingTop: 'var(--space-3)',
+                  paddingBottom: 'var(--space-3)',
                   borderRadius: 'var(--radius-base)',
-                  backgroundColor: 'white'
+                  backgroundColor: 'white',
+                  border: 'var(--border-thin) solid var(--color-light-gray)',
+                  fontSize: 'var(--text-body)',
+                  color: 'var(--color-soft-black)',
+                  transition: 'border-color var(--duration-fast) var(--ease-out)'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent)'
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-light-gray)'
                 }}
               />
             </div>
+          </div>
 
-            {/* Stats */}
-            <div
-              className="border border-gray-200 text-center"
-              style={{
-                backgroundColor: 'var(--color-pale-gray)',
-                padding: 'var(--space-4)',
-                borderRadius: 'var(--radius-base)',
-                marginBottom: 'var(--space-4)'
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 'var(--text-h1)',
-                  fontWeight: 'var(--weight-bold)',
-                  color: 'var(--color-accent)',
-                  lineHeight: 'var(--leading-tight)'
-                }}
-              >
-                {authors.length}
-              </div>
-              <div className="label" style={{ color: 'var(--color-mid-gray)', marginTop: 'var(--space-1)' }}>
-                Authors in Database
-              </div>
-            </div>
-
-            {/* Sort Options */}
-            <div
-              className="flex items-center"
-              style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}
-            >
-              <label
-                className="caption font-semibold uppercase"
-                style={{
-                  color: 'var(--color-mid-gray)',
-                  letterSpacing: 'var(--tracking-wide)'
-                }}
-              >
-                Sort by:
-              </label>
+          {/* Compact Controls */}
+          <div
+            className="border-b"
+            style={{
+              padding: 'var(--space-4) var(--space-5)',
+              backgroundColor: 'var(--color-cloud)',
+              borderColor: 'var(--color-light-gray)'
+            }}
+          >
+            {/* Sort and Stats Row */}
+            <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-3)' }}>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="flex-1 border border-gray-300 label cursor-pointer"
+                className="label cursor-pointer outline-none"
                 style={{
                   padding: 'var(--space-2) var(--space-3)',
                   borderRadius: 'var(--radius-base)',
-                  backgroundColor: 'white'
+                  backgroundColor: 'white',
+                  border: 'var(--border-thin) solid var(--color-light-gray)',
+                  color: 'var(--color-soft-black)',
+                  transition: 'border-color var(--duration-fast) var(--ease-out)'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent)'
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-light-gray)'
                 }}
               >
-                <option value="alpha">Alphabetical (A-Z)</option>
+                <option value="alpha">A-Z</option>
                 <option value="domain">By Domain</option>
                 <option value="camp">By Camp</option>
               </select>
+              <div className="caption" style={{ color: 'var(--color-mid-gray)' }}>
+                {processedAuthors.length} {processedAuthors.length === 1 ? 'author' : 'authors'}
+              </div>
             </div>
 
             {/* A-Z Navigation (only for alphabetical view) */}
             {sortBy === 'alpha' && (
               <div
-                className="flex flex-wrap border border-gray-200"
+                className="flex flex-wrap"
                 style={{
-                  gap: 'var(--space-1)',
-                  padding: 'var(--space-3)',
-                  backgroundColor: 'var(--color-pale-gray)',
-                  borderRadius: 'var(--radius-base)'
+                  gap: 'var(--space-1)'
                 }}
               >
                 {alphabet.map(letter => {
@@ -323,16 +331,29 @@ export default function AuthorIndexPage() {
                           element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                         }
                       }}
-                      className={`flex items-center justify-center caption font-semibold transition-colors ${
-                        isAvailable
-                          ? 'bg-white border border-gray-300 hover:border-gray-400 cursor-pointer'
-                          : 'bg-white border border-gray-200 cursor-not-allowed'
-                      }`}
+                      className="flex items-center justify-center caption"
                       style={{
-                        width: 'var(--space-6)',
-                        height: 'var(--space-6)',
+                        width: '28px',
+                        height: '28px',
                         borderRadius: 'var(--radius-sm)',
-                        color: isAvailable ? 'var(--color-accent)' : 'var(--color-light-gray)'
+                        backgroundColor: isAvailable ? 'white' : 'transparent',
+                        border: isAvailable ? 'var(--border-thin) solid var(--color-light-gray)' : 'none',
+                        color: isAvailable ? 'var(--color-soft-black)' : 'var(--color-light-gray)',
+                        fontWeight: isAvailable ? 'var(--weight-medium)' : 'var(--weight-normal)',
+                        cursor: isAvailable ? 'pointer' : 'not-allowed',
+                        transition: 'all var(--duration-fast) var(--ease-out)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (isAvailable) {
+                          e.currentTarget.style.backgroundColor = 'var(--color-accent-light)'
+                          e.currentTarget.style.borderColor = 'var(--color-accent)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (isAvailable) {
+                          e.currentTarget.style.backgroundColor = 'white'
+                          e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                        }
                       }}
                     >
                       {letter}
@@ -350,11 +371,13 @@ export default function AuthorIndexPage() {
                 {Object.keys(authorsByLetter).sort().map(letter => (
                   <div key={letter} id={`letter-${letter}`} style={{ marginBottom: 'var(--space-6)' }}>
                     <div
-                      className="border-b-2 border-gray-200"
+                      className="border-b"
                       style={{
                         fontSize: 'var(--text-h3)',
                         fontWeight: 'var(--weight-semibold)',
                         color: 'var(--color-accent)',
+                        borderWidth: 'var(--border-medium)',
+                        borderColor: 'var(--color-light-gray)',
                         paddingBottom: 'var(--space-2)',
                         marginBottom: 'var(--space-3)'
                       }}
@@ -368,6 +391,7 @@ export default function AuthorIndexPage() {
                         camps={getAuthorCamps(author.id)}
                         isSelected={selectedAuthor?.id === author.id}
                         onClick={() => setSelectedAuthor(author)}
+                        formatName={formatNameLastFirst}
                       />
                     ))}
                   </div>
@@ -380,9 +404,11 @@ export default function AuthorIndexPage() {
                 {Object.keys(authorsByDomain).sort().map(domain => (
                   <div key={domain} style={{ marginBottom: 'var(--space-6)' }}>
                     <div
-                      className="label font-bold border-b border-gray-200"
+                      className="label border-b"
                       style={{
                         color: 'var(--color-charcoal)',
+                        fontWeight: 'var(--weight-bold)',
+                        borderColor: 'var(--color-light-gray)',
                         paddingBottom: 'var(--space-2)',
                         marginBottom: 'var(--space-3)'
                       }}
@@ -396,6 +422,7 @@ export default function AuthorIndexPage() {
                         camps={getAuthorCamps(author.id)}
                         isSelected={selectedAuthor?.id === author.id}
                         onClick={() => setSelectedAuthor(author)}
+                        formatName={formatNameLastFirst}
                       />
                     ))}
                   </div>
@@ -408,9 +435,11 @@ export default function AuthorIndexPage() {
                 {Object.keys(authorsByCamp).sort().map(camp => (
                   <div key={camp} style={{ marginBottom: 'var(--space-6)' }}>
                     <div
-                      className="label font-bold border-b border-gray-200"
+                      className="label border-b"
                       style={{
                         color: 'var(--color-charcoal)',
+                        fontWeight: 'var(--weight-bold)',
+                        borderColor: 'var(--color-light-gray)',
                         paddingBottom: 'var(--space-2)',
                         marginBottom: 'var(--space-3)'
                       }}
@@ -424,6 +453,7 @@ export default function AuthorIndexPage() {
                         camps={getAuthorCamps(author.id)}
                         isSelected={selectedAuthor?.id === author.id}
                         onClick={() => setSelectedAuthor(author)}
+                        formatName={formatNameLastFirst}
                       />
                     ))}
                   </div>
@@ -452,53 +482,88 @@ export default function AuthorIndexPage() {
             <div>
               {/* Profile Header */}
               <div
-                className="border border-gray-200"
+                className="border"
                 style={{
                   backgroundColor: 'var(--color-cloud)',
+                  borderColor: 'var(--color-light-gray)',
                   borderRadius: 'var(--radius-base)',
                   padding: 'var(--space-5)',
                   marginBottom: 'var(--space-5)'
                 }}
               >
-                <h2 style={{ marginBottom: 'var(--space-1)' }}>{selectedAuthor.name}</h2>
+                <h2 style={{ marginBottom: 'var(--space-1)' }}>{formatNameLastFirst(selectedAuthor.name)}</h2>
                 <div className="label" style={{ color: 'var(--color-mid-gray)', marginBottom: 'var(--space-3)' }}>
                   {selectedAuthor.header_affiliation || selectedAuthor.primary_affiliation || 'Independent'}
                 </div>
                 <div className="flex flex-wrap" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+                  {/* Credibility Tier - Outlined style for distinction */}
                   {selectedAuthor.credibility_tier && (
                     <span
-                      className="caption font-medium bg-blue-100 text-blue-700"
+                      className="caption"
                       style={{
-                        padding: 'var(--space-1) var(--space-2)',
-                        borderRadius: 'var(--radius-sm)'
+                        padding: 'var(--space-1) var(--space-3)',
+                        borderRadius: 'var(--radius-base)',
+                        border: 'var(--border-medium) solid var(--color-accent)',
+                        backgroundColor: 'white',
+                        color: 'var(--color-accent)',
+                        fontWeight: 'var(--weight-semibold)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
                       }}
                     >
                       {selectedAuthor.credibility_tier}
                     </span>
                   )}
+
+                  {/* Author Type - Subtle gray badge */}
                   {selectedAuthor.author_type && (
                     <span
-                      className="caption font-medium bg-gray-100 text-gray-600"
+                      className="caption"
                       style={{
                         padding: 'var(--space-1) var(--space-2)',
-                        borderRadius: 'var(--radius-sm)'
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: 'var(--color-pale-gray)',
+                        border: 'var(--border-thin) solid var(--color-light-gray)',
+                        color: 'var(--color-charcoal)',
+                        fontWeight: 'var(--weight-medium)'
                       }}
                     >
                       {selectedAuthor.author_type}
                     </span>
                   )}
+
+                  {/* Domain/Camp Labels - Filled colored badges */}
                   {getAuthorCamps(selectedAuthor.id).map((camp, idx) => (
                     <span
                       key={idx}
-                      className={`caption font-medium ${DOMAIN_COLORS[camp.domain] || 'bg-gray-100 text-gray-600'}`}
+                      className={`caption ${DOMAIN_COLORS[camp.domain] || 'bg-gray-100 text-gray-600'}`}
                       style={{
                         padding: 'var(--space-1) var(--space-2)',
-                        borderRadius: 'var(--radius-sm)'
+                        borderRadius: 'var(--radius-sm)',
+                        fontWeight: 'var(--weight-medium)'
                       }}
                     >
                       {camp.name}
                     </span>
                   ))}
+
+                  {/* If no camps, show "No camp assigned" */}
+                  {getAuthorCamps(selectedAuthor.id).length === 0 && (
+                    <span
+                      className="caption"
+                      style={{
+                        padding: 'var(--space-1) var(--space-2)',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: 'var(--color-pale-gray)',
+                        border: 'var(--border-thin) dashed var(--color-light-gray)',
+                        color: 'var(--color-mid-gray)',
+                        fontWeight: 'var(--weight-normal)',
+                        fontStyle: 'italic'
+                      }}
+                    >
+                      No camp assigned
+                    </span>
+                  )}
                 </div>
 
                 {selectedAuthor.notes && (
@@ -528,9 +593,10 @@ export default function AuthorIndexPage() {
 
               {/* Sources Section */}
               <div
-                className="border border-gray-200"
+                className="border"
                 style={{
                   backgroundColor: 'var(--color-cloud)',
+                  borderColor: 'var(--color-light-gray)',
                   borderRadius: 'var(--radius-base)',
                   padding: 'var(--space-5)'
                 }}
@@ -544,10 +610,18 @@ export default function AuthorIndexPage() {
                     {selectedAuthor.sources.map((source: any, index: number) => (
                       <div
                         key={index}
-                        className="border border-gray-200 hover:border-gray-400 transition-colors"
+                        className="border transition-colors"
                         style={{
+                          borderColor: 'var(--color-light-gray)',
                           borderRadius: 'var(--radius-base)',
-                          padding: 'var(--space-4)'
+                          padding: 'var(--space-4)',
+                          transition: 'border-color var(--duration-fast) var(--ease-out)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--color-mid-gray)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--color-light-gray)'
                         }}
                       >
                         <div className="flex items-start justify-between" style={{ marginBottom: 'var(--space-2)' }}>
@@ -610,24 +684,37 @@ export default function AuthorIndexPage() {
 }
 
 // Author Card Component
-function AuthorCard({ author, camps, isSelected, onClick }: {
+function AuthorCard({ author, camps, isSelected, onClick, formatName }: {
   author: any
   camps: any[]
   isSelected: boolean
   onClick: () => void
+  formatName: (name: string) => string
 }) {
   return (
     <div
       onClick={onClick}
-      className={`border cursor-pointer transition-all ${
-        isSelected
-          ? 'border-indigo-500 bg-indigo-50'
-          : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm'
-      }`}
+      className="border cursor-pointer"
       style={{
         padding: 'var(--space-4)',
         borderRadius: 'var(--radius-base)',
-        marginBottom: 'var(--space-2)'
+        marginBottom: 'var(--space-2)',
+        borderColor: isSelected ? 'var(--color-accent)' : 'var(--color-light-gray)',
+        backgroundColor: isSelected ? 'var(--color-accent-light)' : 'white',
+        transition: 'all var(--duration-fast) var(--ease-out)',
+        boxShadow: isSelected ? 'var(--shadow-sm)' : 'none'
+      }}
+      onMouseEnter={(e) => {
+        if (!isSelected) {
+          e.currentTarget.style.borderColor = 'var(--color-accent)'
+          e.currentTarget.style.backgroundColor = 'var(--color-accent-light)'
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) {
+          e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+          e.currentTarget.style.backgroundColor = 'white'
+        }
       }}
     >
       <div
@@ -637,7 +724,7 @@ function AuthorCard({ author, camps, isSelected, onClick }: {
           marginBottom: 'var(--space-1)'
         }}
       >
-        {author.name}
+        {formatName(author.name)}
       </div>
       <div
         className="caption"
@@ -649,29 +736,52 @@ function AuthorCard({ author, camps, isSelected, onClick }: {
         {author.header_affiliation || author.primary_affiliation || 'Independent'}
       </div>
       <div className="flex flex-wrap" style={{ gap: 'var(--space-1)' }}>
-        {camps.slice(0, 2).map((camp, idx) => (
+        {camps.length > 0 ? (
+          <>
+            {camps.slice(0, 2).map((camp, idx) => (
+              <span
+                key={idx}
+                className={`caption ${
+                  DOMAIN_COLORS[camp.domain] || 'bg-gray-100 text-gray-600'
+                }`}
+                style={{
+                  padding: 'var(--space-1) var(--space-2)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontWeight: 'var(--weight-medium)'
+                }}
+              >
+                {camp.name}
+              </span>
+            ))}
+            {camps.length > 2 && (
+              <span
+                className="caption"
+                style={{
+                  padding: 'var(--space-1) var(--space-2)',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--color-pale-gray)',
+                  color: 'var(--color-charcoal)',
+                  fontWeight: 'var(--weight-medium)'
+                }}
+              >
+                +{camps.length - 2}
+              </span>
+            )}
+          </>
+        ) : (
           <span
-            key={idx}
-            className={`caption font-medium ${
-              DOMAIN_COLORS[camp.domain] || 'bg-gray-100 text-gray-600'
-            }`}
+            className="caption"
             style={{
               padding: 'var(--space-1) var(--space-2)',
-              borderRadius: 'var(--radius-sm)'
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'transparent',
+              border: 'var(--border-thin) dashed var(--color-light-gray)',
+              color: 'var(--color-mid-gray)',
+              fontWeight: 'var(--weight-normal)',
+              fontStyle: 'italic'
             }}
           >
-            {camp.name}
-          </span>
-        ))}
-        {camps.length > 2 && (
-          <span
-            className="caption font-medium bg-gray-100 text-gray-600"
-            style={{
-              padding: 'var(--space-1) var(--space-2)',
-              borderRadius: 'var(--radius-sm)'
-            }}
-          >
-            +{camps.length - 2}
+            No camp
           </span>
         )}
       </div>
