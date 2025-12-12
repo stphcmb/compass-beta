@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Search } from 'lucide-react'
+import Header from '@/components/Header'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { getCampsWithAuthors } from '@/lib/api/thought-leaders'
 
@@ -201,7 +202,8 @@ export default function AuthorIndexPage() {
     return (
       <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
         <Sidebar />
-        <main className="flex-1 ml-64 flex items-center justify-center">
+        <Header />
+        <main className="flex-1 ml-64 mt-16 flex items-center justify-center">
           <div className="label" style={{ color: 'var(--color-mid-gray)' }}>Loading authors...</div>
         </main>
       </div>
@@ -213,7 +215,8 @@ export default function AuthorIndexPage() {
   return (
     <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
       <Sidebar />
-      <main className="flex-1 ml-64 flex">
+      <Header />
+      <main className="flex-1 ml-64 mt-16 flex">
         {/* Left Panel - Author List */}
         <div
           className="w-[400px] border-r flex flex-col overflow-hidden"

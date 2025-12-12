@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
+import Header from '@/components/Header'
 import SearchBar from '@/components/SearchBar'
 import SuggestedTopics from '@/components/SuggestedTopics'
 import DiscoverByDomain from '@/components/DiscoverByDomain'
@@ -19,7 +20,8 @@ export default function Home() {
   return (
     <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
       <Sidebar />
-      <main className="flex-1 ml-64 flex flex-col items-center justify-start overflow-y-auto" style={{ padding: 'var(--space-10)' }}>
+      <Header />
+      <main className="flex-1 ml-64 mt-16 flex flex-col items-center justify-start overflow-y-auto" style={{ padding: 'var(--space-10)' }}>
         {/* Hero Section - Clear "Start Here" Anchor */}
         <div className="max-w-3xl w-full text-center" style={{ marginBottom: 'var(--section-spacing)' }}>
           <h1 style={{ marginBottom: 'var(--space-3)' }}>

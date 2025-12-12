@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import Header from '@/components/Header'
 import SearchBar from '@/components/SearchBar'
 import PositioningSnapshot from '@/components/PositioningSnapshot'
 import CampAccordion from '@/components/CampAccordion'
@@ -70,7 +71,8 @@ export default function ResultsPage({
   return (
     <div className="h-screen bg-gray-50 flex">
       <Sidebar />
-      <main ref={mainRef} className="flex-1 ml-64 overflow-y-auto">
+      <Header />
+      <main ref={mainRef} className="flex-1 ml-64 mt-16 overflow-y-auto">
         <div className="max-w-5xl mx-auto p-6">
           <div className="mb-6">
             <SearchBar initialQuery={query} showEdit={true} />
