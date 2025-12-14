@@ -189,7 +189,7 @@ Act like an editorial partner, not a taxonomy classifier. Give concrete feedback
 2. Identify 2-4 camps that are most relevant (score 0-100, only include >= 30)
 3. For EACH camp:
    - Explain what this perspective means in plain language (avoid jargon like "co-evolution" - explain the actual viewpoint)
-   - Pick 2-3 specific authors and for EACH author provide:
+   - Pick 3-5 specific authors and for EACH author provide:
      * Their core belief/position on this topic (1-2 sentences, specific)
      * Whether they AGREE, DISAGREE, or PARTIALLY align with what the user wrote
      * An actual quote that represents their view (if you can infer it from their position summary)
@@ -199,6 +199,12 @@ Act like an editorial partner, not a taxonomy classifier. Give concrete feedback
    - What they're MISSING (specific gaps, name authors they should cite)
 
 CRITICAL: Use the EXACT IDs provided in the context above. For campId, use the "Camp ID" value. For authorId, use the "ID" value listed with each author. Do not make up or modify these IDs.
+
+CRITICAL CONSTRAINT - AUTHOR CONSISTENCY:
+- ANY author you mention by name in editorialSuggestions MUST also appear in the topAuthors array of at least one rankedCamp.
+- Before mentioning an author in presentPerspectives or missingPerspectives, ensure they are included in a camp's topAuthors list.
+- If you want to mention an author in editorial suggestions, you MUST first add them to a relevant camp's topAuthors (you can include 3-5 authors per camp).
+- This ensures all mentioned authors appear in the "Thought Leaders" section below the editorial suggestions.
 
 Return ONLY valid JSON (no markdown, no extra text):
 

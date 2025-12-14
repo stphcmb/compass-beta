@@ -2,16 +2,18 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { MiniBrainAnalyzeResponse } from '@/lib/mini-brain'
+import { AIEditorAnalyzeResponse } from '@/lib/ai-editor'
+import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark } from 'lucide-react'
 
-export default function MiniBrain() {
+export default function AIEditor() {
   const [text, setText] = useState('')
-  const [result, setResult] = useState<MiniBrainAnalyzeResponse | null>(null)
+  const [result, setResult] = useState<AIEditorAnalyzeResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [savedOnce, setSavedOnce] = useState(false)
+  const [allAuthors, setAllAuthors] = useState<Array<{ id: string; name: string }>>([])
 
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const authorsRef = useRef<HTMLDivElement>(null)
@@ -20,21 +22,63 @@ export default function MiniBrain() {
   // Listen for load text events from sidebar
   useEffect(() => {
     const handleLoadText = (e: Event) => {
-      const ev = e as CustomEvent<{ text: string }>
+      const ev = e as CustomEvent<{ text: string; cachedResult?: AIEditorAnalyzeResponse }>
       if (ev?.detail?.text) {
         setText(ev.detail.text)
-        setResult(null)
+        // If there's a cached result, restore it; otherwise clear
+        setResult(ev.detail.cachedResult || null)
         setError(null)
         setSavedOnce(false)
       }
     }
 
-    window.addEventListener('load-mini-brain-text', handleLoadText as EventListener)
-    return () => window.removeEventListener('load-mini-brain-text', handleLoadText as EventListener)
+    window.addEventListener('load-ai-editor-text', handleLoadText as EventListener)
+    return () => window.removeEventListener('load-ai-editor-text', handleLoadText as EventListener)
+  }, [])
+
+  // Fetch all authors on mount for linkification
+  useEffect(() => {
+    const fetchAuthors = async () => {
+      try {
+        const authors = await getThoughtLeaders()
+        setAllAuthors(authors.map(a => ({ id: a.id, name: a.name })))
+      } catch (error) {
+        console.error('Error fetching authors for linkification:', error)
+      }
+    }
+    fetchAuthors()
   }, [])
 
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const addToRecentSearches = (searchText: string, analysisResult: AIEditorAnalyzeResponse) => {
+    try {
+      const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+
+      // Create preview (first 60 chars)
+      const preview = searchText.length > 60 ? searchText.substring(0, 60) + '...' : searchText
+
+      // Remove if already exists
+      const filtered = recent.filter((s: any) => s.query !== preview)
+
+      // Add to beginning with cached result
+      filtered.unshift({
+        id: `recent-ai-editor-${Date.now()}`,
+        query: preview,
+        type: 'ai-editor',
+        fullText: searchText,
+        cachedResult: analysisResult,
+        timestamp: new Date().toISOString()
+      })
+
+      // Keep only last 20
+      const limited = filtered.slice(0, 20)
+      localStorage.setItem('recentSearches', JSON.stringify(limited))
+    } catch (error) {
+      console.error('Error adding to recent searches:', error)
+    }
   }
 
   const handleAnalyze = async () => {
@@ -62,6 +106,8 @@ export default function MiniBrain() {
         setError(data.error || data.message || 'Analysis failed')
       } else {
         setResult(data)
+        // Add to recent searches with cached result
+        addToRecentSearches(text, data)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error')
@@ -81,7 +127,7 @@ export default function MiniBrain() {
     if (!text.trim() || saving) return
     setSaving(true)
     try {
-      const saved = JSON.parse(localStorage.getItem('savedMiniBrainAnalyses') || '[]')
+      const saved = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
 
       // Create preview from text (first 60 characters)
       const preview = text.trim().substring(0, 60) + (text.trim().length > 60 ? '...' : '')
@@ -91,7 +137,7 @@ export default function MiniBrain() {
 
       // Add to beginning
       filtered.unshift({
-        id: `mini-brain-${Date.now()}`,
+        id: `ai-editor-${Date.now()}`,
         text: text.trim(),
         preview,
         timestamp: new Date().toISOString()
@@ -99,14 +145,14 @@ export default function MiniBrain() {
 
       // Keep only last 20
       const limited = filtered.slice(0, 20)
-      localStorage.setItem('savedMiniBrainAnalyses', JSON.stringify(limited))
+      localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(limited))
 
       setSavedOnce(true)
-      window.dispatchEvent(new CustomEvent('mini-brain-saved', {
+      window.dispatchEvent(new CustomEvent('ai-editor-saved', {
         detail: { text: text.trim(), preview, timestamp: new Date().toISOString() }
       }))
     } catch (e) {
-      console.error('Error saving mini brain analysis:', e)
+      console.error('Error saving AI editor analysis:', e)
     } finally {
       setSaving(false)
     }
@@ -136,12 +182,54 @@ export default function MiniBrain() {
     }
   }
 
-  // Parse text and linkify author mentions in brackets
+  // Build author name to ID map from matched camps
+  const buildAuthorMap = () => {
+    const map = new Map<string, string>()
+
+    // Add all authors from the database for comprehensive linkification
+    allAuthors.forEach(author => {
+      if (author.id && author.name) {
+        map.set(author.name, author.id)
+      }
+    })
+
+    // Also add authors from matched camps (in case they have different data)
+    if (result?.matchedCamps) {
+      result.matchedCamps.forEach(camp => {
+        camp.topAuthors.forEach(author => {
+          if (author.id && author.name) {
+            map.set(author.name, author.id)
+          }
+        })
+      })
+    }
+
+    return map
+  }
+
+  // Parse text and linkify author mentions (both bracketed and plain names)
   const linkifyAuthors = (text: string) => {
+    const authorMap = buildAuthorMap()
+
+    // Build regex pattern for all author names in the map
+    const authorNames = Array.from(authorMap.keys())
+    if (authorNames.length === 0) {
+      return text
+    }
+
+    // Escape special regex characters in author names and sort by length (longest first)
+    const escapedNames = authorNames
+      .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .sort((a, b) => b.length - a.length)
+
+    // Create pattern that matches author names OR bracketed content
+    const pattern = `\\[([^\\]]+)\\]|\\b(${escapedNames.join('|')})\\b`
+    const regex = new RegExp(pattern, 'g')
+
     const parts = []
     let lastIndex = 0
-    const regex = /\[([^\]]+)\]/g
     let match
+    let linkKey = 0
 
     while ((match = regex.exec(text)) !== null) {
       // Add text before the match
@@ -149,12 +237,17 @@ export default function MiniBrain() {
         parts.push(text.substring(lastIndex, match.index))
       }
 
+      // Determine if this is a bracketed match or plain author name
+      const bracketedName = match[1]
+      const plainName = match[2]
+      const authorName = bracketedName || plainName
+      const authorId = authorMap.get(authorName)
+
       // Add the linked author name
-      const authorName = match[1]
       parts.push(
         <Link
-          key={match.index}
-          href={`/authors`}
+          key={`author-link-${linkKey++}`}
+          href={authorId ? `/author/${authorId}` : `/authors`}
           style={{
             color: 'var(--color-accent)',
             fontWeight: 'var(--weight-semibold)',
@@ -205,9 +298,9 @@ export default function MiniBrain() {
             <Sparkles style={{ width: '24px', height: '24px', color: 'white' }} />
           </div>
           <div>
-            <h1 style={{ marginBottom: 'var(--space-1)' }}>Mini Brain</h1>
+            <h1 style={{ marginBottom: 'var(--space-1)' }}>AI Editor</h1>
             <p style={{ fontSize: 'var(--text-small)', color: 'var(--color-mid-gray)', margin: 0 }}>
-              AI-powered editorial analysis
+              Editorial analysis powered by AI
             </p>
           </div>
         </div>
@@ -217,7 +310,7 @@ export default function MiniBrain() {
           lineHeight: 'var(--leading-relaxed)',
           margin: 0
         }}>
-          Paste your draft or paragraph, and get instant editorial feedback. The Mini Brain analyzes your text against our canon of thought leaders, identifying which perspectives you're using and which you might be missing.
+          Paste your draft or paragraph, and get instant editorial feedback. AI Editor analyzes your text against our canon of thought leaders, identifying which perspectives you're using and which you might be missing.
         </p>
       </div>
 
@@ -229,7 +322,7 @@ export default function MiniBrain() {
         marginBottom: 'var(--space-6)',
         border: '1px solid var(--color-light-gray)'
       }}>
-        <label htmlFor="mini-brain-text-input" style={{
+        <label htmlFor="ai-editor-text-input" style={{
           display: 'block',
           fontSize: 'var(--text-small)',
           fontWeight: 'var(--weight-medium)',
@@ -247,12 +340,12 @@ export default function MiniBrain() {
           </span>
         </label>
         <textarea
-          id="mini-brain-text-input"
+          id="ai-editor-text-input"
           name="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="mini-brain-textarea"
+          className="ai-editor-textarea"
           style={{
             width: '100%',
             height: '192px',
@@ -383,7 +476,7 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
           ) : (
             <>
               <Sparkles style={{ width: '20px', height: '20px' }} />
-              Analyze with Mini Brain
+              Analyze with AI Editor
             </>
           )}
         </button>
@@ -749,14 +842,27 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
                     >
                       {/* Camp Header */}
                       <div style={{ marginBottom: 'var(--space-4)' }}>
-                        <h3 style={{
-                          fontWeight: 'var(--weight-semibold)',
-                          fontSize: 'var(--text-h3)',
-                          color: 'var(--color-soft-black)',
-                          marginBottom: 'var(--space-2)'
-                        }}>
+                        <Link
+                          href={`/results?q=${encodeURIComponent(camp.campLabel)}`}
+                          style={{
+                            fontWeight: 'var(--weight-semibold)',
+                            fontSize: 'var(--text-h3)',
+                            color: 'var(--color-soft-black)',
+                            marginBottom: 'var(--space-2)',
+                            display: 'block',
+                            textDecoration: 'none',
+                            transition: 'color var(--duration-fast) var(--ease-out)',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'var(--color-accent)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--color-soft-black)'
+                          }}
+                        >
                           {camp.campLabel}
-                        </h3>
+                        </Link>
                         <p style={{
                           fontSize: 'var(--text-small)',
                           color: 'var(--color-charcoal)',

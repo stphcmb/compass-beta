@@ -1,5 +1,5 @@
 /**
- * Mini Brain API Endpoint
+ * AI Editor API Endpoint
  *
  * POST /api/brain/analyze
  *
@@ -13,13 +13,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   analyzeText,
   validateText,
-  MiniBrainAnalyzeRequest,
-} from '@/lib/mini-brain'
+  AIEditorAnalyzeRequest,
+} from '@/lib/ai-editor'
 
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
-    const body: MiniBrainAnalyzeRequest = await request.json()
+    const body: AIEditorAnalyzeRequest = await request.json()
 
     if (!body.text) {
       return NextResponse.json(
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: 200 })
   } catch (error) {
     // Log error for debugging
-    console.error('Mini Brain API error:', error)
+    console.error('AI Editor API error:', error)
 
     // Return error response
     if (error instanceof Error) {

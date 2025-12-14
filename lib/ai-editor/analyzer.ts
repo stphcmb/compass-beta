@@ -1,5 +1,5 @@
 /**
- * Mini Brain Module - Main Analyzer
+ * AI Editor Module - Main Analyzer
  *
  * Orchestrates the full analysis pipeline:
  * 1. Extract keywords from user text
@@ -11,16 +11,16 @@
 import { extractKeywords, queryCampsByKeywords, getCampsByIds } from './query'
 import { analyzeWithGemini } from './gemini'
 import {
-  MiniBrainAnalyzeResponse,
-  MiniBrainMatchedCamp,
-  MiniBrainAuthor,
+  AIEditorAnalyzeResponse,
+  AIEditorMatchedCamp,
+  AIEditorAuthor,
   CampWithAuthors,
 } from './types'
 
 /**
  * Analyze user text and return editorial suggestions
  *
- * This is the main entry point for the Mini Brain feature.
+ * This is the main entry point for the AI Editor feature.
  * It implements a hybrid approach:
  * - For longer text, extracts keywords + uses LLM for semantic analysis
  * - Returns matched camps with authors and editorial suggestions
@@ -35,7 +35,7 @@ export async function analyzeText(
     maxCamps?: number
     includeDebugInfo?: boolean
   } = {}
-): Promise<MiniBrainAnalyzeResponse> {
+): Promise<AIEditorAnalyzeResponse> {
   const { maxCamps = 10, includeDebugInfo = false } = options
 
   // Validate input
@@ -89,11 +89,11 @@ export async function analyzeText(
 
     // Step 4: Format the response
     // Map Gemini's ranked camps to our response format
-    const matchedCamps: MiniBrainMatchedCamp[] = geminiAnalysis.rankedCamps
+    const matchedCamps: AIEditorMatchedCamp[] = geminiAnalysis.rankedCamps
       .slice(0, maxCamps)
-      .map((rankedCamp): MiniBrainMatchedCamp => {
+      .map((rankedCamp): AIEditorMatchedCamp => {
         // Gemini now returns authors with full details
-        const topAuthors: MiniBrainAuthor[] = rankedCamp.topAuthors.map((author) => ({
+        const topAuthors: AIEditorAuthor[] = rankedCamp.topAuthors.map((author) => ({
           ...(author.authorId && { id: author.authorId }),
           name: author.authorName,
           position: author.position,
@@ -117,7 +117,7 @@ export async function analyzeText(
   } catch (error) {
     if (error instanceof Error) {
       // Log the error for debugging
-      console.error('Mini Brain analysis error:', error.message)
+      console.error('AI Editor analysis error:', error.message)
 
       // Return a user-friendly error response
       throw new Error(

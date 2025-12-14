@@ -1,5 +1,5 @@
 /**
- * Mini Brain Module
+ * AI Editor Module
  *
  * A focused service that reads user text, looks up relevant camps
  * and authors in the canon, and returns editorial suggestions.
@@ -14,11 +14,11 @@ export { analyzeText, validateText } from './analyzer'
 
 // Types (for consumers of the module)
 export type {
-  MiniBrainAnalyzeRequest,
-  MiniBrainAnalyzeResponse,
-  MiniBrainMatchedCamp,
-  MiniBrainAuthor,
-  MiniBrainEditorialSuggestions,
+  AIEditorAnalyzeRequest,
+  AIEditorAnalyzeResponse,
+  AIEditorMatchedCamp,
+  AIEditorAuthor,
+  AIEditorEditorialSuggestions,
 } from './types'
 
 // Internal utilities (exported for testing, but not part of public API)
