@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Header from '@/components/Header'
 import SearchBar from '@/components/SearchBar'
@@ -11,26 +12,16 @@ import { ExpandedQueries } from '@/components/search-expansion'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
-export default function ResultsPage({
-  searchParams,
-}: {
-  searchParams: {
-    q?: string
-    domain?: string
-    domains?: string
-    camp?: string
-    camps?: string
-    authors?: string
-    date?: string
-  }
-}) {
-  const query = searchParams.q || ''
-  const domain = searchParams.domain
-  const domains = searchParams.domains?.split(',') || []
-  const camp = searchParams.camp
-  const camps = searchParams.camps?.split(',') || []
-  const authors = searchParams.authors?.split(',') || []
-  const date = searchParams.date
+export default function ResultsPage() {
+  const searchParams = useSearchParams()
+
+  const query = searchParams.get('q') || ''
+  const domain = searchParams.get('domain') || undefined
+  const domains = searchParams.get('domains')?.split(',') || []
+  const camp = searchParams.get('camp') || undefined
+  const camps = searchParams.get('camps')?.split(',') || []
+  const authors = searchParams.get('authors')?.split(',') || []
+  const date = searchParams.get('date') || undefined
 
   const mainRef = useRef<HTMLElement>(null)
   const [selectedRelevance, setSelectedRelevance] = useState<string | null>(null)

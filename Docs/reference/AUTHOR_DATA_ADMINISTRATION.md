@@ -14,9 +14,10 @@
 4. [Rules & Best Practices](#rules--best-practices)
 5. [Camp Reference (UUIDs)](#camp-reference-uuids)
 6. [SQL Templates](#sql-templates)
-7. [Verification Queries](#verification-queries)
-8. [Common Mistakes to Avoid](#common-mistakes-to-avoid)
-9. [Batch Operations](#batch-operations)
+7. [Pre-Commit Checklist](#pre-commit-checklist) ⭐ **MUST COMPLETE BEFORE COMMITTING**
+8. [Verification Queries](#verification-queries)
+9. [Common Mistakes to Avoid](#common-mistakes-to-avoid)
+10. [Batch Operations](#batch-operations)
 
 ---
 
@@ -172,10 +173,13 @@ Each author MUST have at least 3 relevant sources in JSONB format:
 
 **Source Quality Standards:**
 - ✅ URLs must be working and relevant
+- ✅ **NO DUPLICATE URLs** - Each URL must be unique
+- ✅ **NO DUPLICATE titles** - Each source must be distinct
 - ✅ Mix of source types (not all podcasts)
 - ✅ At least one substantial source (book, research, organization)
 - ✅ Prefer recent sources (last 3 years when possible)
 - ✅ Titles should be clear and descriptive
+- ✅ Run `node scripts/find_duplicate_sources.mjs` to verify no duplicates
 
 #### **3. Camp Relationships (1-5 per Author)**
 
@@ -202,12 +206,18 @@ Each author MUST have at least 3 relevant sources in JSONB format:
 
 **Per Camp Requirements:**
 
-| Field | Requirement | Word Count |
-|-------|-------------|------------|
-| `relevance` | `strong` \| `partial` \| `challenges` \| `emerging` | N/A |
-| `key_quote` | Domain-specific quote, actual words from author | 60-150 words |
-| `quote_source_url` | Direct link to where quote appears | N/A |
-| `why_it_matters` | Explains their influence in this domain | 80-180 words |
+| Field | Requirement | Word Count | Status |
+|-------|-------------|------------|--------|
+| `relevance` | `strong` \| `partial` \| `challenges` \| `emerging` | N/A | **REQUIRED** |
+| `key_quote` | Domain-specific quote, actual words from author | 60-150 words | **REQUIRED** |
+| `quote_source_url` | Direct link to where quote appears | N/A | **REQUIRED** |
+| `why_it_matters` | Explains their influence in this domain | 80-180 words | **REQUIRED** |
+
+**⚠️ CRITICAL: Quotes are MANDATORY**
+- Every author-camp relationship MUST have a `key_quote` and `quote_source_url`
+- Quotes appear in Mini Brain results and author cards throughout the UI
+- Missing quotes create poor user experience and incomplete author profiles
+- Run `node scripts/find_missing_quotes.mjs` before finalizing to verify all quotes are present
 
 ---
 
@@ -236,9 +246,13 @@ Each author MUST have at least 3 relevant sources in JSONB format:
    - Reference the [Camp Reference](#camp-reference-uuids) section
    - Never make up UUIDs
 
-5. **Provide camp-specific quotes**
-   - Each camp relationship needs unique, contextual content
-   - Quotes should reflect the author's stance on THAT domain
+5. **Provide camp-specific quotes (MANDATORY)**
+   - **EVERY camp relationship MUST have a quote before author goes live**
+   - Each camp needs unique, contextual content
+   - Quotes should be actual words from the author (not paraphrased)
+   - Quote must reflect the author's stance on THAT specific domain/camp
+   - Include source URL where the quote can be verified
+   - **Run validation:** `node scripts/find_missing_quotes.mjs` before committing
 
 6. **Use `notes` field for bio**
    - The `bio` field does NOT exist
@@ -267,9 +281,23 @@ Each author MUST have at least 3 relevant sources in JSONB format:
    - Authors without sources won't display properly in the UI
    - Minimum 3 required
 
-3. **Don't reuse generic quotes**
+2a. **NEVER add duplicate sources**
+   - ❌ **Same URL appearing multiple times** (copy-paste error)
+   - ❌ **Same content with slightly different URLs** (e.g., http vs https)
+   - ❌ **Multiple sources pointing to same resource** (redundant)
+   - ✅ Each source must be unique and add distinct value
+   - ✅ Run `node scripts/find_duplicate_sources.mjs` before committing
+
+3. **Don't reuse generic quotes across camps**
    - Each camp needs domain-specific content
    - Quote must reflect the author's actual position on that topic
+   - Never copy the same quote to multiple camps for one author
+
+3a. **NEVER add authors without quotes**
+   - ❌ **Authors without quotes will create UI gaps in Mini Brain and author cards**
+   - ❌ **No exceptions** - quotes are not optional or "nice to have"
+   - ✅ Collect quotes BEFORE adding the author to database
+   - ✅ If you can't find a quote, the author shouldn't be in that camp
 
 4. **Don't add to non-existent camps**
    - Always verify camp UUIDs from the reference table below
@@ -552,6 +580,67 @@ LEFT JOIN camp_authors ca ON a.id = ca.author_id
 WHERE a.name IN ('John Smith', 'Sarah Johnson')
 GROUP BY a.id;
 ```
+
+---
+
+## Pre-Commit Checklist
+
+**⚠️ BEFORE committing any new authors, complete ALL items:**
+
+### **1. Data Completeness**
+- [ ] Author has `name`, `primary_affiliation`, `header_affiliation`
+- [ ] Author has `notes` (2-3 sentence bio)
+- [ ] Author has `credibility_tier` set
+- [ ] Author has `author_type` set
+- [ ] Author has minimum **3 sources** in `sources` JSONB array
+- [ ] All source URLs are working and relevant
+- [ ] **NO duplicate URLs** in sources array
+- [ ] **NO duplicate titles** in sources array
+- [ ] Each source is unique and distinct
+
+### **2. Camp Relationships**
+- [ ] Author is mapped to **1-5 camps** based on actual expertise
+- [ ] Each camp relationship has `relevance` set
+- [ ] Each camp relationship has `why_it_matters` (80-180 words)
+
+### **3. Quotes (MANDATORY)**
+- [ ] **Every camp relationship has `key_quote`** (60-150 words, actual author words)
+- [ ] **Every camp relationship has `quote_source_url`** (verifiable link)
+- [ ] Quotes are domain-specific (different quote per camp)
+- [ ] Quotes reflect author's stance on THAT specific camp
+- [ ] **Run validation:** `node scripts/find_missing_quotes.mjs`
+- [ ] **Verify output shows 0 missing quotes**
+
+### **4. SQL Quality**
+- [ ] Used transactions (`BEGIN;` ... `COMMIT;`)
+- [ ] Included `ON CONFLICT` handling for camp_authors
+- [ ] No hardcoded author UUIDs (use `RETURNING id`)
+- [ ] Tested SQL in Supabase before committing
+
+### **5. Final Verification**
+```bash
+# 1. Check for missing quotes - should show 0
+node scripts/find_missing_quotes.mjs
+
+# Expected output:
+# Authors with missing quotes: 0
+# Total missing quotes: 0
+
+# 2. Check for duplicate sources - should show 0
+node scripts/find_duplicate_sources.mjs
+
+# Expected output:
+# Authors with duplicate sources: 0
+# Total duplicate entries: 0
+
+# 3. Run full validation
+node scripts/validate_authors_pre_commit.mjs
+
+# Expected output:
+# ✅ VALIDATION PASSED
+```
+
+**🚨 If any checkboxes are unchecked, DO NOT COMMIT. Fix issues first.**
 
 ---
 

@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# Git Pre-Commit Hook for Author Data Validation
+#
+# This hook validates author data before allowing commits.
+# It ensures all authors have quotes and required data.
+#
+# Installation:
+#   cp scripts/git-hooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# To bypass (NOT RECOMMENDED):
+#   git commit --no-verify
+#
+
+echo "🔍 Running author data validation..."
+
+# Run validation script
+node scripts/validate_authors_pre_commit.mjs
+
+# Capture exit code
+VALIDATION_EXIT_CODE=$?
+
+# If validation failed, block commit
+if [ $VALIDATION_EXIT_CODE -ne 0 ]; then
+  echo ""
+  echo "❌ Commit blocked due to validation errors."
+  echo ""
+  echo "To fix:"
+  echo "  1. Run: node scripts/find_missing_quotes.mjs"
+  echo "  2. Add missing quotes to camp_authors table"
+  echo "  3. Run: node scripts/validate_authors_pre_commit.mjs"
+  echo "  4. Try committing again"
+  echo ""
+  echo "To bypass (NOT RECOMMENDED): git commit --no-verify"
+  echo ""
+  exit 1
+fi
+
+# Validation passed, allow commit
+echo ""
+echo "✅ Validation passed. Proceeding with commit..."
+echo ""
+exit 0

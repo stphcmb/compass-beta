@@ -430,7 +430,7 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
               e.currentTarget.style.backgroundColor = 'white'
             }
           }}
-          title={savedOnce ? 'Saved' : 'Save this analysis'}
+          title={savedOnce ? 'Saved - find it in your sidebar' : 'Save this text to revisit later'}
         >
           <Bookmark style={{ width: '18px', height: '18px' }} />
           {savedOnce ? 'Saved' : saving ? 'Saving...' : 'Save'}
@@ -467,6 +467,7 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
               e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
             }
           }}
+          title="Analyze your text to discover which thought leaders agree or disagree with your perspective"
         >
           {loading ? (
             <>

@@ -217,24 +217,49 @@ export default function AuthorProfile({ authorId }: AuthorProfileProps) {
                       gap: 'var(--space-2)',
                       marginBottom: 'var(--space-2)'
                     }}>
-                      <h3 style={{
-                        fontSize: 'var(--text-h3)',
-                        fontWeight: 'var(--weight-semibold)',
-                        color: 'var(--color-soft-black)',
-                        margin: 0
-                      }}>
+                      <Link
+                        href={`/results?q=${encodeURIComponent(camp.name)}`}
+                        style={{
+                          fontSize: 'var(--text-h3)',
+                          fontWeight: 'var(--weight-semibold)',
+                          color: 'var(--color-soft-black)',
+                          margin: 0,
+                          textDecoration: 'none',
+                          transition: 'color var(--duration-fast) var(--ease-out)',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = 'var(--color-accent)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'var(--color-soft-black)'
+                        }}
+                      >
                         {camp.name}
-                      </h3>
-                      <span style={{
-                        padding: 'var(--space-1) var(--space-2)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: 'var(--text-caption)',
-                        fontWeight: 'var(--weight-medium)',
-                        backgroundColor: domainColor.bg,
-                        color: domainColor.text
-                      }}>
+                      </Link>
+                      <Link
+                        href={`/results?q=${encodeURIComponent(camp.domain)}`}
+                        style={{
+                          padding: 'var(--space-1) var(--space-2)',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: 'var(--text-caption)',
+                          fontWeight: 'var(--weight-medium)',
+                          backgroundColor: domainColor.bg,
+                          color: domainColor.text,
+                          textDecoration: 'none',
+                          transition: 'opacity var(--duration-fast) var(--ease-out)',
+                          cursor: 'pointer',
+                          display: 'inline-block'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.opacity = '0.8'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.opacity = '1'
+                        }}
+                      >
                         {camp.domain}
-                      </span>
+                      </Link>
                     </div>
                     {camp.description && (
                       <p style={{

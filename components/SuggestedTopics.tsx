@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 
 // Comprehensive list of search suggestions organized by domain and viewpoint
 const suggestedTopics = [
@@ -71,11 +71,18 @@ interface SuggestedTopicsProps {
 }
 
 export default function SuggestedTopics({ onTopicSelect }: SuggestedTopicsProps) {
-  // Randomly select 8 topics on each render (refreshes on page visit)
-  const displayTopics = useMemo(() => {
+  // Randomly select 8 topics on mount (client-side only to avoid hydration mismatch)
+  const [displayTopics, setDisplayTopics] = useState<typeof suggestedTopics>([])
+
+  useEffect(() => {
     const shuffled = [...suggestedTopics].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, 8)
+    setDisplayTopics(shuffled.slice(0, 8))
   }, [])
+
+  // Don't render until we have topics to avoid hydration mismatch
+  if (displayTopics.length === 0) {
+    return null
+  }
 
   return (
     <div className="text-center">

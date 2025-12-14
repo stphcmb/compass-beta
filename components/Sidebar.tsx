@@ -293,7 +293,7 @@ export default function Sidebar() {
         <div>
           {/* Section Header */}
           <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" title="Your recent searches and AI Editor analyses are saved here automatically">
               <Clock className="w-4 h-4 text-gray-500" />
               <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
                 Recent
@@ -383,7 +383,7 @@ export default function Sidebar() {
       <div>
         {/* Section Header */}
         <div className="flex items-center justify-between mb-3 pb-2 border-b border-blue-100">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" title="Save searches to revisit later without re-running analysis">
             <Bookmark className="w-4 h-4 text-blue-600" />
             <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
               Saved
@@ -465,7 +465,7 @@ export default function Sidebar() {
       <div>
         {/* Section Header */}
         <div className="flex items-center justify-between mb-3 pb-2 border-b border-purple-100">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" title="Your saved AI Editor analyses - click to reload text and results">
             <Sparkles className="w-4 h-4 text-purple-600" />
             <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
               Analyses

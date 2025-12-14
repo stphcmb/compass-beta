@@ -13,9 +13,9 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
   const pathname = usePathname()
 
   const navItems = [
-    { href: '/ai-editor', label: 'AI Editor', icon: Sparkles },
-    { href: '/authors', label: 'Authors', icon: Users },
-    { href: '/', label: 'Search', icon: Search },
+    { href: '/ai-editor', label: 'AI Editor', icon: Sparkles, tooltip: 'Get editorial feedback on your writing from diverse perspectives' },
+    { href: '/authors', label: 'Authors', icon: Users, tooltip: 'Browse thought leaders and their viewpoints' },
+    { href: '/', label: 'Search', icon: Search, tooltip: 'Search for camps and perspectives by topic' },
   ]
 
   return (
@@ -45,6 +45,7 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
                     ? 'bg-indigo-50 text-indigo-700'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
+                title={item.tooltip}
               >
                 <Icon className="w-4 h-4" />
                 {item.label}

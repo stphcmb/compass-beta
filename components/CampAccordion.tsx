@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import AuthorCard from './AuthorCard'
 
 interface CampAccordionProps {
@@ -298,7 +299,25 @@ export default function CampAccordion({
                   <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-1)' }}>
                     <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
                       {/* Domain name as H2 for proper hierarchy */}
-                      <h2 style={{ fontSize: 'var(--text-h2)', marginBottom: 0 }}>{domainName}</h2>
+                      <h2 style={{ fontSize: 'var(--text-h2)', marginBottom: 0 }}>
+                        <Link
+                          href={`/results?q=${encodeURIComponent(domainName)}`}
+                          style={{
+                            color: 'var(--color-soft-black)',
+                            textDecoration: 'none',
+                            transition: 'color var(--duration-fast) var(--ease-out)',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'var(--color-accent)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--color-soft-black)'
+                          }}
+                        >
+                          {domainName}
+                        </Link>
+                      </h2>
                       <span
                         className="caption font-medium"
                         style={{
@@ -359,16 +378,28 @@ export default function CampAccordion({
                       </div>
                       <div className="flex flex-wrap" style={{ gap: 'var(--space-2)' }}>
                         {campsWithFilteredAuthors.map((camp: any) => (
-                          <span
+                          <Link
                             key={camp.id}
+                            href={`/results?q=${encodeURIComponent(camp.name)}`}
                             className={`caption font-medium border ${getRelevanceBadgeStyles(relevanceFilter)}`}
                             style={{
                               padding: 'var(--space-1) var(--space-2)',
-                              borderRadius: 'var(--radius-full)'
+                              borderRadius: 'var(--radius-full)',
+                              textDecoration: 'none',
+                              transition: 'opacity var(--duration-fast) var(--ease-out)',
+                              cursor: 'pointer',
+                              display: 'inline-block'
                             }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.opacity = '0.8'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = '1'
+                            }}
+                            title={`Click to search for "${camp.name}" - a perspective with ${camp.authorCount} thought leader${camp.authorCount !== 1 ? 's' : ''}`}
                           >
                             {camp.name} · {camp.authorCount}
-                          </span>
+                          </Link>
                         ))}
                       </div>
                     </div>
