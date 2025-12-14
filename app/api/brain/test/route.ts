@@ -1,5 +1,5 @@
 /**
- * Mini Brain Test Endpoint (No Gemini)
+ * AI Editor Test Endpoint (No Gemini)
  *
  * POST /api/brain/test
  *
@@ -8,8 +8,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { extractKeywords, queryCampsByKeywords } from '@/lib/mini-brain/query'
-import { validateText } from '@/lib/mini-brain'
+import { extractKeywords, queryCampsByKeywords } from '@/lib/ai-editor/query'
+import { validateText } from '@/lib/ai-editor'
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     // Log error for debugging
-    console.error('Mini Brain test error:', error)
+    console.error('AI Editor test error:', error)
 
     // Return error response
     if (error instanceof Error) {
