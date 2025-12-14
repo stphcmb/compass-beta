@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { Suspense, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Header from '@/components/Header'
@@ -12,7 +12,7 @@ import { ExpandedQueries } from '@/components/search-expansion'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
-export default function ResultsPage() {
+function ResultsPageContent() {
   const searchParams = useSearchParams()
 
   const query = searchParams.get('q') || ''
@@ -98,6 +98,18 @@ export default function ResultsPage() {
         <BackToTop containerRef={mainRef} />
       </main>
     </div>
+  )
+}
+
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    }>
+      <ResultsPageContent />
+    </Suspense>
   )
 }
 
