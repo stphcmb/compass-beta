@@ -505,7 +505,12 @@ export async function getPositioningMetrics(query?: string, domain?: string, rel
       totalAuthors: 0,
       domains: [],
       filteredDomains: [],
-      topCamps: []
+      topCamps: {
+        stronglyAligned: [],
+        partiallyAligned: [],
+        challenging: [],
+        emerging: []
+      }
     }
   }
 
