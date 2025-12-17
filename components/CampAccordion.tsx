@@ -492,7 +492,7 @@ export default function CampAccordion({
                     }}
                   >
                     {allAuthors.map((author: any) => (
-                      <AuthorCard key={author.id} author={author} query={query} />
+                      <AuthorCard key={author.id} author={author} query={query} expandedQueries={expandedQueries || undefined} />
                     ))}
                   </div>
                 </div>

@@ -22,7 +22,14 @@ export default function PositioningSnapshot({ query, domain, camp, selectedRelev
     emerging: 0,
     totalCamps: 0,
     totalAuthors: 0,
-    domains: [] as string[]
+    domains: [] as string[],
+    filteredDomains: [] as string[],
+    topCamps: {
+      stronglyAligned: [] as Array<{ name: string; description: string }>,
+      partiallyAligned: [] as Array<{ name: string; description: string }>,
+      challenging: [] as Array<{ name: string; description: string }>,
+      emerging: [] as Array<{ name: string; description: string }>
+    }
   })
   const [opportunities, setOpportunities] = useState<string[]>([])
 
@@ -31,7 +38,7 @@ export default function PositioningSnapshot({ query, domain, camp, selectedRelev
       setLoading(true)
       try {
         const [metricsData, opportunitiesData] = await Promise.all([
-          getPositioningMetrics(query, domain),
+          getPositioningMetrics(query, domain, selectedRelevance),
           getWhiteSpaceOpportunities(query, domain)
         ])
         setMetrics(metricsData)
@@ -44,7 +51,7 @@ export default function PositioningSnapshot({ query, domain, camp, selectedRelev
     }
 
     fetchData()
-  }, [query, domain])
+  }, [query, domain, selectedRelevance])
 
   const handleDomainClick = (domainName: string) => {
     const domainId = `domain-${domainName.toLowerCase().replace(/\s+/g, '-')}`
@@ -52,6 +59,84 @@ export default function PositioningSnapshot({ query, domain, camp, selectedRelev
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
+  }
+
+  // Plain language domain explanations
+  const getDomainExplanation = (domainName: string): string => {
+    const explanations: Record<string, string> = {
+      'AI Technical Capabilities': 'AI capabilities & limitations',
+      'AI & Society': 'AI impact on society',
+      'Enterprise AI Adoption': 'how companies adopt AI',
+      'AI Governance & Oversight': 'AI regulation & governance',
+      'Future of Work': 'AI impact on jobs & work'
+    }
+    return explanations[domainName] || domainName
+  }
+
+  // Generate intuitive summary for filtered results
+  const getFilteredSummary = () => {
+    if (!selectedRelevance) return null
+
+    const count = selectedRelevance === 'strong' ? metrics.stronglyAligned :
+                  selectedRelevance === 'partial' ? metrics.partiallyAligned :
+                  selectedRelevance === 'challenges' ? metrics.challenging :
+                  metrics.emerging
+
+    const topCampsForFilter = selectedRelevance === 'strong' ? metrics.topCamps.stronglyAligned :
+                             selectedRelevance === 'partial' ? metrics.topCamps.partiallyAligned :
+                             selectedRelevance === 'challenges' ? metrics.topCamps.challenging :
+                             metrics.topCamps.emerging
+
+    const domains = metrics.filteredDomains.length > 0 ? metrics.filteredDomains : metrics.domains
+    const domainCount = domains.length
+
+    // Build domain description with plain language
+    let domainText = ''
+    if (domainCount === 1) {
+      domainText = getDomainExplanation(domains[0])
+    } else if (domainCount === 2) {
+      domainText = `${getDomainExplanation(domains[0])} and ${getDomainExplanation(domains[1])}`
+    } else if (domainCount > 2) {
+      const firstTwo = domains.slice(0, 2).map(d => getDomainExplanation(d)).join(', ')
+      domainText = `${firstTwo}, and ${domainCount - 2} other ${domainCount - 2 === 1 ? 'area' : 'areas'}`
+    }
+
+    // Build a proper plain English sentence
+    let summaryText = ''
+
+    if (selectedRelevance === 'strong') {
+      if (count === 1) {
+        summaryText = `1 voice supports your view on ${query || 'this topic'}`
+      } else {
+        summaryText = `${count} voices support your view on ${query || 'this topic'}`
+      }
+    } else if (selectedRelevance === 'partial') {
+      if (count === 1) {
+        summaryText = `1 voice partially agrees with your view on ${query || 'this topic'}`
+      } else {
+        summaryText = `${count} voices partially agree with your view on ${query || 'this topic'}`
+      }
+    } else if (selectedRelevance === 'challenges') {
+      if (count === 1) {
+        summaryText = `1 voice challenges your view on ${query || 'this topic'}`
+      } else {
+        summaryText = `${count} voices challenge your view on ${query || 'this topic'}`
+      }
+    } else {
+      // Emerging voices
+      if (count === 1) {
+        summaryText = `1 emerging voice offers new perspectives on ${query || 'this topic'}`
+      } else {
+        summaryText = `${count} emerging voices offer new perspectives on ${query || 'this topic'}`
+      }
+    }
+
+    // Add domain context if available
+    if (domainText) {
+      summaryText += ` — focusing on ${domainText}`
+    }
+
+    return { count, summaryText, domainText, domainCount, domains }
   }
 
   const handleSave = async () => {
@@ -179,43 +264,43 @@ export default function PositioningSnapshot({ query, domain, camp, selectedRelev
         </button>
       </div>
 
-      {selectedRelevance && (
-        <div className="mt-4 p-3 bg-gray-100 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[13px] text-gray-700">
-              Showing <strong className="text-emerald-700">
-                {selectedRelevance === 'strong' && `${metrics.stronglyAligned} authors who agree`}
-                {selectedRelevance === 'partial' && `${metrics.partiallyAligned} authors who partially agree`}
-                {selectedRelevance === 'challenges' && `${metrics.challenging} authors who disagree`}
-                {selectedRelevance === 'emerging' && `${metrics.emerging} new voices`}
-              </strong> across {metrics.domains.length} {metrics.domains.length === 1 ? 'domain' : 'domains'}:
-            </span>
-            <button
-              onClick={() => onRelevanceClick?.(selectedRelevance)}
-              className="text-[12px] text-gray-500 hover:text-gray-800 flex items-center gap-1"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6 6 18"></path>
-                <path d="m6 6 12 12"></path>
-              </svg>
-              Clear
-            </button>
-          </div>
-          {metrics.domains.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {metrics.domains.map((domainName) => (
-                <button
-                  key={domainName}
-                  onClick={() => handleDomainClick(domainName)}
-                  className="px-2.5 py-1 bg-white border border-gray-300 rounded-md text-[12px] text-gray-700 hover:bg-indigo-50 hover:border-indigo-400 hover:text-indigo-700 transition-colors"
-                >
-                  {domainName}
-                </button>
-              ))}
+      {selectedRelevance && (() => {
+        const summary = getFilteredSummary()
+        if (!summary) return null
+
+        return (
+          <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[13px] text-gray-700 leading-relaxed">
+                {summary.summaryText}
+              </span>
+              <button
+                onClick={() => onRelevanceClick?.(selectedRelevance)}
+                className="text-[12px] text-gray-500 hover:text-gray-800 flex items-center gap-1 flex-shrink-0 ml-3"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6 6 18"></path>
+                  <path d="m6 6 12 12"></path>
+                </svg>
+                Clear
+              </button>
             </div>
-          )}
-        </div>
-      )}
+            {summary.domains.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {summary.domains.map((domainName) => (
+                  <button
+                    key={domainName}
+                    onClick={() => handleDomainClick(domainName)}
+                    className="px-2.5 py-1 bg-white border border-gray-300 rounded-md text-[12px] text-gray-700 hover:bg-indigo-50 hover:border-indigo-400 hover:text-indigo-700 transition-colors"
+                  >
+                    {domainName}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {opportunities.length > 0 && !selectedRelevance && (
         <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">

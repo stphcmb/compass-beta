@@ -27,6 +27,10 @@
 // Core API
 export { expandQuery, extractSearchTerms } from './client'
 
+// Shared utilities (for both main search and AI Editor)
+export { expandSearchTerms, expandSearchTermsWithQueries } from './shared'
+export { expandQuerySemantics, extractPhrases } from './semantic-provider'
+
 // Types
 export type {
   ExpandedQuery,

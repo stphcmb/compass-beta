@@ -7,6 +7,7 @@
 
 import { supabase } from '../supabase'
 import { ExtractedKeywords, CampWithAuthors } from './types'
+import { expandSearchTerms } from '@/lib/search-expansion'
 
 /**
  * Extract keywords from text using simple heuristics
@@ -130,13 +131,22 @@ export async function queryCampsByKeywords(
   }
 
   try {
-    // Build search terms (prioritize phrases over single words)
+    // Use shared expansion logic (combines n8n + semantic fallback)
+    // This ensures consistency with main search behavior
+    const queryText = keywords.allTerms.join(' ')
+    const expandedTerms = await expandSearchTerms(queryText)
+
+    // Combine expanded terms with original keywords
     const searchTerms = [
-      ...keywords.phrases.slice(0, 5), // Top 5 phrases
-      ...keywords.words.slice(0, 10), // Top 10 words
+      ...keywords.phrases.slice(0, 5), // Keep original phrases (high priority)
+      ...expandedTerms,                 // Add expanded terms from shared logic
+      ...keywords.words.slice(0, 10),  // Keep original words
     ]
 
-    if (searchTerms.length === 0) {
+    // Remove duplicates
+    const uniqueSearchTerms = Array.from(new Set(searchTerms))
+
+    if (uniqueSearchTerms.length === 0) {
       return []
     }
 
@@ -199,7 +209,14 @@ export async function queryCampsByKeywords(
         }
       }
 
-      // Score based on word matches
+      // Score based on expanded term matches
+      for (const term of expandedTerms) {
+        if (searchableText.includes(term)) {
+          score += 5  // Higher weight for AI-expanded terms
+        }
+      }
+
+      // Score based on original word matches
       for (const word of keywords.words) {
         if (searchableText.includes(word)) {
           score += 3
@@ -219,8 +236,9 @@ export async function queryCampsByKeywords(
           author.header_affiliation || author.primary_affiliation || '',
         ].join(' ').toLowerCase()
 
-        for (const word of keywords.words) {
-          if (authorText.includes(word)) {
+        // Check against all search terms
+        for (const term of uniqueSearchTerms) {
+          if (authorText.includes(term)) {
             score += 2
           }
         }

@@ -1,6 +1,12 @@
 import { supabase } from '@/lib/supabase'
 import type { ThoughtLeader, TaxonomyCamp, AuthorCampMapping } from '@/lib/database-types'
-import { expandQuery, extractSearchTerms } from '@/lib/search-expansion'
+import { expandSearchTermsWithQueries, extractPhrases } from '@/lib/search-expansion'
+import {
+  detectQueryIntent,
+  calculateCampRelevance,
+  filterByQuality,
+  QUALITY_THRESHOLDS
+} from '@/lib/search/editorial-system'
 
 /**
  * Fetch all thought leaders (authors)
@@ -236,88 +242,45 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
       const queryLower = query.toLowerCase().trim()
       console.log('  Applying query filter:', queryLower)
 
-      let queryWords: string[] = []
-      let queryPhrases: string[] = []
+      // Detect query intent using editorial system
+      const intent = detectQueryIntent(queryLower)
+      console.log('  Detected intent:', intent)
 
-      // Try n8n query expansion first
-      const expandedQueries = await expandQuery(queryLower)
-
-      // Store for return value
-      if (expandedQueries && expandedQueries.length > 0) {
-        expandedQueriesResult = expandedQueries
-      }
-
-      if (expandedQueries && expandedQueries.length > 0) {
-        // Use n8n expanded queries
-        console.log('  Using n8n expanded queries:', expandedQueries.map(eq => eq.query))
-        const n8nTerms = extractSearchTerms(expandedQueries)
-        queryWords = n8nTerms
-
-        // Add the original query terms as well
-        queryWords.push(...queryLower.split(/\s+/).filter(word => word.length > 2))
-
-        // Extract phrases from expanded queries
-        expandedQueries.forEach(eq => {
-          const phrases = extractPhrases(eq.query.toLowerCase())
-          queryPhrases.push(...phrases)
-        })
-
-        // Also include original query phrases
-        queryPhrases.push(...extractPhrases(queryLower))
-
-      } else {
-        // Fallback to local semantic expansion
-        console.log('  Falling back to local query expansion')
-        const expandedTerms = expandQuerySemantics(queryLower)
-        console.log('  Expanded terms:', expandedTerms)
-
-        // Create expanded queries for UI display (semantic fallback)
-        if (expandedTerms.length > 0) {
-          expandedQueriesResult = expandedTerms.map((term, idx) => ({
-            query: term,
-            role: 'context' as const,
-            priority: 10 - idx
-          }))
-        }
-
-        // Split query into individual words and add expanded terms
-        queryWords = [
-          ...queryLower.split(/\s+/).filter(word => word.length > 2),
-          ...expandedTerms
-        ]
-
-        // Also check for multi-word phrases (for queries like "AI is a bubble")
-        queryPhrases = extractPhrases(queryLower)
-      }
+      // Use shared expansion logic (n8n + semantic fallback)
+      const { terms: queryWords, expandedQueries } = await expandSearchTermsWithQueries(queryLower)
+      expandedQueriesResult = expandedQueries
 
       console.log('  Query words:', queryWords.slice(0, 10), queryWords.length > 10 ? `... (${queryWords.length} total)` : '')
-      console.log('  Query phrases:', queryPhrases.slice(0, 5), queryPhrases.length > 5 ? `... (${queryPhrases.length} total)` : '')
 
-      camps = camps.filter((camp: any) => {
-        const campText = `${camp.name} ${camp.positionSummary} ${camp.code || ''}`.toLowerCase()
-
-        // Check if camp text contains any of the query words or phrases
-        const campMatches = queryWords.some(word => campText.includes(word)) ||
-          queryPhrases.some(phrase => campText.includes(phrase))
-
-        // Check if any author matches (including sources and notes)
-        const authorMatches = camp.authors.some((author: any) => {
-          // Build searchable text from author data including sources
-          let authorText = `${author.name || ''} ${author.affiliation || ''} ${author.positionSummary || ''}`.toLowerCase()
-
-          // Add source titles to searchable text
-          if (author.sources && Array.isArray(author.sources)) {
-            const sourceTitles = author.sources.map((s: any) => s.title || '').join(' ')
-            authorText += ' ' + sourceTitles.toLowerCase()
-          }
-
-          // Check for word matches or phrase matches
-          return queryWords.some(word => authorText.includes(word)) ||
-            queryPhrases.some(phrase => authorText.includes(phrase))
-        })
-
-        return campMatches || authorMatches
+      // Score all camps using editorial system
+      const scoredCamps = camps.map(camp => {
+        const relevance = calculateCampRelevance(camp, queryLower, queryWords, intent)
+        return {
+          camp,
+          relevance
+        }
       })
+
+      // Filter by quality threshold (only high-relevance camps)
+      const filteredScored = scoredCamps
+        .filter(item => item.relevance.score >= QUALITY_THRESHOLDS.HIGH_RELEVANCE)
+        .sort((a, b) => b.relevance.score - a.relevance.score)
+
+      console.log(`  Camps after quality filtering: ${filteredScored.length} (from ${camps.length})`)
+      console.log('  Top 3 matches:', filteredScored.slice(0, 3).map(item => ({
+        name: item.camp.name,
+        score: item.relevance.score,
+        stance: item.relevance.stance,
+        reasons: item.relevance.matchReasons.slice(0, 2)
+      })))
+
+      // Store relevance scores in camps for later use
+      camps = filteredScored.map(item => ({
+        ...item.camp,
+        _relevanceScore: item.relevance.score,
+        _stance: item.relevance.stance,
+        _matchReasons: item.relevance.matchReasons
+      }))
 
       console.log('  Camps after filtering:', camps.length)
     }
@@ -530,7 +493,7 @@ export async function getDomainStats(): Promise<Record<string, { campsCount: num
 /**
  * Get positioning metrics for a query/domain
  */
-export async function getPositioningMetrics(query?: string, domain?: string) {
+export async function getPositioningMetrics(query?: string, domain?: string, relevanceFilter?: string | null) {
   if (!supabase) {
     console.warn('Supabase not configured')
     return {
@@ -540,7 +503,9 @@ export async function getPositioningMetrics(query?: string, domain?: string) {
       emerging: 0,
       totalCamps: 0,
       totalAuthors: 0,
-      domains: []
+      domains: [],
+      filteredDomains: [],
+      topCamps: []
     }
   }
 
@@ -548,7 +513,7 @@ export async function getPositioningMetrics(query?: string, domain?: string) {
     const result = await getCampsWithAuthors(query, domain)
     const camps = result.camps
 
-    // Get unique domains
+    // Get unique domains (all camps)
     const uniqueDomains = Array.from(new Set(camps.map((c: any) => c.domain).filter(Boolean)))
 
     // Track unique authors per positioning category
@@ -560,27 +525,83 @@ export async function getPositioningMetrics(query?: string, domain?: string) {
     }
     const allAuthorIds = new Set<number>()
 
+    // Track domains and camps for filtered results
+    const filteredDomains = new Set<string>()
+    const campsByRelevance: Record<string, any[]> = {
+      stronglyAligned: [],
+      partiallyAligned: [],
+      challenging: [],
+      emerging: []
+    }
+
     camps.forEach((camp: any) => {
+      // Use semantic stance from editorial system instead of author.relevance
+      // _stance indicates how the camp relates to the user's search query
+      const stance = camp._stance || 'neutral'
+
+      // Determine which category this camp belongs to based on semantic stance
+      let categoryKey: 'stronglyAligned' | 'partiallyAligned' | 'challenging' | 'emerging'
+
+      if (stance === 'supports') {
+        categoryKey = 'stronglyAligned'
+      } else if (stance === 'challenges') {
+        categoryKey = 'challenging'
+      } else if (stance === 'neutral') {
+        // Neutral camps represent emerging or alternative perspectives
+        categoryKey = 'emerging'
+      } else {
+        // Fallback for camps without stance info
+        categoryKey = 'emerging'
+      }
+
+      // Add all authors from this camp to the appropriate category
       camp.authors?.forEach((author: any) => {
         // Count unique authors overall
         if (author.id) {
           allAuthorIds.add(author.id)
         }
 
-        // Categorize by relevance - track unique authors per category
-        const relevanceLower = (author.relevance || '').toLowerCase()
+        // Add author to the category determined by camp stance
+        authorSets[categoryKey].add(author.id)
+      })
 
-        if (relevanceLower.includes('strong')) {
-          authorSets.stronglyAligned.add(author.id)
-        } else if (relevanceLower.includes('partial')) {
-          authorSets.partiallyAligned.add(author.id)
-        } else if (relevanceLower.includes('challenge')) {
-          authorSets.challenging.add(author.id)
-        } else if (relevanceLower.includes('emerging')) {
-          authorSets.emerging.add(author.id)
+      // Track this camp in the appropriate category
+      campsByRelevance[categoryKey].push(camp)
+    })
+
+    // Calculate filtered domains based on relevance filter
+    if (relevanceFilter) {
+      const filterKey = relevanceFilter === 'strong' ? 'stronglyAligned' :
+                       relevanceFilter === 'partial' ? 'partiallyAligned' :
+                       relevanceFilter === 'challenges' ? 'challenging' : 'emerging'
+
+      campsByRelevance[filterKey].forEach((camp: any) => {
+        if (camp.domain) {
+          filteredDomains.add(camp.domain)
         }
       })
-    })
+    }
+
+    // Get top camps for each category (for summary generation)
+    // Use descriptions instead of names for better clarity
+    const topCamps = {
+      stronglyAligned: campsByRelevance.stronglyAligned.slice(0, 2).map((c: any) => ({
+        name: c.name,
+        description: c.positionSummary || c.name
+      })),
+      partiallyAligned: campsByRelevance.partiallyAligned.slice(0, 2).map((c: any) => ({
+        name: c.name,
+        description: c.positionSummary || c.name
+      })),
+      challenging: campsByRelevance.challenging.slice(0, 2).map((c: any) => ({
+        name: c.name,
+        description: c.positionSummary || c.name
+      })),
+      emerging: campsByRelevance.emerging.slice(0, 2).map((c: any) => ({
+        name: c.name,
+        description: c.positionSummary || c.name
+      }))
+    }
 
     const metrics = {
       stronglyAligned: authorSets.stronglyAligned.size,
@@ -589,7 +610,9 @@ export async function getPositioningMetrics(query?: string, domain?: string) {
       emerging: authorSets.emerging.size,
       totalCamps: camps.length,
       totalAuthors: allAuthorIds.size,
-      domains: uniqueDomains
+      domains: uniqueDomains,
+      filteredDomains: Array.from(filteredDomains),
+      topCamps
     }
 
     return metrics
@@ -602,7 +625,14 @@ export async function getPositioningMetrics(query?: string, domain?: string) {
       emerging: 0,
       totalCamps: 0,
       totalAuthors: 0,
-      domains: []
+      domains: [],
+      filteredDomains: [],
+      topCamps: {
+        stronglyAligned: [],
+        partiallyAligned: [],
+        challenging: [],
+        emerging: []
+      }
     }
   }
 }
@@ -657,95 +687,4 @@ function getRelevanceColor(relevance?: string): string {
   if (relevanceLower.includes('moderate') || relevanceLower.includes('partial')) return 'yellow'
 
   return 'gray'
-}
-
-/**
- * Semantic query expansion - maps common phrases/concepts to relevant keywords
- * This helps users find results even when their query doesn't exactly match camp names
- */
-function expandQuerySemantics(query: string): string[] {
-  const expansions: string[] = []
-  const q = query.toLowerCase()
-
-  // AI skepticism / criticism patterns
-  if (q.includes('bubble') || q.includes('hype') || q.includes('overhyped') || q.includes('overrated')) {
-    expansions.push('realist', 'skeptic', 'grounding', 'limitation', 'critical', 'bubble')
-  }
-  if (q.includes('not a bubble') || q.includes('not hype')) {
-    expansions.push('maximalist', 'optimist', 'progress', 'potential')
-  }
-
-  // AI optimism patterns
-  if (q.includes('optimis') || q.includes('bull') || q.includes('promising') || q.includes('potential')) {
-    expansions.push('utopian', 'maximalist', 'scaling', 'optimist', 'progress')
-  }
-
-  // Safety and risk patterns
-  if (q.includes('danger') || q.includes('risk') || q.includes('threat') || q.includes('doom') || q.includes('existential')) {
-    expansions.push('safety', 'risk', 'ethical', 'steward', 'alignment', 'regulation')
-  }
-
-  // Scaling debate
-  if (q.includes('scale') || q.includes('bigger') || q.includes('larger') || q.includes('more data') || q.includes('more compute')) {
-    expansions.push('scaling', 'maximalist', 'grounding', 'realist')
-  }
-
-  // Jobs and work
-  if (q.includes('job') || q.includes('work') || q.includes('employ') || q.includes('replace') || q.includes('automat')) {
-    expansions.push('displacement', 'collaboration', 'worker', 'human')
-  }
-
-  // Regulation patterns
-  if (q.includes('regulat') || q.includes('govern') || q.includes('law') || q.includes('policy') || q.includes('control')) {
-    expansions.push('regulation', 'governance', 'interventionist', 'adaptive', 'innovation')
-  }
-
-  // Open source patterns
-  if (q.includes('open') || q.includes('democratiz') || q.includes('access')) {
-    expansions.push('open', 'builder', 'hugging')
-  }
-
-  // Enterprise/business patterns
-  if (q.includes('enterprise') || q.includes('business') || q.includes('company') || q.includes('adopt')) {
-    expansions.push('adoption', 'evolution', 'business', 'builder', 'tech')
-  }
-
-  // Ethics patterns
-  if (q.includes('ethic') || q.includes('bias') || q.includes('fair') || q.includes('discriminat')) {
-    expansions.push('ethical', 'steward', 'justice', 'fairness')
-  }
-
-  // AGI patterns
-  if (q.includes('agi') || q.includes('general intelligence') || q.includes('superintelligen')) {
-    expansions.push('scaling', 'maximalist', 'safety', 'alignment')
-  }
-
-  return expansions
-}
-
-/**
- * Extract meaningful phrases from a query for phrase matching
- * This helps match multi-word queries like "AI is a bubble" or "AI will replace workers"
- */
-function extractPhrases(query: string): string[] {
-  const phrases: string[] = []
-
-  // Return the full query as a phrase if it's longer than 3 words
-  const words = query.trim().split(/\s+/)
-  if (words.length >= 3) {
-    phrases.push(query)
-  }
-
-  // Extract common meaningful phrases (3-6 words)
-  for (let i = 0; i < words.length - 2; i++) {
-    const phrase3 = words.slice(i, i + 3).join(' ')
-    const phrase4 = words.slice(i, i + 4).join(' ')
-    const phrase5 = words.slice(i, i + 5).join(' ')
-
-    if (phrase3.length > 8) phrases.push(phrase3)
-    if (i < words.length - 3 && phrase4.length > 10) phrases.push(phrase4)
-    if (i < words.length - 4 && phrase5.length > 12) phrases.push(phrase5)
-  }
-
-  return phrases
 }
