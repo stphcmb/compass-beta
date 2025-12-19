@@ -4,16 +4,27 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { AIEditorAnalyzeResponse } from '@/lib/ai-editor'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
+import { useToast } from '@/components/Toast'
 import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark } from 'lucide-react'
+
+// Loading phase messages for progressive feedback
+const LOADING_PHASES = [
+  { message: 'Analyzing your text...', duration: 2000 },
+  { message: 'Finding relevant thought leaders...', duration: 4000 },
+  { message: 'Comparing perspectives to your draft...', duration: 5000 },
+  { message: 'Generating editorial suggestions...', duration: 0 }, // Final phase, no auto-advance
+]
 
 export default function AIEditor() {
   const [text, setText] = useState('')
   const [result, setResult] = useState<AIEditorAnalyzeResponse | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingPhase, setLoadingPhase] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [savedOnce, setSavedOnce] = useState(false)
   const [allAuthors, setAllAuthors] = useState<Array<{ id: string; name: string }>>([])
+  const { showToast } = useToast()
 
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const authorsRef = useRef<HTMLDivElement>(null)
@@ -88,8 +99,29 @@ export default function AIEditor() {
     }
 
     setLoading(true)
+    setLoadingPhase(0)
     setError(null)
     setResult(null)
+
+    // Start cycling through loading phases
+    const phaseTimers: NodeJS.Timeout[] = []
+    let currentPhase = 0
+
+    const advancePhase = () => {
+      if (currentPhase < LOADING_PHASES.length - 1) {
+        currentPhase++
+        setLoadingPhase(currentPhase)
+        const nextDuration = LOADING_PHASES[currentPhase].duration
+        if (nextDuration > 0) {
+          phaseTimers.push(setTimeout(advancePhase, nextDuration))
+        }
+      }
+    }
+
+    // Start the first timer
+    if (LOADING_PHASES[0].duration > 0) {
+      phaseTimers.push(setTimeout(advancePhase, LOADING_PHASES[0].duration))
+    }
 
     try {
       const response = await fetch('/api/brain/analyze', {
@@ -112,7 +144,10 @@ export default function AIEditor() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error')
     } finally {
+      // Clear all phase timers
+      phaseTimers.forEach(timer => clearTimeout(timer))
       setLoading(false)
+      setLoadingPhase(0)
     }
   }
 
@@ -148,11 +183,13 @@ export default function AIEditor() {
       localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(limited))
 
       setSavedOnce(true)
+      showToast('Analysis saved successfully')
       window.dispatchEvent(new CustomEvent('ai-editor-saved', {
         detail: { text: text.trim(), preview, timestamp: new Date().toISOString() }
       }))
     } catch (e) {
       console.error('Error saving AI editor analysis:', e)
+      showToast('Failed to save analysis', 'error')
     } finally {
       setSaving(false)
     }
@@ -401,41 +438,6 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
         <button
-          onClick={handleSave}
-          disabled={saving || !text.trim()}
-          style={{
-            backgroundColor: savedOnce ? 'var(--color-success)' : 'white',
-            color: savedOnce ? 'white' : 'var(--color-charcoal)',
-            padding: 'var(--space-4) var(--space-6)',
-            borderRadius: 'var(--radius-base)',
-            fontSize: 'var(--text-body)',
-            fontWeight: 'var(--weight-medium)',
-            border: savedOnce ? '1px solid var(--color-success)' : '1px solid var(--color-light-gray)',
-            cursor: saving || !text.trim() ? 'not-allowed' : 'pointer',
-            transition: 'all var(--duration-fast) var(--ease-out)',
-            boxShadow: 'var(--shadow-sm)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 'var(--space-2)',
-            flex: '0 0 auto'
-          }}
-          onMouseEnter={(e) => {
-            if (!saving && text.trim() && !savedOnce) {
-              e.currentTarget.style.backgroundColor = 'var(--color-pale-gray)'
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!saving && text.trim() && !savedOnce) {
-              e.currentTarget.style.backgroundColor = 'white'
-            }
-          }}
-          title={savedOnce ? 'Saved - find it in your sidebar' : 'Save this text to revisit later'}
-        >
-          <Bookmark style={{ width: '18px', height: '18px' }} />
-          {savedOnce ? 'Saved' : saving ? 'Saving...' : 'Save'}
-        </button>
-        <button
           onClick={handleAnalyze}
           disabled={loading || !text.trim()}
           style={{
@@ -472,7 +474,7 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
           {loading ? (
             <>
               <Loader2 style={{ width: '20px', height: '20px' }} className="animate-spin" />
-              Analyzing...
+              {LOADING_PHASES[loadingPhase].message}
             </>
           ) : (
             <>
@@ -482,6 +484,52 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
           )}
         </button>
       </div>
+
+      {/* Loading Progress Indicator */}
+      {loading && (
+        <div style={{
+          backgroundColor: 'var(--color-cloud)',
+          border: '1px solid var(--color-light-gray)',
+          borderRadius: 'var(--radius-base)',
+          padding: 'var(--space-4)',
+          marginBottom: 'var(--space-6)'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            {LOADING_PHASES.map((phase, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  opacity: idx <= loadingPhase ? 1 : 0.4,
+                  transition: 'opacity 0.3s ease'
+                }}
+              >
+                {idx < loadingPhase ? (
+                  <CheckCircle style={{ width: '16px', height: '16px', color: 'var(--color-success)' }} />
+                ) : idx === loadingPhase ? (
+                  <Loader2 style={{ width: '16px', height: '16px', color: 'var(--color-accent)' }} className="animate-spin" />
+                ) : (
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    border: '2px solid var(--color-light-gray)'
+                  }} />
+                )}
+                <span style={{
+                  fontSize: 'var(--text-small)',
+                  color: idx <= loadingPhase ? 'var(--color-soft-black)' : 'var(--color-mid-gray)',
+                  fontWeight: idx === loadingPhase ? 'var(--weight-medium)' : 'var(--weight-normal)'
+                }}>
+                  {phase.message.replace('...', '')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -617,6 +665,41 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
               >
                 <Users style={{ width: '16px', height: '16px' }} />
                 Thought Leaders ({result.matchedCamps.length})
+              </button>
+
+              {/* Save Analysis Button */}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  padding: 'var(--space-2) var(--space-4)',
+                  backgroundColor: savedOnce ? 'var(--color-success)' : 'var(--color-bone)',
+                  border: savedOnce ? '1px solid var(--color-success)' : '1px solid var(--color-light-gray)',
+                  color: savedOnce ? 'white' : 'var(--color-accent)',
+                  borderRadius: 'var(--radius-base)',
+                  fontSize: 'var(--text-small)',
+                  fontWeight: 'var(--weight-medium)',
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  transition: 'all var(--duration-fast) var(--ease-out)',
+                  marginLeft: 'auto'
+                }}
+                onMouseEnter={(e) => {
+                  if (!saving && !savedOnce) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-accent-light)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!saving && !savedOnce) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bone)'
+                  }
+                }}
+                title={savedOnce ? 'Analysis saved - find it in your sidebar' : 'Save this analysis to revisit later'}
+              >
+                <Bookmark style={{ width: '16px', height: '16px' }} />
+                {savedOnce ? 'Saved' : saving ? 'Saving...' : 'Save Analysis'}
               </button>
             </div>
           </div>
@@ -825,7 +908,7 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
                 color: 'var(--color-mid-gray)',
                 marginBottom: 'var(--space-6)'
               }}>
-                These perspectives are most relevant to your content. See what each author believes and how they relate to your argument.
+                See what each thought leader believes and how their ideas specifically support or challenge your draft.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
                 {result.matchedCamps.map((camp, idx) => {
@@ -968,57 +1051,186 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
                                   </p>
                                 </div>
 
-                                {/* Quote */}
-                                {author.quote && (
+                                {/* Draft Connection - How this relates to the user's draft */}
+                                {author.draftConnection && (
                                   <div style={{
-                                    backgroundColor: 'var(--color-bone)',
-                                    border: '1px solid var(--color-light-gray)',
-                                    borderRadius: 'var(--radius-base)',
+                                    marginBottom: 'var(--space-3)',
                                     padding: 'var(--space-3)',
-                                    marginBottom: 'var(--space-3)'
+                                    backgroundColor: author.stance === 'agrees'
+                                      ? 'rgba(16, 185, 129, 0.08)'
+                                      : author.stance === 'disagrees'
+                                      ? 'rgba(239, 68, 68, 0.08)'
+                                      : 'rgba(245, 158, 11, 0.08)',
+                                    borderRadius: 'var(--radius-base)',
+                                    borderLeft: `3px solid ${
+                                      author.stance === 'agrees'
+                                        ? 'var(--color-success)'
+                                        : author.stance === 'disagrees'
+                                        ? 'var(--color-error)'
+                                        : 'var(--color-warning)'
+                                    }`
                                   }}>
-                                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                                      <Quote style={{
-                                        width: '16px',
-                                        height: '16px',
-                                        color: 'var(--color-mid-gray)',
-                                        flexShrink: 0,
-                                        marginTop: '2px'
-                                      }} />
-                                      <p style={{
-                                        fontSize: 'var(--text-small)',
-                                        fontStyle: 'italic',
-                                        color: 'var(--color-charcoal)',
-                                        margin: 0,
-                                        lineHeight: 'var(--leading-relaxed)'
-                                      }}>
-                                        "{author.quote}"
-                                      </p>
-                                    </div>
+                                    <p style={{
+                                      fontSize: 'var(--text-small)',
+                                      fontWeight: 'var(--weight-semibold)',
+                                      color: author.stance === 'agrees'
+                                        ? 'var(--color-success)'
+                                        : author.stance === 'disagrees'
+                                        ? 'var(--color-error)'
+                                        : 'var(--color-warning)',
+                                      marginBottom: 'var(--space-1)'
+                                    }}>
+                                      {author.stance === 'agrees'
+                                        ? '✓ How this supports your draft:'
+                                        : author.stance === 'disagrees'
+                                        ? '✗ How this challenges your draft:'
+                                        : '◐ How this relates to your draft:'}
+                                    </p>
+                                    <p style={{
+                                      fontSize: 'var(--text-small)',
+                                      color: 'var(--color-soft-black)',
+                                      lineHeight: 'var(--leading-relaxed)',
+                                      margin: 0
+                                    }}>
+                                      {author.draftConnection}
+                                    </p>
                                   </div>
                                 )}
 
-                                {/* Source Link */}
-                                {author.sourceUrl && (
-                                  <a
-                                    href={author.sourceUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: 'var(--space-1)',
-                                      fontSize: 'var(--text-caption)',
-                                      color: 'var(--color-accent)',
-                                      textDecoration: 'none',
-                                      transition: 'color var(--duration-fast) var(--ease-out)'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent-hover)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-accent)'}
-                                  >
-                                    <ExternalLink style={{ width: '12px', height: '12px' }} />
-                                    Read more
-                                  </a>
+                                {/* Quote - Clickable if source URL exists */}
+                                {author.quote && (
+                                  author.sourceUrl ? (
+                                    <a
+                                      href={author.sourceUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      title={author.sourceUrl}
+                                      style={{
+                                        display: 'block',
+                                        backgroundColor: 'var(--color-bone)',
+                                        border: '1px solid var(--color-light-gray)',
+                                        borderRadius: 'var(--radius-base)',
+                                        padding: 'var(--space-3)',
+                                        textDecoration: 'none',
+                                        transition: 'all var(--duration-fast) var(--ease-out)',
+                                        cursor: 'pointer'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-accent)'
+                                        e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.05)'
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                                        e.currentTarget.style.backgroundColor = 'var(--color-bone)'
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                        <Quote style={{
+                                          width: '16px',
+                                          height: '16px',
+                                          color: 'var(--color-accent)',
+                                          flexShrink: 0,
+                                          marginTop: '2px'
+                                        }} />
+                                        <div style={{ flex: 1 }}>
+                                          <p style={{
+                                            fontSize: 'var(--text-small)',
+                                            fontStyle: 'italic',
+                                            color: 'var(--color-charcoal)',
+                                            margin: 0,
+                                            lineHeight: 'var(--leading-relaxed)'
+                                          }}>
+                                            "{author.quote}"
+                                          </p>
+                                          <span style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 'var(--space-1)',
+                                            fontSize: 'var(--text-caption)',
+                                            color: 'var(--color-accent)',
+                                            marginTop: 'var(--space-2)'
+                                          }}>
+                                            <ExternalLink style={{ width: '12px', height: '12px' }} />
+                                            {(() => {
+                                              try {
+                                                const url = new URL(author.sourceUrl)
+                                                // Extract readable source name from domain
+                                                const domain = url.hostname.replace('www.', '')
+                                                // Map common domains to readable names
+                                                const domainNames: Record<string, string> = {
+                                                  'nytimes.com': 'New York Times',
+                                                  'wsj.com': 'Wall Street Journal',
+                                                  'wired.com': 'WIRED',
+                                                  'theverge.com': 'The Verge',
+                                                  'techcrunch.com': 'TechCrunch',
+                                                  'medium.com': 'Medium',
+                                                  'substack.com': 'Substack',
+                                                  'youtube.com': 'YouTube',
+                                                  'twitter.com': 'Twitter',
+                                                  'x.com': 'X',
+                                                  'linkedin.com': 'LinkedIn',
+                                                  'forbes.com': 'Forbes',
+                                                  'bloomberg.com': 'Bloomberg',
+                                                  'ft.com': 'Financial Times',
+                                                  'economist.com': 'The Economist',
+                                                  'hbr.org': 'Harvard Business Review',
+                                                  'mit.edu': 'MIT',
+                                                  'stanford.edu': 'Stanford',
+                                                  'arxiv.org': 'arXiv',
+                                                  'nature.com': 'Nature',
+                                                  'science.org': 'Science',
+                                                  'github.com': 'GitHub',
+                                                  'openai.com': 'OpenAI',
+                                                  'anthropic.com': 'Anthropic',
+                                                  'google.com': 'Google',
+                                                  'deepmind.com': 'DeepMind',
+                                                  'a16z.com': 'a16z',
+                                                  'pmarca.substack.com': 'Substack',
+                                                  'time.com': 'TIME',
+                                                  'washingtonpost.com': 'Washington Post',
+                                                  'theguardian.com': 'The Guardian',
+                                                  'bbc.com': 'BBC',
+                                                  'cnn.com': 'CNN',
+                                                  'reuters.com': 'Reuters',
+                                                  'apnews.com': 'AP News',
+                                                }
+                                                const siteName = domainNames[domain] || domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1)
+                                                return `Read on ${siteName}`
+                                              } catch {
+                                                return 'View source'
+                                              }
+                                            })()}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </a>
+                                  ) : (
+                                    <div style={{
+                                      backgroundColor: 'var(--color-bone)',
+                                      border: '1px solid var(--color-light-gray)',
+                                      borderRadius: 'var(--radius-base)',
+                                      padding: 'var(--space-3)'
+                                    }}>
+                                      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                        <Quote style={{
+                                          width: '16px',
+                                          height: '16px',
+                                          color: 'var(--color-mid-gray)',
+                                          flexShrink: 0,
+                                          marginTop: '2px'
+                                        }} />
+                                        <p style={{
+                                          fontSize: 'var(--text-small)',
+                                          fontStyle: 'italic',
+                                          color: 'var(--color-charcoal)',
+                                          margin: 0,
+                                          lineHeight: 'var(--leading-relaxed)'
+                                        }}>
+                                          "{author.quote}"
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )
                                 )}
                               </div>
                             )

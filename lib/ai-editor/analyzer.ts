@@ -98,6 +98,7 @@ export async function analyzeText(
           name: author.authorName,
           position: author.position,
           stance: author.stance,
+          draftConnection: author.draftConnection || '',
           ...(author.quote && { quote: author.quote }),
           ...(author.sourceUrl && { sourceUrl: author.sourceUrl }),
         }))

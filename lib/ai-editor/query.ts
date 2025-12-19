@@ -7,7 +7,6 @@
 
 import { supabase } from '../supabase'
 import { ExtractedKeywords, CampWithAuthors } from './types'
-import { expandSearchTerms } from '@/lib/search-expansion'
 
 /**
  * Extract keywords from text using simple heuristics
@@ -131,16 +130,12 @@ export async function queryCampsByKeywords(
   }
 
   try {
-    // Use shared expansion logic (combines n8n + semantic fallback)
-    // This ensures consistency with main search behavior
-    const queryText = keywords.allTerms.join(' ')
-    const expandedTerms = await expandSearchTerms(queryText)
-
-    // Combine expanded terms with original keywords
+    // For AI Editor, skip external N8N expansion to reduce latency
+    // The local keyword extraction is sufficient since Gemini does semantic matching
+    // This saves 2-5 seconds of unnecessary API calls
     const searchTerms = [
-      ...keywords.phrases.slice(0, 5), // Keep original phrases (high priority)
-      ...expandedTerms,                 // Add expanded terms from shared logic
-      ...keywords.words.slice(0, 10),  // Keep original words
+      ...keywords.phrases.slice(0, 5), // Original phrases (high priority)
+      ...keywords.words.slice(0, 15),  // Original words
     ]
 
     // Remove duplicates
@@ -150,7 +145,7 @@ export async function queryCampsByKeywords(
       return []
     }
 
-    // Query camps with authors
+    // Query camps with authors including their quotes
     // We'll search across camp fields and author fields
     const { data: camps, error } = await supabase
       .from('camps')
@@ -163,12 +158,16 @@ export async function queryCampsByKeywords(
         domain_id,
         camp_authors (
           relevance,
+          key_quote,
+          quote_source_url,
           authors (
             id,
             name,
             header_affiliation,
             primary_affiliation,
-            notes
+            notes,
+            key_quote,
+            quote_source_url
           )
         )
       `
@@ -209,14 +208,7 @@ export async function queryCampsByKeywords(
         }
       }
 
-      // Score based on expanded term matches
-      for (const term of expandedTerms) {
-        if (searchableText.includes(term)) {
-          score += 5  // Higher weight for AI-expanded terms
-        }
-      }
-
-      // Score based on original word matches
+      // Score based on word matches
       for (const word of keywords.words) {
         if (searchableText.includes(word)) {
           score += 3
@@ -224,11 +216,16 @@ export async function queryCampsByKeywords(
       }
 
       // Also check author names and affiliations
-      const authors = Array.isArray(camp.camp_authors)
-        ? camp.camp_authors
-            .map((ca: any) => ca.authors)
-            .filter(Boolean)
+      // Keep camp_authors data for quote extraction
+      const campAuthorsData = Array.isArray(camp.camp_authors)
+        ? camp.camp_authors.filter((ca: any) => ca.authors)
         : []
+      const authors = campAuthorsData.map((ca: any) => ({
+        ...ca.authors,
+        // Prefer camp-specific quote, fall back to author-level quote
+        key_quote: ca.key_quote || ca.authors.key_quote,
+        quote_source_url: ca.quote_source_url || ca.authors.quote_source_url,
+      }))
 
       for (const author of authors) {
         const authorText = [
@@ -270,6 +267,8 @@ export async function queryCampsByKeywords(
         affiliation: author.header_affiliation || author.primary_affiliation || undefined,
         position_summary: author.notes || undefined,
         relevance: undefined,
+        key_quote: author.key_quote || undefined,
+        quote_source_url: author.quote_source_url || undefined,
       })),
     }))
   } catch (error) {
@@ -311,12 +310,16 @@ export async function getCampsByIds(
         domain_id,
         camp_authors (
           relevance,
+          key_quote,
+          quote_source_url,
           authors (
             id,
             name,
             header_affiliation,
             primary_affiliation,
-            notes
+            notes,
+            key_quote,
+            quote_source_url
           )
         )
       `
@@ -340,11 +343,15 @@ export async function getCampsByIds(
     }
 
     return camps.map((camp) => {
-      const authors = Array.isArray(camp.camp_authors)
-        ? camp.camp_authors
-            .map((ca: any) => ca.authors)
-            .filter(Boolean)
+      const campAuthorsData = Array.isArray(camp.camp_authors)
+        ? camp.camp_authors.filter((ca: any) => ca.authors)
         : []
+      const authors = campAuthorsData.map((ca: any) => ({
+        ...ca.authors,
+        // Prefer camp-specific quote, fall back to author-level quote
+        key_quote: ca.key_quote || ca.authors.key_quote,
+        quote_source_url: ca.quote_source_url || ca.authors.quote_source_url,
+      }))
 
       return {
         id: camp.id,
@@ -357,6 +364,8 @@ export async function getCampsByIds(
           name: author.name,
           affiliation: author.header_affiliation || author.primary_affiliation || undefined,
           position_summary: author.notes || undefined,
+          key_quote: author.key_quote || undefined,
+          quote_source_url: author.quote_source_url || undefined,
         })),
       }
     })

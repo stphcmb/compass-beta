@@ -27,6 +27,8 @@ export interface AIEditorAuthor {
   position: string;
   /** Whether they agree or disagree with the user's perspective */
   stance: 'agrees' | 'disagrees' | 'partial';
+  /** How this author's ideas specifically align with or counter the user's draft */
+  draftConnection: string;
   /** A representative quote from this author */
   quote?: string;
   /** Citation or source link */
@@ -84,6 +86,10 @@ export interface CampWithAuthors {
     affiliation?: string;
     position_summary?: string;
     relevance?: string;
+    /** Real quote from database (camp-specific or author-level) */
+    key_quote?: string;
+    /** Source URL for the quote */
+    quote_source_url?: string;
   }[];
 }
 
@@ -158,6 +164,7 @@ export interface GeminiAnalysisResult {
       authorName: string;
       position: string;
       stance: 'agrees' | 'disagrees' | 'partial';
+      draftConnection: string;
       quote?: string;
       sourceUrl?: string;
     }>;

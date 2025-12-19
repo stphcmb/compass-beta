@@ -5,11 +5,13 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Bookmark, Clock, Search as SearchIcon, ChevronRight, Users, X, Sparkles, PanelLeftClose, PanelLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useToast } from '@/components/Toast'
 
 export default function Sidebar() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const { showToast } = useToast()
   const [recentSearches, setRecentSearches] = useState<any[]>([])
   const [savedSearches, setSavedSearches] = useState<any[]>([])
   const [savedAIEditorAnalyses, setSavedAIEditorAnalyses] = useState<any[]>([])
@@ -218,17 +220,22 @@ export default function Sidebar() {
       const filtered = saved.filter((s: any) => s.id !== id)
       localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(filtered))
       setSavedAIEditorAnalyses(filtered.slice(0, 10))
+      showToast('Analysis deleted')
     } catch (error) {
       console.error('Error deleting saved AI editor analysis:', error)
+      showToast('Failed to delete analysis', 'error')
     }
   }
 
   const clearAllSavedAIEditorAnalyses = () => {
     try {
+      const count = savedAIEditorAnalyses.length
       localStorage.setItem('savedAIEditorAnalyses', '[]')
       setSavedAIEditorAnalyses([])
+      showToast(`${count} ${count === 1 ? 'analysis' : 'analyses'} cleared`)
     } catch (error) {
       console.error('Error clearing saved AI editor analyses:', error)
+      showToast('Failed to clear analyses', 'error')
     }
   }
 
@@ -289,179 +296,7 @@ export default function Sidebar() {
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-4 pt-8 pb-4 space-y-8 min-h-0 sidebar-scroll">
-        {/* Recent Searches */}
-        <div>
-          {/* Section Header */}
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
-            <div className="flex items-center gap-2" title="Your recent searches and AI Editor analyses are saved here automatically">
-              <Clock className="w-4 h-4 text-gray-500" />
-              <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                Recent
-              </h3>
-              {recentSearches.length > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-medium text-gray-600 bg-gray-100 rounded-full">
-                  {recentSearches.length}
-                </span>
-              )}
-            </div>
-            {recentSearches.length > 0 && (
-              <button
-                onClick={clearAllRecentSearches}
-                className="text-xs text-gray-500 hover:text-red-600 hover:underline transition-colors"
-                title="Clear all recent searches"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="space-y-2">
-            {recentSearches.length === 0 ? (
-              <div className="text-center py-6 px-3">
-                <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-xs text-gray-500 leading-relaxed">
-                  No recent searches yet
-                </p>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Your search history will appear here
-                </p>
-              </div>
-            ) : (
-            recentSearches.map((search) => {
-              const isMiniBrain = search.type === 'mini-brain'
-              return (
-                <div key={search.id} className="relative group">
-                  <button
-                    onClick={() => handleSearchClick(search.query, search.type, search.fullText, search.cachedResult)}
-                    className={`w-full text-left p-2.5 rounded border transition-all ${
-                      isMiniBrain
-                        ? 'bg-purple-50 hover:bg-purple-100 border-purple-200 shadow-sm'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      {isMiniBrain ? (
-                        <Sparkles className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
-                      ) : (
-                        <SearchIcon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0 pr-6">
-                        {isMiniBrain && (
-                          <div className="flex items-center gap-1 mb-1">
-                            <span className="text-[9px] font-semibold text-purple-700 uppercase tracking-wider bg-purple-100 px-1.5 py-0.5 rounded">
-                              AI Analysis
-                            </span>
-                          </div>
-                        )}
-                        <div className={`text-sm truncate ${isMiniBrain ? 'text-purple-900 font-medium' : 'text-gray-800'}`}>
-                          {search.query}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                          <Clock className="w-3 h-3" />
-                          <span>{timeAgo(search.timestamp)}</span>
-                        </div>
-                      </div>
-                      <ChevronRight className={`w-4 h-4 flex-shrink-0 ${isMiniBrain ? 'text-purple-600' : 'text-gray-400'}`} />
-                    </div>
-                  </button>
-                  <button
-                    onClick={(e) => deleteRecentSearch(e, search.id)}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
-                    title="Delete recent search"
-                  >
-                    <X className="w-3 h-3 text-red-600" />
-                  </button>
-                </div>
-              )
-            })
-          )}
-        </div>
-      </div>
-
-      {/* Saved Searches */}
-      <div>
-        {/* Section Header */}
-        <div className="flex items-center justify-between mb-3 pb-2 border-b border-blue-100">
-          <div className="flex items-center gap-2" title="Save searches to revisit later without re-running analysis">
-            <Bookmark className="w-4 h-4 text-blue-600" />
-            <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
-              Saved
-            </h3>
-            {savedSearches.length > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-medium text-blue-700 bg-blue-100 rounded-full">
-                {savedSearches.length}
-              </span>
-            )}
-          </div>
-          {savedSearches.length > 0 && (
-            <button
-              onClick={clearAllSavedSearches}
-              className="text-xs text-gray-500 hover:text-red-600 hover:underline transition-colors"
-              title="Clear all saved searches"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="space-y-2">
-          {savedSearches.length === 0 ? (
-            <div className="text-center py-6 px-3">
-              <Bookmark className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-xs text-gray-500 leading-relaxed">
-                No saved searches yet
-              </p>
-              <p className="text-[10px] text-gray-400 mt-1">
-                Save searches to revisit them later
-              </p>
-            </div>
-          ) : (
-            savedSearches.map((search) => (
-              <div key={search.id} className="relative group">
-                <button
-                  onClick={() => handleSearchClick(search.query)}
-                  className="w-full text-left p-2 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition-colors"
-                >
-                  <div className="flex items-start gap-2">
-                    <Bookmark className="w-4 h-4 text-blue-700 mt-0.5" />
-                    <div className="flex-1 min-w-0 pr-6">
-                      <div className="text-sm text-gray-800 truncate">
-                        {search.query}
-                      </div>
-                      {search.filters && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {Object.entries(search.filters).map(([key, value]: any, idx: number) => (
-                            value && (
-                              <span
-                                key={idx}
-                                className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/70 border border-blue-200 text-blue-800"
-                              >
-                                {key}: {String(value)}
-                              </span>
-                            )
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-blue-700" />
-                  </div>
-                </button>
-                <button
-                  onClick={(e) => deleteSavedSearch(e, search.id)}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
-                  title="Delete saved search"
-                >
-                  <X className="w-3 h-3 text-red-600" />
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Saved Analyses */}
+        {/* Saved Analyses */}
       <div>
         {/* Section Header */}
         <div className="flex items-center justify-between mb-3 pb-2 border-b border-purple-100">

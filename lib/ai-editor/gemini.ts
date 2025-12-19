@@ -127,11 +127,36 @@ export async function analyzeWithGemini(
   text: string,
   candidateCamps: CampWithAuthors[]
 ): Promise<GeminiAnalysisResult> {
-  // Build context about camps for the LLM
+  // Helper to sanitize quotes for safe JSON output
+  const sanitizeForJson = (str: string): string => {
+    if (!str) return str
+    return str
+      .replace(/\\/g, '\\\\')  // Escape backslashes first
+      .replace(/"/g, '\\"')    // Escape double quotes
+      .replace(/\n/g, ' ')     // Replace newlines with spaces
+      .replace(/\r/g, '')      // Remove carriage returns
+      .replace(/\t/g, ' ')     // Replace tabs with spaces
+  }
+
+  // Build context about camps for the LLM, including real quotes
   const campsContext = candidateCamps
     .map((camp) => {
       const authorsText = camp.authors
-        .map((a) => `- ID: ${a.id} | Name: ${a.name}${a.affiliation ? ` (${a.affiliation})` : ''}${a.position_summary ? ` | Position: ${a.position_summary}` : ''}`)
+        .map((a) => {
+          let authorInfo = `- ID: ${a.id} | Name: ${a.name}${a.affiliation ? ` (${a.affiliation})` : ''}`
+          if (a.position_summary) {
+            authorInfo += ` | Position: ${a.position_summary}`
+          }
+          if (a.key_quote) {
+            // Sanitize quote to prevent JSON parsing issues
+            const sanitizedQuote = sanitizeForJson(a.key_quote)
+            authorInfo += `\n  REAL QUOTE: "${sanitizedQuote}"`
+            if (a.quote_source_url) {
+              authorInfo += `\n  SOURCE URL: ${a.quote_source_url}`
+            }
+          }
+          return authorInfo
+        })
         .join('\n')
 
       return `Camp: "${camp.name}"
@@ -192,8 +217,12 @@ Act like an editorial partner, not a taxonomy classifier. Give concrete feedback
    - Pick 3-5 specific authors and for EACH author provide:
      * Their core belief/position on this topic (1-2 sentences, specific)
      * Whether they AGREE, DISAGREE, or PARTIALLY align with what the user wrote
-     * An actual quote that represents their view (if you can infer it from their position summary)
-     * A source URL if available in the data
+     * A SPECIFIC connection to the user's draft: explain exactly HOW this author's ideas align with or counter what the user wrote. Reference specific points from the draft. Examples:
+       - "Your emphasis on X directly supports their argument that..."
+       - "Your claim that Y contradicts their core thesis that..."
+       - "While you mention Z, this author would push back because..."
+     * IMPORTANT: Use the REAL QUOTE provided in the context above (marked as "REAL QUOTE:"). Do NOT make up or paraphrase quotes. Only include a quote if one is provided in the context.
+     * Use the SOURCE URL provided in the context (marked as "SOURCE URL:"). Only include a sourceUrl if one is provided.
 4. Editorial feedback in plain language:
    - What arguments/angles they're CURRENTLY using (be specific - name authors, not camps)
    - What they're MISSING (specific gaps, name authors they should cite)
@@ -223,8 +252,9 @@ Return ONLY valid JSON (no markdown, no extra text):
           "authorName": "Author Name",
           "position": "Their specific belief about this topic",
           "stance": "agrees|disagrees|partial",
-          "quote": "A representative quote or key insight",
-          "sourceUrl": "URL if available, otherwise null"
+          "draftConnection": "How this specifically relates to YOUR draft: Your argument that [X] aligns with/contradicts their view because...",
+          "quote": "EXACT quote from REAL QUOTE in context - only include if provided, otherwise omit this field",
+          "sourceUrl": "EXACT URL from SOURCE URL in context - only include if provided, otherwise omit this field"
         }
       ]
     }
@@ -250,7 +280,27 @@ Return ONLY valid JSON (no markdown, no extra text):
       throw new Error('No JSON found in Gemini response')
     }
 
-    const result: GeminiAnalysisResult = JSON.parse(jsonMatch[0])
+    let jsonStr = jsonMatch[0]
+
+    // Clean up common JSON issues from LLM output
+    // Fix unescaped newlines inside strings
+    jsonStr = jsonStr.replace(/(?<=":[\s]*"[^"]*)\n(?=[^"]*")/g, ' ')
+    // Fix unescaped tabs
+    jsonStr = jsonStr.replace(/(?<=":[\s]*"[^"]*)\t(?=[^"]*")/g, ' ')
+
+    let result: GeminiAnalysisResult
+
+    try {
+      result = JSON.parse(jsonStr)
+    } catch (parseError) {
+      // If parsing fails, try a more aggressive cleanup
+      // Remove control characters that might break JSON
+      jsonStr = jsonStr.replace(/[\x00-\x1F\x7F]/g, (char) => {
+        if (char === '\n' || char === '\r' || char === '\t') return ' '
+        return ''
+      })
+      result = JSON.parse(jsonStr)
+    }
 
     // Validate the structure
     if (!result.summary || !result.rankedCamps || !result.editorialSuggestions) {
