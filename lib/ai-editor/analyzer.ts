@@ -67,11 +67,15 @@ export async function analyzeText(
       // No matching camps found - return empty result
       return {
         summary: 'No relevant camps found in the canon for this text.',
+        executiveSummary: {
+          strengths: [],
+          improvements: ['Consider exploring topics related to AI, technology, or organizational strategy to connect with perspectives in our canon.'],
+        },
         matchedCamps: [],
         editorialSuggestions: {
           presentPerspectives: [],
           missingPerspectives: [
-            'This text does not match any perspectives in our current canon. Consider exploring topics related to AI, technology, or organizational strategy.',
+            'This text does not match any perspectives in our current canon.',
           ],
         },
       }
@@ -112,6 +116,7 @@ export async function analyzeText(
 
     return {
       summary: geminiAnalysis.summary,
+      executiveSummary: geminiAnalysis.executiveSummary,
       matchedCamps,
       editorialSuggestions: geminiAnalysis.editorialSuggestions,
     }

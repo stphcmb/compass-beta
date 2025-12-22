@@ -126,7 +126,6 @@ export default function ContentHelperPage({
               query={topic}
               domain={undefined}
               camp={undefined}
-              relevanceFilter={selectedRelevance}
             />
           </div>
         </div>

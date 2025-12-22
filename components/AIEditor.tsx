@@ -15,8 +15,12 @@ const LOADING_PHASES = [
   { message: 'Generating editorial suggestions...', duration: 0 }, // Final phase, no auto-advance
 ]
 
-export default function AIEditor() {
-  const [text, setText] = useState('')
+interface AIEditorProps {
+  initialText?: string
+}
+
+export default function AIEditor({ initialText = '' }: AIEditorProps) {
+  const [text, setText] = useState(initialText)
   const [result, setResult] = useState<AIEditorAnalyzeResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingPhase, setLoadingPhase] = useState(0)
@@ -32,6 +36,16 @@ export default function AIEditor() {
   const authorsRef = useRef<HTMLDivElement>(null)
   const summaryRef = useRef<HTMLDivElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
+
+  // Update text when initialText prop changes (e.g., from MiniAIEditor)
+  useEffect(() => {
+    if (initialText) {
+      setText(initialText)
+      setResult(null)
+      setError(null)
+      setSavedOnce(false)
+    }
+  }, [initialText])
 
   // Listen for load text events from sidebar
   useEffect(() => {
@@ -708,7 +722,7 @@ export default function AIEditor() {
           lineHeight: 'var(--leading-relaxed)',
           margin: 0
         }}>
-          Paste your draft or paragraph, and get instant editorial feedback. AI Editor analyzes your text against our canon of thought leaders, identifying which perspectives you're using and which you might be missing.
+          Paste your draft or paragraph, and get instant editorial feedback. AI Editor analyzes your text against our collection of thought leaders, identifying which perspectives you're using and which you might be missing.
         </p>
       </div>
 

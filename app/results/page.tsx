@@ -21,17 +21,10 @@ function ResultsPageContent() {
   const camp = searchParams.get('camp') || undefined
   const camps = searchParams.get('camps')?.split(',') || []
   const authors = searchParams.get('authors')?.split(',') || []
-  const date = searchParams.get('date') || undefined
 
   const mainRef = useRef<HTMLElement>(null)
-  const [selectedRelevance, setSelectedRelevance] = useState<string | null>(null)
   const [expandedQueries, setExpandedQueries] = useState<any[] | null>(null)
   const [loadingQueries, setLoadingQueries] = useState(false)
-
-  const handleRelevanceClick = (relevance: string) => {
-    // Toggle: if clicking same one, deselect; otherwise select new one
-    setSelectedRelevance(prev => prev === relevance ? null : relevance)
-  }
 
   // Fetch expanded queries when query changes
   useEffect(() => {
@@ -80,8 +73,6 @@ function ResultsPageContent() {
             query={query}
             domain={domain}
             camp={camp}
-            selectedRelevance={selectedRelevance}
-            onRelevanceClick={handleRelevanceClick}
           />
           <div className="space-y-4 mt-6">
             <CampAccordion
@@ -91,7 +82,6 @@ function ResultsPageContent() {
               camp={camp}
               camps={camps}
               authors={authors}
-              relevanceFilter={selectedRelevance}
             />
           </div>
         </div>
@@ -112,4 +102,3 @@ export default function ResultsPage() {
     </Suspense>
   )
 }
-

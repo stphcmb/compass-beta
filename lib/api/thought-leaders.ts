@@ -668,11 +668,6 @@ export async function getWhiteSpaceOpportunities(query?: string, domain?: string
       opportunities.push(`${smallCamps.length} emerging camp(s) with few voices - opportunity for new perspectives`)
     }
 
-    // Check for dominant camps
-    const largeCamps = camps.filter((c: any) => c.authorCount > 10)
-    if (largeCamps.length > 0) {
-      opportunities.push(`${largeCamps.length} dominant camp(s) - consider alternative viewpoints`)
-    }
 
     return opportunities
   } catch (error) {

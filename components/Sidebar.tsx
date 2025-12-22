@@ -157,8 +157,16 @@ export default function Sidebar() {
         }))
       }, 100)
     } else {
-      // Regular search
-      router.push(`/results?q=${encodeURIComponent(query)}`)
+      // Regular search - navigate to explore page
+      // Store cached result in sessionStorage for immediate use
+      if (cachedResult) {
+        sessionStorage.setItem('pending-search-cache', JSON.stringify({
+          query,
+          cachedResult,
+          timestamp: Date.now()
+        }))
+      }
+      router.push(`/explore?q=${encodeURIComponent(query)}`)
     }
   }
 
@@ -295,9 +303,79 @@ export default function Sidebar() {
       )}
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-8 pb-4 space-y-8 min-h-0 sidebar-scroll">
+      <div className="flex-1 overflow-y-auto px-4 pt-8 pb-4 space-y-6 min-h-0 sidebar-scroll">
+        {/* Saved Searches Section */}
+        <div>
+          {/* Section Header */}
+          <div className="flex items-center justify-between mb-3 pb-2 border-b border-blue-100">
+            <div className="flex items-center gap-2" title="Your saved searches">
+              <SearchIcon className="w-4 h-4 text-blue-600" />
+              <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                Saved Searches
+              </h3>
+              {savedSearches.length > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-medium text-blue-700 bg-blue-100 rounded-full">
+                  {savedSearches.length}
+                </span>
+              )}
+            </div>
+            {savedSearches.length > 0 && (
+              <button
+                onClick={clearAllSavedSearches}
+                className="text-xs text-gray-500 hover:text-red-600 hover:underline transition-colors"
+                title="Clear all saved searches"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="space-y-2">
+            {savedSearches.length === 0 ? (
+              <div className="text-center py-4 px-3">
+                <SearchIcon className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                <p className="text-xs text-gray-500">No saved searches</p>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Save searches from Explore
+                </p>
+              </div>
+            ) : (
+              savedSearches.slice(0, 5).map((search) => (
+                <div key={search.id} className="relative group">
+                  <button
+                    onClick={() => handleSearchClick(search.query, 'search', undefined, search.cachedResult)}
+                    className="w-full text-left p-2 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition-colors"
+                  >
+                    <div className="flex items-start gap-2">
+                      <SearchIcon className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0 pr-6">
+                        <div className="text-sm text-gray-800 line-clamp-2">
+                          {search.query}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                          <Clock className="w-3 h-3" />
+                          <span>{timeAgo(search.timestamp)}</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    </div>
+                  </button>
+                  <button
+                    onClick={(e) => deleteSavedSearch(e, search.id)}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
+                    title="Delete saved search"
+                  >
+                    <X className="w-3 h-3 text-red-600" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         {/* Saved Analyses */}
-      <div>
+        <div>
         {/* Section Header */}
         <div className="flex items-center justify-between mb-3 pb-2 border-b border-purple-100">
           <div className="flex items-center gap-2" title="Your saved AI Editor analyses - click to reload text and results">

@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Filter, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Search, Filter } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { TERMINOLOGY } from '@/lib/constants/terminology'
 
 const domains = [
   'Business',
@@ -36,8 +36,6 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
   const [selectedCamps, setSelectedCamps] = useState<string[]>([])
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>([])
   const [selectedDateRange, setSelectedDateRange] = useState('Last 12 months')
-  const [saving, setSaving] = useState(false)
-  const [savedOnce, setSavedOnce] = useState(false)
 
   // Data from database
   const [camps, setCamps] = useState<string[]>([])
@@ -108,30 +106,7 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
     if (selectedAuthors.length > 0) params.set('authors', selectedAuthors.join(','))
     if (selectedDateRange !== 'Last 12 months') params.set('date', selectedDateRange)
 
-    router.push(`/results?${params.toString()}`)
-  }
-
-  const handleSave = async () => {
-    if (query.trim().length === 0 || saving) return
-    setSaving(true)
-    try {
-      const filters = {
-        domains: selectedDomains.length > 0 ? selectedDomains : undefined,
-        camps: selectedCamps.length > 0 ? selectedCamps : undefined,
-        authors: selectedAuthors.length > 0 ? selectedAuthors : undefined,
-        dateRange: selectedDateRange,
-      }
-      if (supabase) {
-        await supabase.from('saved_searches').insert({ query: query.trim(), filters })
-      }
-      setSavedOnce(true)
-      window.dispatchEvent(new CustomEvent('saved-search-created', {
-        detail: { query: query.trim(), filters, created_at: new Date().toISOString() }
-      }))
-    } catch (e) {
-    } finally {
-      setSaving(false)
-    }
+    router.push(`/explore?${params.toString()}`)
   }
 
   // Helper functions for multi-select
@@ -200,27 +175,43 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
 
   return (
     <div
-      className="bg-white/95 backdrop-blur border border-gray-100"
+      className="bg-gradient-to-br from-white to-blue-50/30 border-2 border-[var(--color-accent)]/20 hover:border-[var(--color-accent)]/40 transition-colors"
       style={{
-        borderRadius: 'var(--radius-base)',
+        borderRadius: 'var(--radius-lg)',
         padding: 'var(--space-6)',
         marginBottom: 'var(--space-8)',
-        boxShadow: 'var(--shadow-lg)'
+        boxShadow: '0 4px 20px rgba(0, 51, 255, 0.08)'
       }}
     >
-      {/* Main Search Input - This is the "Start Here" anchor */}
-      <div className="flex items-center" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
-        <Search style={{ width: 'var(--space-6)', height: 'var(--space-6)', color: 'var(--color-accent)' }} />
+      {/* Search Prompt Label */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
+        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-accent)]">
+          Search Perspectives
+        </span>
+      </div>
+
+      {/* Main Search Input */}
+      <div
+        className="flex items-center bg-white border border-gray-200 focus-within:border-[var(--color-accent)] focus-within:ring-2 focus-within:ring-[var(--color-accent)]/20 transition-all"
+        style={{
+          gap: 'var(--space-3)',
+          padding: 'var(--space-3) var(--space-4)',
+          borderRadius: 'var(--radius-md)',
+          marginBottom: 'var(--space-5)'
+        }}
+      >
+        <Search style={{ width: 'var(--space-5)', height: 'var(--space-5)', color: 'var(--color-accent)' }} />
         <input
           type="text"
-          placeholder="Paste your thesis or search by keywords..."
+          placeholder="Search by topic, thesis, or keywords..."
           value={query}
           onChange={(e) => handleQueryChange(e.target.value)}
           onKeyDown={handleKeyDown}
           maxLength={500}
           className="flex-1 outline-none"
           style={{
-            fontSize: 'var(--text-h3)',
+            fontSize: 'var(--text-body)',
             fontWeight: 'var(--weight-medium)',
             color: 'var(--color-soft-black)',
             backgroundColor: 'transparent'
@@ -246,20 +237,6 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
           </button>
         </div>
         <div className="flex items-center" style={{ gap: 'var(--space-3)' }}>
-          <button
-            onClick={handleSave}
-            disabled={saving || query.trim().length === 0}
-            className={`label border transition-colors ${savedOnce ? 'text-white border-green-600 hover:bg-green-700' : 'hover:bg-gray-50 border-gray-200'}`}
-            style={{
-              padding: 'var(--space-2) var(--space-4)',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: savedOnce ? 'var(--color-success)' : 'white',
-              color: savedOnce ? 'white' : 'var(--color-charcoal)'
-            }}
-            title={savedOnce ? 'Saved' : 'Save search'}
-          >
-            {savedOnce ? 'Saved' : saving ? 'Saving…' : 'Save'}
-          </button>
           <button
             onClick={handleSearch}
             className="label font-semibold text-white transition-all"
@@ -309,7 +286,7 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
             {/* Domain Dropdown */}
             <div className="relative">
               <label className="block label font-medium" style={{ marginBottom: 'var(--space-2)' }}>
-                Domain {selectedDomains.length > 0 && `(${selectedDomains.length})`}
+                {TERMINOLOGY.domain} {selectedDomains.length > 0 && `(${selectedDomains.length})`}
               </label>
               <button
                 onClick={() => toggleDropdown('domains')}
@@ -321,7 +298,7 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
                 }}
               >
                 <span className="label" style={{ color: 'var(--color-charcoal)' }}>
-                  {selectedDomains.length > 0 ? `${selectedDomains.length} selected` : 'Select domains'}
+                  {selectedDomains.length > 0 ? `${selectedDomains.length} selected` : `Select ${TERMINOLOGY.domains.toLowerCase()}`}
                 </span>
                 <svg
                   className={`transition-transform ${openDropdown === 'domains' ? 'rotate-180' : ''}`}
@@ -368,7 +345,7 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
             {/* Camp Dropdown */}
             <div className="relative">
               <label className="block label font-medium" style={{ marginBottom: 'var(--space-2)' }}>
-                Camp/Position {selectedCamps.length > 0 && `(${selectedCamps.length})`}
+                {TERMINOLOGY.camp} {selectedCamps.length > 0 && `(${selectedCamps.length})`}
               </label>
               <button
                 onClick={() => toggleDropdown('camps')}
@@ -381,7 +358,7 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
                 }}
               >
                 <span className="label" style={{ color: 'var(--color-charcoal)' }}>
-                  {loading ? 'Loading...' : selectedCamps.length > 0 ? `${selectedCamps.length} selected` : 'Select camps'}
+                  {loading ? 'Loading...' : selectedCamps.length > 0 ? `${selectedCamps.length} selected` : `Select ${TERMINOLOGY.camps.toLowerCase()}`}
                 </span>
                 <svg
                   className={`transition-transform ${openDropdown === 'camps' ? 'rotate-180' : ''}`}

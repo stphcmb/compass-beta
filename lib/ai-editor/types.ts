@@ -56,11 +56,23 @@ export interface AIEditorEditorialSuggestions {
 }
 
 /**
+ * Executive summary of draft quality
+ */
+export interface AIEditorExecutiveSummary {
+  /** What the draft does well */
+  strengths: string[];
+  /** How the draft could be improved */
+  improvements: string[];
+}
+
+/**
  * Response from the AI Editor analyze endpoint
  */
 export interface AIEditorAnalyzeResponse {
   /** 2-3 sentence summary of the text */
   summary: string;
+  /** Executive summary of strengths and areas for improvement */
+  executiveSummary: AIEditorExecutiveSummary;
   /** Camps matched to the text with their top authors */
   matchedCamps: AIEditorMatchedCamp[];
   /** Editorial suggestions based on canon analysis */
@@ -153,6 +165,10 @@ export interface GeminiResponse {
  */
 export interface GeminiAnalysisResult {
   summary: string;
+  executiveSummary: {
+    strengths: string[];
+    improvements: string[];
+  };
   rankedCamps: Array<{
     campId: string;
     campName: string;

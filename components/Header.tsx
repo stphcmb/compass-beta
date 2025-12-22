@@ -3,7 +3,8 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
-import { Search, Users, Sparkles } from 'lucide-react'
+import { Compass, Users, Sparkles, Home } from 'lucide-react'
+import { TERMINOLOGY } from '@/lib/constants/terminology'
 
 interface HeaderProps {
   sidebarCollapsed?: boolean
@@ -13,9 +14,10 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
   const pathname = usePathname()
 
   const navItems = [
-    { href: '/ai-editor', label: 'AI Editor', icon: Sparkles, tooltip: 'Get editorial feedback on your writing from diverse perspectives' },
-    { href: '/authors', label: 'Authors', icon: Users, tooltip: 'Browse thought leaders and their viewpoints' },
-    { href: '/', label: 'Search', icon: Search, tooltip: 'Search for camps and perspectives by topic' },
+    { href: '/', label: 'Home', icon: Home, tooltip: 'Go to homepage' },
+    { href: '/ai-editor', label: TERMINOLOGY.aiEditor, icon: Sparkles, tooltip: 'Get editorial feedback on your writing from diverse perspectives' },
+    { href: '/explore', label: TERMINOLOGY.search, icon: Compass, tooltip: `Browse ${TERMINOLOGY.camps.toLowerCase()} and positions on AI discourse` },
+    { href: '/authors', label: TERMINOLOGY.authors, icon: Users, tooltip: 'Browse thought leaders and their viewpoints' },
   ]
 
   return (
@@ -35,7 +37,9 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
         <nav className="flex items-center gap-1">
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href || (item.href === '/authors' && pathname.startsWith('/author/'))
+            const isActive = pathname === item.href ||
+                  (item.href === '/authors' && pathname.startsWith('/author/')) ||
+                  (item.href === '/explore' && pathname === '/results')
             return (
               <Link
                 key={item.href}

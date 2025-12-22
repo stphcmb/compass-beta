@@ -5,8 +5,10 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Search } from 'lucide-react'
 import Header from '@/components/Header'
+import { FeatureHint } from '@/components/FeatureHint'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { getCampsWithAuthors } from '@/lib/api/thought-leaders'
+import { TERMINOLOGY } from '@/lib/constants/terminology'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
@@ -307,7 +309,7 @@ export default function AuthorIndexPage() {
               >
                 <option value="alpha">A-Z</option>
                 <option value="domain">By Domain</option>
-                <option value="camp">By Camp</option>
+                <option value="camp">By {TERMINOLOGY.camp}</option>
               </select>
               <div className="caption" style={{ color: 'var(--color-mid-gray)' }}>
                 {processedAuthors.length} {processedAuthors.length === 1 ? 'author' : 'authors'}
@@ -481,6 +483,7 @@ export default function AuthorIndexPage() {
             padding: 'var(--space-8)'
           }}
         >
+          <FeatureHint featureKey="authors" className="mb-6" />
           {selectedAuthor ? (
             <div>
               {/* Profile Header */}
@@ -550,7 +553,7 @@ export default function AuthorIndexPage() {
                     </span>
                   ))}
 
-                  {/* If no camps, show "No camp assigned" */}
+                  {/* If no camps, show "No {TERMINOLOGY.camp.toLowerCase()} assigned" */}
                   {getAuthorCamps(selectedAuthor.id).length === 0 && (
                     <span
                       className="caption"
@@ -564,7 +567,7 @@ export default function AuthorIndexPage() {
                         fontStyle: 'italic'
                       }}
                     >
-                      No camp assigned
+                      No {TERMINOLOGY.camp.toLowerCase()} assigned
                     </span>
                   )}
                 </div>
@@ -784,7 +787,7 @@ function AuthorCard({ author, camps, isSelected, onClick, formatName }: {
               fontStyle: 'italic'
             }}
           >
-            No camp
+            No {TERMINOLOGY.camp.toLowerCase()}
           </span>
         )}
       </div>
