@@ -706,37 +706,13 @@ export default function AIEditor({ initialText = '', autoAnalyze = false }: AIEd
 
   return (
     <div style={{ maxWidth: 'var(--width-wide)' }}>
-      {/* Header */}
-      <div style={{
-        backgroundColor: 'var(--color-cloud)',
-        borderRadius: 'var(--radius-base)',
-        padding: 'var(--space-8)',
-        marginBottom: 'var(--space-8)',
-        border: '1px solid var(--color-light-gray)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-          <div style={{
-            padding: 'var(--space-3)',
-            backgroundColor: 'var(--color-accent)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-sm)'
-          }}>
-            <Sparkles style={{ width: '24px', height: '24px', color: 'white' }} />
-          </div>
-          <div>
-            <h1 style={{ marginBottom: 'var(--space-1)' }}>AI Editor</h1>
-            <p style={{ fontSize: 'var(--text-small)', color: 'var(--color-mid-gray)', margin: 0 }}>
-              Editorial analysis powered by AI
-            </p>
-          </div>
-        </div>
-        <p style={{
-          fontSize: 'var(--text-body)',
-          color: 'var(--color-charcoal)',
-          lineHeight: 'var(--leading-relaxed)',
-          margin: 0
-        }}>
-          Paste your draft or paragraph, and get instant editorial feedback. AI Editor analyzes your text against our collection of thought leaders, identifying which perspectives you're using and which you might be missing.
+      {/* Page Title */}
+      <div style={{ marginBottom: 'var(--space-6)' }}>
+        <h1 style={{ fontSize: 'var(--text-h2)', marginBottom: 'var(--space-2)' }}>
+          AI Editor
+        </h1>
+        <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-mid-gray)' }}>
+          Analyze your draft against 200+ thought leaders
         </p>
       </div>
 
