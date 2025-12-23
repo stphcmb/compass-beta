@@ -61,9 +61,16 @@ function ExplorePageContent() {
       setSidebarCollapsed(ev.detail.isCollapsed)
     }
 
-    const savedState = localStorage.getItem('sidebarCollapsed')
-    if (savedState === 'true') {
-      setSidebarCollapsed(true)
+    // Check initial state - match Sidebar logic
+    const savedSearches = JSON.parse(localStorage.getItem('savedSearches') || '[]')
+    const savedAnalyses = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+    const hasContent = savedSearches.length > 0 || savedAnalyses.length > 0
+    const userPreference = localStorage.getItem('sidebarCollapsed')
+
+    if (userPreference !== null) {
+      setSidebarCollapsed(userPreference === 'true')
+    } else {
+      setSidebarCollapsed(!hasContent)
     }
 
     window.addEventListener('sidebar-toggle', handleSidebarToggle as EventListener)

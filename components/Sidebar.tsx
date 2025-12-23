@@ -21,10 +21,21 @@ export default function Sidebar() {
 
   useEffect(() => {
     setMounted(true)
-    // Load collapsed state from localStorage
-    const savedState = localStorage.getItem('sidebarCollapsed')
-    if (savedState === 'true') {
-      setIsCollapsed(true)
+
+    // Check if user has any saved content
+    const savedSearches = JSON.parse(localStorage.getItem('savedSearches') || '[]')
+    const savedAnalyses = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+    const hasContent = savedSearches.length > 0 || savedAnalyses.length > 0
+
+    // Load user's explicit preference if set
+    const userPreference = localStorage.getItem('sidebarCollapsed')
+
+    if (userPreference !== null) {
+      // User has explicitly set a preference - respect it
+      setIsCollapsed(userPreference === 'true')
+    } else {
+      // No explicit preference - collapse by default unless they have saved content
+      setIsCollapsed(!hasContent)
     }
   }, [])
 

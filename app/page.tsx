@@ -5,8 +5,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import { MiniAIEditor } from '@/components/MiniAIEditor'
-import { BookOpen, Users, ArrowRight, FileText, Compass, Lightbulb, Edit3, Search, Sparkles } from 'lucide-react'
-import { TERMINOLOGY } from '@/lib/constants/terminology'
+import { Users, Compass, Lightbulb, Edit3, Search, Sparkles } from 'lucide-react'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
@@ -20,10 +19,16 @@ export default function Home() {
       setSidebarCollapsed(ev.detail.isCollapsed)
     }
 
-    // Check initial state
-    const savedState = localStorage.getItem('sidebarCollapsed')
-    if (savedState === 'true') {
-      setSidebarCollapsed(true)
+    // Check initial state - match Sidebar logic
+    const savedSearches = JSON.parse(localStorage.getItem('savedSearches') || '[]')
+    const savedAnalyses = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+    const hasContent = savedSearches.length > 0 || savedAnalyses.length > 0
+    const userPreference = localStorage.getItem('sidebarCollapsed')
+
+    if (userPreference !== null) {
+      setSidebarCollapsed(userPreference === 'true')
+    } else {
+      setSidebarCollapsed(!hasContent)
     }
 
     window.addEventListener('sidebar-toggle', handleSidebarToggle as EventListener)
@@ -37,191 +42,211 @@ export default function Home() {
       <main
         className="flex-1 mt-16 flex flex-col items-center justify-start overflow-y-auto transition-all duration-300"
         style={{
-          padding: 'var(--space-10)',
           marginLeft: sidebarCollapsed ? '0' : '256px'
         }}
       >
-        {/* Hero Section - AI Editor First */}
-        <div className="max-w-2xl w-full text-center relative" style={{ marginBottom: 'var(--section-spacing-large)' }}>
-          {/* Subtle decorative accent */}
-          <div
-            className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-gradient-to-r from-transparent via-[var(--color-accent)] to-transparent opacity-60"
-          />
-
-          <h1
-            className="animate-fade-in"
-            style={{
-              marginBottom: 'var(--space-4)',
-              background: 'linear-gradient(135deg, var(--color-soft-black) 0%, var(--color-charcoal) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            Write with the full picture
-          </h1>
-          <p
-            className="animate-fade-in-delay"
-            style={{
-              fontSize: 'var(--text-h3)',
-              color: 'var(--color-charcoal)',
-              marginBottom: 'var(--space-8)',
-              lineHeight: 'var(--leading-relaxed)',
-              fontWeight: 'var(--weight-normal)'
-            }}
-          >
-            See how your writing connects to—or challenges—the authors shaping AI discourse.
-          </p>
-
-          {/* Mini AI Editor */}
-          <MiniAIEditor className="mb-10" />
-
-          {/* How It Works - Enhanced with icons and connecting line */}
-          <div
-            className="relative mt-12"
-          >
-            {/* Connecting line behind steps */}
+        {/* Hero Section */}
+        <div className="w-full relative" style={{
+          background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)',
+        }}>
+          {/* Gradient orbs - contained */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div
-              className="absolute top-6 left-[16.67%] right-[16.67%] h-px hidden md:block"
-              style={{
-                background: 'linear-gradient(90deg, transparent, var(--color-light-gray) 15%, var(--color-light-gray) 85%, transparent)'
-              }}
+              className="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-30"
+              style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)' }}
             />
+            <div
+              className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-25"
+              style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }}
+            />
+            <div
+              className="absolute top-1/2 right-0 w-64 h-64 rounded-full blur-3xl opacity-20"
+              style={{ background: 'radial-gradient(circle, #06b6d4 0%, transparent 70%)' }}
+            />
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6">
+          <div className="max-w-3xl mx-auto text-center relative z-10" style={{ padding: '48px 24px 48px' }}>
+            {/* Badge */}
+            <div
+              className="inline-flex items-center gap-2 mb-4"
+              style={{
+                padding: 'var(--space-2) var(--space-4)',
+                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%)',
+                borderRadius: 'var(--radius-full)',
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <Sparkles size={14} style={{ color: '#a78bfa' }} />
+              <span style={{
+                fontSize: 'var(--text-caption)',
+                fontWeight: 'var(--weight-semibold)',
+                color: '#c4b5fd',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                AI-Powered Editorial Analysis
+              </span>
+            </div>
+
+            {/* Main Headline */}
+            <h1
+              className="animate-fade-in"
+              style={{
+                marginBottom: '16px',
+                fontSize: 'clamp(2rem, 5vw, 3rem)',
+                fontWeight: 'var(--weight-bold)',
+                letterSpacing: 'var(--tracking-tight)',
+                lineHeight: '1.1',
+                background: 'linear-gradient(135deg, #ffffff 0%, #e0e7ff 50%, #c7d2fe 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              Know what perspectives
+              <br />
+              <span style={{
+                background: 'linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>you're missing</span>
+            </h1>
+
+            {/* Subheadline */}
+            <p
+              className="animate-fade-in-delay mx-auto"
+              style={{
+                fontSize: '18px',
+                color: '#94a3b8',
+                lineHeight: '1.5',
+                fontWeight: '400',
+                maxWidth: '500px',
+                marginBottom: '32px'
+              }}
+            >
+              Analyze your writing against 200+ thought leaders shaping AI discourse.
+            </p>
+
+            {/* Mini AI Editor */}
+            <MiniAIEditor className="mb-0" />
+          </div>
+        </div>
+
+        {/* How It Works Section */}
+        <div className="w-full relative" style={{
+          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+        }}>
+          <div className="max-w-4xl mx-auto" style={{ padding: '48px 24px' }}>
+            {/* Section Header */}
+            <div className="text-center mb-8">
+              <span
+                style={{
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#8b5cf6',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  marginBottom: '8px',
+                  display: 'block'
+                }}
+              >
+                Simple Process
+              </span>
+              <h2 style={{
+                fontSize: '28px',
+                fontWeight: '700',
+                color: '#0f172a',
+                marginBottom: '8px'
+              }}>
+                How it works
+              </h2>
+              <p style={{
+                fontSize: '16px',
+                color: '#64748b'
+              }}>
+                Three steps to stronger, more informed writing
+              </p>
+            </div>
+
+            {/* Steps */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <HowItWorksStep
                 number="1"
                 icon={Edit3}
                 title="Paste your draft"
-                description="Share a paragraph or thesis you're working on"
+                description="Any paragraph, thesis, or argument you're working on"
               />
               <HowItWorksStep
                 number="2"
                 icon={Search}
-                title="We match perspectives"
-                description="Find relevant authors from 200+ thought leaders"
+                title="Match perspectives"
+                description="We compare against 200+ curated thought leaders"
               />
               <HowItWorksStep
                 number="3"
                 icon={Sparkles}
-                title="Get editorial insights"
-                description="See where you align and what you might be missing"
+                title="See the gaps"
+                description="Discover what you're using and what you're missing"
               />
             </div>
           </div>
         </div>
 
-        {/* Explore More Section */}
-        <div className="w-full max-w-4xl" style={{ marginBottom: 'var(--section-spacing-large)' }}>
-          {/* Section header with decorative line */}
-          <div className="text-center relative" style={{ marginBottom: 'var(--space-10)' }}>
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <div className="h-px w-12 bg-gradient-to-r from-transparent to-[var(--color-light-gray)]" />
-              <span
-                className="text-[var(--color-mid-gray)] uppercase tracking-widest"
-                style={{ fontSize: 'var(--text-caption)' }}
-              >
-                Explore
-              </span>
-              <div className="h-px w-12 bg-gradient-to-l from-transparent to-[var(--color-light-gray)]" />
-            </div>
-            <h2 style={{
-              marginBottom: 'var(--space-2)',
-              fontSize: 'var(--text-h2)',
-              color: 'var(--color-soft-black)'
-            }}>
-              Explore Perspectives
-            </h2>
-            <p style={{
-              fontSize: 'var(--text-body)',
-              color: 'var(--color-mid-gray)',
-              maxWidth: '500px',
-              margin: '0 auto'
-            }}>
-              Discover perspectives and authors shaping AI discourse
-            </p>
-          </div>
+        {/* Explore Section */}
+        <div className="w-full relative overflow-hidden" style={{
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        }}>
+          {/* Gradient accent */}
+          <div
+            className="absolute top-0 left-0 right-0 h-1"
+            style={{ background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)' }}
+          />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Explore Perspectives Card */}
-            <FeatureCard
-              href="/explore"
-              icon={Compass}
-              iconColor="text-blue-600"
-              iconBg="bg-blue-50"
-              title={TERMINOLOGY.searchFull}
-              description="Browse the definitive collection of perspectives and positions on AI's future. See who agrees—and who challenges each stance."
-              cta="Browse Perspectives"
-            />
-
-            {/* Authors Card */}
-            <FeatureCard
-              href="/authors"
-              icon={Users}
-              iconColor="text-emerald-600"
-              iconBg="bg-emerald-50"
-              title="Meet the Authors"
-              description="From researchers to policymakers, technologists to ethicists—explore the thinkers defining AI's future."
-              cta="Browse Authors"
-            />
-          </div>
-        </div>
-
-        {/* Quick Access Section */}
-        <div className="w-full max-w-4xl" style={{ marginBottom: 'var(--section-spacing)' }}>
-          {/* Section header with decorative line */}
-          <div className="text-center relative" style={{ marginBottom: 'var(--space-8)' }}>
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <div className="h-px w-12 bg-gradient-to-r from-transparent to-[var(--color-light-gray)]" />
-              <span
-                className="text-[var(--color-mid-gray)] uppercase tracking-widest"
-                style={{ fontSize: 'var(--text-caption)' }}
-              >
-                Ideas
-              </span>
-              <div className="h-px w-12 bg-gradient-to-l from-transparent to-[var(--color-light-gray)]" />
-            </div>
-            <h2 style={{
-              marginBottom: 'var(--space-2)',
-              fontSize: 'var(--text-h2)',
-              color: 'var(--color-soft-black)'
-            }}>
-              {TERMINOLOGY.whiteSpace}
-            </h2>
-            <p style={{
-              fontSize: 'var(--text-body)',
-              color: 'var(--color-mid-gray)',
-              maxWidth: '500px',
-              margin: '0 auto'
-            }}>
-              Content opportunities waiting to be explored
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <OpportunityCard
-              topic="AI and creative industries"
-              angle="The economic impact on freelance creatives"
-            />
-            <OpportunityCard
-              topic="Enterprise AI adoption"
-              angle="Middle management's role in AI transformation"
-            />
-            <OpportunityCard
-              topic="AI safety research"
-              angle="Bridging academic research and industry practice"
-            />
-          </div>
-
-          <div className="text-center mt-8">
-            <Link
-              href="/content-helper"
-              className="inline-flex items-center gap-2 text-[var(--color-accent)] hover:gap-3 transition-all duration-200 group"
-              style={{ fontSize: 'var(--text-small)', fontWeight: 'var(--weight-medium)' }}
+          <div className="max-w-4xl mx-auto text-center relative z-10" style={{ padding: '40px 24px' }}>
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#a78bfa',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                marginBottom: '8px',
+                display: 'block'
+              }}
             >
-              Explore more angles
-              <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-            </Link>
+              Explore More
+            </span>
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#ffffff',
+              marginBottom: '24px'
+            }}>
+              Or browse on your own
+            </h2>
+
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <ExploreButton
+                href="/explore"
+                icon={Compass}
+                label="Browse Perspectives"
+                description="13 camps across 5 domains"
+              />
+              <ExploreButton
+                href="/authors"
+                icon={Users}
+                label="Meet the Authors"
+                description="200+ thought leaders"
+              />
+              <ExploreButton
+                href="/content-helper"
+                icon={Lightbulb}
+                label="Find Content Gaps"
+                description="Untapped angles"
+              />
+            </div>
           </div>
         </div>
       </main>
@@ -244,29 +269,37 @@ function HowItWorksStep({
 }) {
   return (
     <div className="flex flex-col items-center text-center group">
-      {/* Icon container with subtle glow on hover */}
-      <div className="relative mb-4">
-        <div
-          className="w-12 h-12 rounded-xl bg-white border border-[var(--color-light-gray)] flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:border-[var(--color-accent)] transition-all duration-200"
-        >
-          <Icon size={22} className="text-[var(--color-accent)]" />
-        </div>
-        {/* Step number badge */}
-        <span
-          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[var(--color-accent)] text-white flex items-center justify-center text-xs font-semibold shadow-sm"
-        >
+      {/* Step number with gradient */}
+      <div
+        className="w-12 h-12 rounded-full flex items-center justify-center mb-5"
+        style={{
+          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+          boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)'
+        }}
+      >
+        <span className="text-white font-bold" style={{ fontSize: '18px' }}>
           {number}
         </span>
       </div>
+      {/* Icon with gradient background */}
+      <div
+        className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
+        style={{
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+          border: '1px solid rgba(139, 92, 246, 0.2)'
+        }}
+      >
+        <Icon size={26} className="text-violet-500" />
+      </div>
       <h3
-        className="font-semibold text-[var(--color-soft-black)] mb-1.5"
-        style={{ fontSize: 'var(--text-body)' }}
+        className="font-semibold mb-2"
+        style={{ fontSize: '17px', color: '#0f172a' }}
       >
         {title}
       </h3>
       <p
-        className="text-[var(--color-mid-gray)] max-w-[180px]"
-        style={{ fontSize: 'var(--text-small)', lineHeight: '1.5' }}
+        className="max-w-[220px]"
+        style={{ fontSize: '14px', lineHeight: '1.6', color: '#64748b' }}
       >
         {description}
       </p>
@@ -274,111 +307,58 @@ function HowItWorksStep({
   )
 }
 
-function FeatureCard({
+function ExploreButton({
   href,
   icon: Icon,
-  iconColor,
-  iconBg,
-  title,
-  description,
-  cta
+  label,
+  description
 }: {
   href: string
   icon: React.ComponentType<{ size?: number | string; className?: string }>
-  iconColor: string
-  iconBg: string
-  title: string
+  label: string
   description: string
-  cta: string
 }) {
   return (
     <Link
       href={href}
-      className="block p-6 bg-white border border-[var(--color-light-gray)] hover:border-[var(--color-accent)] transition-all group relative overflow-hidden"
+      className="group flex items-center gap-4 px-5 py-4 transition-all"
       style={{
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-subtle)',
+        borderRadius: '12px',
+        background: 'rgba(255, 255, 255, 0.05)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(10px)',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+        e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.5)'
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.boxShadow = '0 8px 25px rgba(139, 92, 246, 0.2)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = 'none'
       }}
     >
-      {/* Subtle gradient overlay on hover */}
       <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+        className="w-11 h-11 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform"
         style={{
-          background: 'linear-gradient(135deg, rgba(0, 51, 255, 0.02) 0%, transparent 50%)'
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%)',
         }}
-      />
-
-      <div className="relative">
-        <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-200`}>
-          <Icon size={24} className={iconColor} />
-        </div>
-        <h3
-          className="font-semibold text-[var(--color-soft-black)] mb-2 group-hover:text-[var(--color-accent)] transition-colors duration-200"
-          style={{ fontSize: 'var(--text-h3)' }}
-        >
-          {title}
-        </h3>
-        <p
-          className="text-[var(--color-charcoal)] mb-4"
-          style={{ fontSize: 'var(--text-small)', lineHeight: 'var(--leading-relaxed)' }}
-        >
-          {description}
-        </p>
-        <span
-          className="inline-flex items-center gap-1.5 text-[var(--color-accent)] group-hover:gap-2.5 transition-all duration-200"
-          style={{ fontSize: 'var(--text-small)', fontWeight: 'var(--weight-medium)' }}
-        >
-          {cta}
-          <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform duration-200" />
-        </span>
+      >
+        <Icon size={22} className="text-violet-300" />
       </div>
-    </Link>
-  )
-}
-
-function OpportunityCard({
-  topic,
-  angle
-}: {
-  topic: string
-  angle: string
-}) {
-  return (
-    <Link
-      href={`/content-helper?topic=${encodeURIComponent(topic)}&angle=${encodeURIComponent(angle)}`}
-      className="block p-4 bg-white border border-[var(--color-light-gray)] hover:border-purple-300 transition-all group relative overflow-hidden"
-      style={{
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-subtle)',
-      }}
-    >
-      {/* Subtle gradient overlay */}
-      <div
-        className="absolute inset-0 opacity-40 group-hover:opacity-60 transition-opacity pointer-events-none"
-        style={{
-          background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.06) 0%, rgba(99, 102, 241, 0.04) 100%)'
-        }}
-      />
-
-      <div className="relative flex items-start gap-3">
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-          <Lightbulb size={16} className="text-purple-600" />
+      <div className="text-left">
+        <div
+          className="font-semibold transition-colors"
+          style={{ fontSize: '15px', color: '#ffffff' }}
+        >
+          {label}
         </div>
-        <div className="flex-1 min-w-0">
-          <p
-            className="font-medium text-[var(--color-soft-black)] mb-0.5 group-hover:text-purple-700 transition-colors"
-            style={{ fontSize: 'var(--text-small)' }}
-          >
-            {topic}
-          </p>
-          <p
-            className="text-[var(--color-mid-gray)] line-clamp-2"
-            style={{ fontSize: 'var(--text-caption)', lineHeight: '1.4' }}
-          >
-            {angle}
-          </p>
+        <div style={{ fontSize: '13px', color: '#94a3b8' }}>
+          {description}
         </div>
-        <ArrowRight size={14} className="flex-shrink-0 text-purple-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all mt-0.5" />
       </div>
     </Link>
   )
