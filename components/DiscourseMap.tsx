@@ -4,18 +4,23 @@ import { useState, useEffect, useRef } from 'react'
 import { Users, ChevronRight, Map } from 'lucide-react'
 
 // Domain color mapping for visual distinction
-const DOMAIN_COLORS: Record<string, { bg: string; border: string; text: string; light: string }> = {
-  'Technology': { bg: 'bg-blue-500', border: 'border-blue-400', text: 'text-blue-700', light: 'bg-blue-50' },
-  'Society': { bg: 'bg-emerald-500', border: 'border-emerald-400', text: 'text-emerald-700', light: 'bg-emerald-50' },
-  'Business': { bg: 'bg-amber-500', border: 'border-amber-400', text: 'text-amber-700', light: 'bg-amber-50' },
-  'Workers': { bg: 'bg-orange-500', border: 'border-orange-400', text: 'text-orange-700', light: 'bg-orange-50' },
-  'Policy & Regulation': { bg: 'bg-purple-500', border: 'border-purple-400', text: 'text-purple-700', light: 'bg-purple-50' },
-  'Philosophy': { bg: 'bg-indigo-500', border: 'border-indigo-400', text: 'text-indigo-700', light: 'bg-indigo-50' },
-  'Other': { bg: 'bg-gray-500', border: 'border-gray-400', text: 'text-gray-700', light: 'bg-gray-50' },
+const DOMAIN_COLORS: Record<string, { bg: string; border: string; text: string; light: string; bgSolid: string; accent: string }> = {
+  'AI Technical Capabilities': { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700', light: 'bg-blue-50', bgSolid: '#dbeafe', accent: 'bg-blue-500' },
+  'AI & Society': { bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-700', light: 'bg-emerald-50', bgSolid: '#d1fae5', accent: 'bg-emerald-500' },
+  'Enterprise AI Adoption': { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-700', light: 'bg-amber-50', bgSolid: '#fef3c7', accent: 'bg-amber-500' },
+  'Future of Work': { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-700', light: 'bg-orange-50', bgSolid: '#ffedd5', accent: 'bg-orange-500' },
+  'AI Governance & Oversight': { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-700', light: 'bg-purple-50', bgSolid: '#f3e8ff', accent: 'bg-purple-500' },
+  'Technology': { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700', light: 'bg-blue-50', bgSolid: '#dbeafe', accent: 'bg-blue-500' },
+  'Society': { bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-700', light: 'bg-emerald-50', bgSolid: '#d1fae5', accent: 'bg-emerald-500' },
+  'Business': { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-700', light: 'bg-amber-50', bgSolid: '#fef3c7', accent: 'bg-amber-500' },
+  'Workers': { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-700', light: 'bg-orange-50', bgSolid: '#ffedd5', accent: 'bg-orange-500' },
+  'Policy & Regulation': { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-700', light: 'bg-purple-50', bgSolid: '#f3e8ff', accent: 'bg-purple-500' },
+  'Philosophy': { bg: 'bg-indigo-100', border: 'border-indigo-400', text: 'text-indigo-700', light: 'bg-indigo-50', bgSolid: '#e0e7ff', accent: 'bg-indigo-500' },
+  'Other': { bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-700', light: 'bg-gray-50', bgSolid: '#f3f4f6', accent: 'bg-gray-500' },
 }
 
 // Fallback color for unknown domains
-const DEFAULT_COLOR = { bg: 'bg-slate-500', border: 'border-slate-400', text: 'text-slate-700', light: 'bg-slate-50' }
+const DEFAULT_COLOR = { bg: 'bg-slate-100', border: 'border-slate-400', text: 'text-slate-700', light: 'bg-slate-50', bgSolid: '#f1f5f9', accent: 'bg-slate-500' }
 
 export function getDomainColor(domain: string) {
   return DOMAIN_COLORS[domain] || DEFAULT_COLOR

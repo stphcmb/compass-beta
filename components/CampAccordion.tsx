@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronUp, Users, ChevronRight, Tag } from 'lucide-react'
+import { ChevronDown, ChevronUp, Users } from 'lucide-react'
 import AuthorCard, { authorQuoteMatchesSearch } from './AuthorCard'
 import { TERMINOLOGY, getCampLabel } from '@/lib/constants/terminology'
 import { getDomainColor } from './DiscourseMap'
@@ -19,59 +19,79 @@ const DOMAIN_DESCRIPTIONS: Record<string, string> = {
   'Future of Work': 'How AI changes employment, skills, and the workplace—perspectives on automation and human potential.',
 }
 
+// Perspective stance data with full sentences and contrasts
+const PERSPECTIVE_STANCES: Record<string, { belief: string; contrast?: string; themes: string[] }> = {
+  'Scaling Will Deliver': {
+    belief: 'These authors believe that scaling current approaches—bigger models, more data, more compute—will continue to drive AI capabilities forward.',
+    contrast: 'Unlike those who see fundamental limits in current architectures, they expect incremental progress to yield transformative results.',
+    themes: ['Scale', 'Progress']
+  },
+  'Needs New Approaches': {
+    belief: 'These authors believe that current AI architectures have fundamental limits and that breakthroughs require entirely new paradigms.',
+    contrast: 'Unlike scaling optimists, they argue that more compute alone won\'t solve AI\'s core challenges.',
+    themes: ['Innovation', 'Research']
+  },
+  'Cautious Optimism': {
+    belief: 'These authors believe AI progress is real and beneficial, but requires careful governance and realistic expectations.',
+    contrast: 'Unlike both extreme optimists and doomers, they advocate for measured, evidence-based approaches.',
+    themes: ['Balanced', 'Pragmatic']
+  },
+  'Existential Risk': {
+    belief: 'These authors believe advanced AI poses serious, potentially existential risks to humanity that demand urgent attention.',
+    contrast: 'Unlike those focused on near-term benefits, they prioritize long-term safety over rapid deployment.',
+    themes: ['Safety', 'Risk']
+  },
+  'Job Displacement': {
+    belief: 'These authors believe AI will fundamentally reshape labor markets, displacing many workers and requiring systemic responses.',
+    contrast: 'Unlike human-AI collaboration optimists, they see automation as a disruptive force requiring policy intervention.',
+    themes: ['Labor', 'Disruption']
+  },
+  'Human-AI Collaboration': {
+    belief: 'These authors believe the future lies in augmentation, not replacement—humans and AI working together to achieve more.',
+    contrast: 'Unlike displacement pessimists, they see AI as a tool that amplifies human capability rather than replacing it.',
+    themes: ['Collaboration', 'Augmentation']
+  },
+  'Regulation First': {
+    belief: 'These authors believe strong regulatory frameworks must be established before AI capabilities advance further.',
+    contrast: 'Unlike innovation-first advocates, they prioritize safety guardrails over speed of development.',
+    themes: ['Policy', 'Safety']
+  },
+  'Innovation First': {
+    belief: 'These authors believe excessive regulation will stifle beneficial AI development and cede leadership to less cautious actors.',
+    contrast: 'Unlike regulation-first advocates, they argue that premature rules will do more harm than good.',
+    themes: ['Innovation', 'Competition']
+  },
+  'AI-First Transformation': {
+    belief: 'These authors believe enterprises must fundamentally restructure around AI to remain competitive.',
+    contrast: 'Unlike incremental adopters, they advocate for bold, organization-wide AI integration.',
+    themes: ['Enterprise', 'Strategy']
+  },
+  'Pragmatic Integration': {
+    belief: 'These authors believe AI adoption should be measured and focused on proven use cases with clear ROI.',
+    contrast: 'Unlike AI-first maximalists, they favor practical, incremental deployment over wholesale transformation.',
+    themes: ['Practical', 'ROI']
+  },
+}
+
 // Helper to generate a stance blurb from perspective name and domain
-function generateStanceBlurb(name: string, domain: string, positionSummary?: string): string {
-  if (positionSummary) return positionSummary
-
-  // Fallback blurbs based on common perspective names
-  const blurbs: Record<string, string> = {
-    'Scaling Will Deliver': 'Bigger models and more data will keep pushing AI capability forward.',
-    'Needs New Approaches': 'Current architectures have fundamental limits; breakthroughs require new paradigms.',
-    'Cautious Optimism': 'AI progress is real but requires careful governance and realistic expectations.',
-    'Existential Risk': 'Advanced AI poses serious risks to humanity that demand urgent attention.',
-    'Job Displacement': 'AI will fundamentally reshape labor markets, displacing many workers.',
-    'Human-AI Collaboration': 'The future lies in augmentation, not replacement—humans and AI working together.',
-    'Regulation First': 'Strong regulatory frameworks must be established before AI capabilities advance further.',
-    'Innovation First': 'Excessive regulation will stifle beneficial AI development and cede leadership to others.',
+function generateStanceBlurb(name: string, domain: string, positionSummary?: string): { belief: string; contrast?: string } {
+  if (positionSummary) {
+    return { belief: `These authors believe ${positionSummary.charAt(0).toLowerCase()}${positionSummary.slice(1)}` }
   }
 
-  return blurbs[name] || `Authors who share this perspective on ${domain.toLowerCase()}.`
+  const stanceData = PERSPECTIVE_STANCES[name]
+  if (stanceData) {
+    return { belief: stanceData.belief, contrast: stanceData.contrast }
+  }
+
+  return { belief: `These authors share perspectives on ${domain.toLowerCase()} and its implications for AI development.` }
 }
 
-// Extract key themes from camp data
-function extractThemes(camp: any): string[] {
-  const themes: string[] = []
-
-  // Try to extract from camp properties
-  if (camp.themes && Array.isArray(camp.themes)) {
-    return camp.themes.slice(0, 2)
-  }
-
-  // Extract from name keywords
-  const keywords = camp.name.toLowerCase().split(/\s+/)
-  const themeKeywords: Record<string, string> = {
-    'scaling': 'Scale',
-    'risk': 'Risk',
-    'safety': 'Safety',
-    'job': 'Jobs',
-    'regulation': 'Policy',
-    'innovation': 'Innovation',
-    'collaboration': 'Collaboration',
-    'human': 'Human-Centric',
-    'displacement': 'Labor',
-    'existential': 'Existential',
-    'optimism': 'Optimistic',
-    'cautious': 'Measured',
-  }
-
-  for (const keyword of keywords) {
-    if (themeKeywords[keyword] && themes.length < 2) {
-      themes.push(themeKeywords[keyword])
-    }
-  }
-
-  return themes
+// Get themes for a perspective
+function getThemes(name: string): string[] {
+  return PERSPECTIVE_STANCES[name]?.themes || []
 }
+
 
 interface CampAccordionProps {
   query: string
@@ -115,12 +135,8 @@ export default function CampAccordion({
             setCamps(cachedCamps)
             setExpandedQueries(cachedExpandedQueries)
 
-            // Auto-expand all camps
-            const initialExpanded: Record<string, boolean> = {}
-            cachedCamps.forEach((camp: any) => {
-              initialExpanded[camp.id] = true
-            })
-            setExpandedCamps(initialExpanded)
+            // Keep collapsed by default for quick scanning
+            setExpandedCamps({})
             setLoading(false)
 
             // Clear the pending cache
@@ -160,12 +176,8 @@ export default function CampAccordion({
           }))
         }
 
-        // Auto-expand all camps by default
-        const initialExpanded: Record<string, boolean> = {}
-        fetchedCamps.forEach((camp: any) => {
-          initialExpanded[camp.id] = true
-        })
-        setExpandedCamps(initialExpanded)
+        // Keep all camps collapsed by default for quick scanning
+        setExpandedCamps({})
 
         // Notify parent of loaded camps
         if (onCampsLoaded) {
@@ -290,31 +302,38 @@ export default function CampAccordion({
         const domainDescription = DOMAIN_DESCRIPTIONS[domainName] || `Perspectives on ${domainName.toLowerCase()} and its implications for AI.`
 
         return (
-          <div key={domainName}>
-            {/* Domain Header */}
-            <div className={`mb-4 pb-3 border-b-2 ${colors.border}`}>
+          <div key={domainName} className="scroll-mt-4">
+            {/* Domain Header - Sticky for context while scrolling */}
+            <div
+              className={`sticky top-0 z-10 mb-4 py-3 px-4 -mx-4 rounded-lg ${colors.bg}`}
+              style={{ backgroundColor: colors.bgSolid || '#f3f4f6' }}
+            >
               <div className="flex items-center gap-3">
-                <div className={`w-5 h-5 rounded-full ${colors.bg} flex-shrink-0`} />
-                <h2 className={`text-lg font-bold ${colors.text}`}>
-                  {domainName}
-                </h2>
-                <span className="text-sm text-gray-400">
-                  {domainCamps.length} {domainCamps.length === 1 ? 'perspective' : 'perspectives'} · {domainAuthorCount} authors
-                </span>
+                <div className={`w-3 h-8 rounded-full ${colors.accent || 'bg-gray-400'}`} />
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <h2 className={`text-lg font-bold ${colors.text}`}>
+                      {domainName}
+                    </h2>
+                    <span className="text-xs text-gray-500 font-medium">
+                      {domainCamps.length} {domainCamps.length === 1 ? 'perspective' : 'perspectives'} · {domainAuthorCount} authors
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed mt-1">
+                    {domainDescription}
+                  </p>
+                </div>
               </div>
-              <p className="mt-2 ml-8 text-sm text-gray-600 leading-relaxed">
-                {domainDescription}
-              </p>
             </div>
 
             {/* Perspectives within Domain */}
-            <div className="space-y-4 ml-3 pl-5 border-l-2 border-gray-100">
+            <div className="space-y-3 ml-1 pl-4 border-l-3 border-gray-200">
               {sortedDomainCamps.map((camp) => {
-                const isExpanded = expandedCamps[camp.id] !== false
+                const isExpanded = expandedCamps[camp.id] === true
                 const needsScroll = camp.authors.length > MAX_AUTHORS_BEFORE_SCROLL
                 const campColors = getDomainColor(camp.domain)
-                const themes = extractThemes(camp)
-                const stanceBlurb = generateStanceBlurb(camp.name, camp.domain, camp.positionSummary)
+                const themes = getThemes(camp.name)
+                const stanceData = generateStanceBlurb(camp.name, camp.domain, camp.positionSummary)
 
                 // Sort authors: those with matching quotes first, then alphabetically
                 const sortedAuthors = [...camp.authors].sort((a: any, b: any) => {
@@ -331,7 +350,9 @@ export default function CampAccordion({
                     key={camp.id}
                     ref={(el) => { campRefs.current[camp.id] = el }}
                     id={`camp-${camp.id}`}
-                    className="bg-white rounded-xl border border-gray-200 overflow-hidden transition-shadow hover:shadow-md"
+                    className={`bg-white rounded-xl border overflow-hidden transition-all ${
+                      isExpanded ? 'border-gray-300 shadow-md' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                    }`}
                   >
                     {/* Perspective Header */}
                     <button
@@ -340,45 +361,53 @@ export default function CampAccordion({
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          {/* Breadcrumb: Domain > Perspective > Authors (count) */}
-                          <div className="flex items-center text-xs text-gray-500 mb-2">
-                            <span className={`${campColors.text} font-medium`}>{camp.domain}</span>
-                            <ChevronRight className="w-3 h-3 mx-1 text-gray-300" />
-                            <span className="font-medium text-gray-700">{camp.name}</span>
-                            <ChevronRight className="w-3 h-3 mx-1 text-gray-300" />
-                            <span className="text-gray-500">
-                              Authors ({camp.authorCount})
+                          {/* Perspective Name with Author Count */}
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-[17px] font-semibold text-gray-900">
+                              {camp.name}
+                            </h3>
+                            <span className="text-xs text-gray-400 font-medium">
+                              {camp.authorCount} {camp.authorCount === 1 ? 'author' : 'authors'}
                             </span>
                           </div>
 
-                          {/* Perspective Name */}
-                          <h3 className="text-[17px] font-semibold text-gray-900 mb-1">
-                            {camp.name}
-                          </h3>
-
-                          {/* Stance Blurb */}
-                          <p className="text-[13px] text-gray-600 leading-relaxed mb-2">
-                            {stanceBlurb}
+                          {/* Belief Statement */}
+                          <p className="text-[13px] text-gray-700 leading-relaxed mb-1.5">
+                            {stanceData.belief}
                           </p>
 
-                          {/* Theme Chips */}
-                          {themes.length > 0 && (
-                            <div className="flex items-center gap-1.5">
-                              <Tag className="w-3 h-3 text-gray-300" />
-                              {themes.map((theme, idx) => (
-                                <span
-                                  key={idx}
-                                  className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded"
-                                >
-                                  {theme}
-                                </span>
-                              ))}
-                            </div>
+                          {/* Contrast Statement - Italicized for distinction */}
+                          {stanceData.contrast && (
+                            <p className="text-[12px] text-gray-500 leading-relaxed italic mb-2">
+                              {stanceData.contrast}
+                            </p>
                           )}
+
+                          {/* Theme Chips - Always show for consistency */}
+                          <div className="flex items-center gap-1.5 mt-2">
+                            {themes.length > 0 ? (
+                              <>
+                                {themes.map((theme, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${campColors.bg} ${campColors.text}`}
+                                  >
+                                    {theme}
+                                  </span>
+                                ))}
+                              </>
+                            ) : (
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${campColors.bg} ${campColors.text}`}>
+                                {camp.domain.split(' ')[0]}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Expand/Collapse Icon */}
-                        <div className="flex-shrink-0 p-1 text-gray-400">
+                        <div className={`flex-shrink-0 p-1.5 rounded-full transition-colors ${
+                          isExpanded ? 'bg-gray-100 text-gray-600' : 'text-gray-400'
+                        }`}>
                           {isExpanded ? (
                             <ChevronUp className="w-5 h-5" />
                           ) : (
