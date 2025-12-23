@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Sparkles, ArrowRight } from 'lucide-react'
 
 const MAX_CHARS = 4000
-const MIN_CHARS = 10
+const MIN_CHARS = 1
 
 interface MiniAIEditorProps {
   className?: string
