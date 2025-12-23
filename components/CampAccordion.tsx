@@ -19,72 +19,64 @@ const DOMAIN_DESCRIPTIONS: Record<string, string> = {
   'Future of Work': 'How AI changes employment, skills, and the workplace—perspectives on automation and human potential.',
 }
 
-// Perspective stance data with full sentences and contrasts
-const PERSPECTIVE_STANCES: Record<string, { belief: string; contrast?: string; themes: string[] }> = {
+// Perspective stance data - natural editorial voice, no formulaic phrasing
+const PERSPECTIVE_STANCES: Record<string, { belief: string; themes: string[] }> = {
   'Scaling Will Deliver': {
-    belief: 'These authors believe that scaling current approaches—bigger models, more data, more compute—will continue to drive AI capabilities forward.',
-    contrast: 'Unlike those who see fundamental limits in current architectures, they expect incremental progress to yield transformative results.',
+    belief: 'More data, more compute, more capability. The path to transformative AI runs through scaling what already works.',
     themes: ['Scale', 'Progress']
   },
   'Needs New Approaches': {
-    belief: 'These authors believe that current AI architectures have fundamental limits and that breakthroughs require entirely new paradigms.',
-    contrast: 'Unlike scaling optimists, they argue that more compute alone won\'t solve AI\'s core challenges.',
+    belief: 'Current architectures have fundamental limits. The next breakthrough requires new paradigms, not just bigger models.',
     themes: ['Innovation', 'Research']
   },
   'Cautious Optimism': {
-    belief: 'These authors believe AI progress is real and beneficial, but requires careful governance and realistic expectations.',
-    contrast: 'Unlike both extreme optimists and doomers, they advocate for measured, evidence-based approaches.',
+    belief: 'AI progress is real, but so are the risks. Measured expectations and careful governance will get us further than hype.',
     themes: ['Balanced', 'Pragmatic']
   },
   'Existential Risk': {
-    belief: 'These authors believe advanced AI poses serious, potentially existential risks to humanity that demand urgent attention.',
-    contrast: 'Unlike those focused on near-term benefits, they prioritize long-term safety over rapid deployment.',
+    belief: 'Advanced AI could pose existential threats to humanity. Safety isn\'t a feature request—it\'s the priority.',
     themes: ['Safety', 'Risk']
   },
   'Job Displacement': {
-    belief: 'These authors believe AI will fundamentally reshape labor markets, displacing many workers and requiring systemic responses.',
-    contrast: 'Unlike human-AI collaboration optimists, they see automation as a disruptive force requiring policy intervention.',
+    belief: 'Automation will reshape labor markets dramatically. Many jobs will disappear, and policy must prepare for this shift.',
     themes: ['Labor', 'Disruption']
   },
   'Human-AI Collaboration': {
-    belief: 'These authors believe the future lies in augmentation, not replacement—humans and AI working together to achieve more.',
-    contrast: 'Unlike displacement pessimists, they see AI as a tool that amplifies human capability rather than replacing it.',
+    belief: 'The future isn\'t humans versus machines—it\'s humans with machines. AI works best when it amplifies what people do.',
     themes: ['Collaboration', 'Augmentation']
   },
   'Regulation First': {
-    belief: 'These authors believe strong regulatory frameworks must be established before AI capabilities advance further.',
-    contrast: 'Unlike innovation-first advocates, they prioritize safety guardrails over speed of development.',
+    belief: 'Guardrails before growth. Strong oversight must be in place before AI capabilities advance further.',
     themes: ['Policy', 'Safety']
   },
   'Innovation First': {
-    belief: 'These authors believe excessive regulation will stifle beneficial AI development and cede leadership to less cautious actors.',
-    contrast: 'Unlike regulation-first advocates, they argue that premature rules will do more harm than good.',
+    belief: 'Move fast, regulate later. Premature rules will stifle progress and hand leadership to less cautious players.',
     themes: ['Innovation', 'Competition']
   },
   'AI-First Transformation': {
-    belief: 'These authors believe enterprises must fundamentally restructure around AI to remain competitive.',
-    contrast: 'Unlike incremental adopters, they advocate for bold, organization-wide AI integration.',
+    belief: 'Half-measures won\'t cut it. Organizations must restructure around AI to stay competitive.',
     themes: ['Enterprise', 'Strategy']
   },
   'Pragmatic Integration': {
-    belief: 'These authors believe AI adoption should be measured and focused on proven use cases with clear ROI.',
-    contrast: 'Unlike AI-first maximalists, they favor practical, incremental deployment over wholesale transformation.',
+    belief: 'Start with proven use cases, measure what works, then scale. Practical wins beat ambitious failures.',
     themes: ['Practical', 'ROI']
   },
 }
 
 // Helper to generate a stance blurb from perspective name and domain
-function generateStanceBlurb(name: string, domain: string, positionSummary?: string): { belief: string; contrast?: string } {
+function generateStanceBlurb(name: string, domain: string, positionSummary?: string): string {
   if (positionSummary) {
-    return { belief: `These authors believe ${positionSummary.charAt(0).toLowerCase()}${positionSummary.slice(1)}` }
+    // Clean up position summary to read naturally
+    const cleaned = positionSummary.replace(/^(these authors |they )?(believe |argue |think )?/i, '')
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
   }
 
   const stanceData = PERSPECTIVE_STANCES[name]
   if (stanceData) {
-    return { belief: stanceData.belief, contrast: stanceData.contrast }
+    return stanceData.belief
   }
 
-  return { belief: `These authors share perspectives on ${domain.toLowerCase()} and its implications for AI development.` }
+  return `Perspectives on how ${domain.toLowerCase()} shapes the future of AI.`
 }
 
 // Get themes for a perspective
@@ -371,17 +363,10 @@ export default function CampAccordion({
                             </span>
                           </div>
 
-                          {/* Belief Statement */}
-                          <p className="text-[13px] text-gray-700 leading-relaxed mb-1.5">
-                            {stanceData.belief}
+                          {/* Stance Description */}
+                          <p className="text-[13px] text-gray-600 leading-relaxed">
+                            {stanceData}
                           </p>
-
-                          {/* Contrast Statement - Italicized for distinction */}
-                          {stanceData.contrast && (
-                            <p className="text-[12px] text-gray-500 leading-relaxed italic mb-2">
-                              {stanceData.contrast}
-                            </p>
-                          )}
 
                           {/* Theme Chips - Always show for consistency */}
                           <div className="flex items-center gap-1.5 mt-2">
