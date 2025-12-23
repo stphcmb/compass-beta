@@ -19,8 +19,9 @@ const DOMAIN_DESCRIPTIONS: Record<string, string> = {
   'Future of Work': 'How AI changes employment, skills, and the workplace—perspectives on automation and human potential.',
 }
 
-// Perspective stance data - natural editorial voice, no formulaic phrasing
+// Perspective stance data - natural editorial voice, keys match database labels exactly
 const PERSPECTIVE_STANCES: Record<string, { belief: string; themes: string[] }> = {
+  // Domain 1: AI Technical Capabilities
   'Scaling Will Deliver': {
     belief: 'More data, more compute, more capability. The path to transformative AI runs through scaling what already works.',
     themes: ['Scale', 'Progress']
@@ -29,51 +30,68 @@ const PERSPECTIVE_STANCES: Record<string, { belief: string; themes: string[] }> 
     belief: 'Current architectures have fundamental limits. The next breakthrough requires new paradigms, not just bigger models.',
     themes: ['Innovation', 'Research']
   },
-  'Cautious Optimism': {
-    belief: 'AI progress is real, but so are the risks. Measured expectations and careful governance will get us further than hype.',
-    themes: ['Balanced', 'Pragmatic']
-  },
-  'Existential Risk': {
-    belief: 'Advanced AI could pose existential threats to humanity. Safety isn\'t a feature request—it\'s the priority.',
+  // Domain 2: AI & Society
+  'Safety First': {
+    belief: 'Advanced AI could pose existential threats. Safety isn\'t a feature request—it\'s the priority before we scale further.',
     themes: ['Safety', 'Risk']
   },
-  'Job Displacement': {
-    belief: 'Automation will reshape labor markets dramatically. Many jobs will disappear, and policy must prepare for this shift.',
-    themes: ['Labor', 'Disruption']
+  'Democratize Fast': {
+    belief: 'AI\'s benefits should reach everyone quickly. Broad access and rapid deployment outweigh hypothetical risks.',
+    themes: ['Access', 'Speed']
   },
-  'Human-AI Collaboration': {
-    belief: 'The future isn\'t humans versus machines—it\'s humans with machines. AI works best when it amplifies what people do.',
-    themes: ['Collaboration', 'Augmentation']
+  // Domain 3: Enterprise AI Adoption
+  'Co-Evolution': {
+    belief: 'Technology and organizations must evolve together. AI transformation requires changing culture, not just tools.',
+    themes: ['Culture', 'Change']
   },
-  'Regulation First': {
-    belief: 'Guardrails before growth. Strong oversight must be in place before AI capabilities advance further.',
-    themes: ['Policy', 'Safety']
+  'Technology Leads': {
+    belief: 'Deploy the tech first, let organizations adapt. Technical capabilities drive business transformation.',
+    themes: ['Tech-First', 'Innovation']
+  },
+  'Business Whisperers': {
+    belief: 'Start with the business problem, not the technology. AI succeeds when it solves real operational pain points.',
+    themes: ['Business', 'ROI']
+  },
+  'Tech Builders': {
+    belief: 'Build robust AI infrastructure now. The companies with the best technical foundations will win.',
+    themes: ['Infrastructure', 'Engineering']
+  },
+  // Domain 4: AI Governance & Oversight
+  'Adaptive Governance': {
+    belief: 'Regulation must evolve with the technology. Rigid rules will either stifle innovation or become obsolete.',
+    themes: ['Flexible', 'Evolving']
   },
   'Innovation First': {
     belief: 'Move fast, regulate later. Premature rules will stifle progress and hand leadership to less cautious players.',
     themes: ['Innovation', 'Competition']
   },
-  'AI-First Transformation': {
-    belief: 'Half-measures won\'t cut it. Organizations must restructure around AI to stay competitive.',
-    themes: ['Enterprise', 'Strategy']
+  'Regulatory Interventionist': {
+    belief: 'Guardrails before growth. Strong oversight must be in place before AI capabilities advance further.',
+    themes: ['Policy', 'Oversight']
   },
-  'Pragmatic Integration': {
-    belief: 'Start with proven use cases, measure what works, then scale. Practical wins beat ambitious failures.',
-    themes: ['Practical', 'ROI']
+  // Domain 5: Future of Work
+  'Displacement Realist': {
+    belief: 'Automation will reshape labor markets dramatically. Many jobs will disappear, and policy must prepare for this shift.',
+    themes: ['Labor', 'Disruption']
+  },
+  'Human–AI Collaboration': {
+    belief: 'The future isn\'t humans versus machines—it\'s humans with machines. AI works best when it amplifies what people do.',
+    themes: ['Collaboration', 'Augmentation']
   },
 }
 
 // Helper to generate a stance blurb from perspective name and domain
 function generateStanceBlurb(name: string, domain: string, positionSummary?: string): string {
-  if (positionSummary) {
-    // Clean up position summary to read naturally
-    const cleaned = positionSummary.replace(/^(these authors |they )?(believe |argue |think )?/i, '')
-    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
-  }
-
+  // Prefer our editorial content first
   const stanceData = PERSPECTIVE_STANCES[name]
   if (stanceData) {
     return stanceData.belief
+  }
+
+  // Fall back to database positionSummary if no editorial content
+  if (positionSummary) {
+    const cleaned = positionSummary.replace(/^(these authors |they )?(believe |argue |think )?/i, '')
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
   }
 
   return `Perspectives on how ${domain.toLowerCase()} shapes the future of AI.`

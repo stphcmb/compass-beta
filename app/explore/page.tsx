@@ -5,9 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Header from '@/components/Header'
 import SearchBar from '@/components/SearchBar'
-import PositioningSnapshot from '@/components/PositioningSnapshot'
 import CampAccordion from '@/components/CampAccordion'
-import DiscourseMap from '@/components/DiscourseMap'
 import BackToTop from '@/components/BackToTop'
 import { ExpandedQueries } from '@/components/search-expansion'
 import { FeatureHint } from '@/components/FeatureHint'
@@ -127,7 +125,13 @@ function ExplorePageContent() {
           <FeatureHint featureKey="explore" className="mb-6" />
 
           {/* Search Bar - Prominent styling */}
-          <SearchBar initialQuery={query} showEdit={false} />
+          <SearchBar
+            initialQuery={query}
+            showEdit={false}
+            showSaveButton={!!query}
+            domain={domain}
+            camp={camp}
+          />
 
           {/* Show expanded queries beneath search bar */}
           {query && expandedQueries && expandedQueries.length > 0 && (
@@ -135,12 +139,6 @@ function ExplorePageContent() {
               <ExpandedQueries queries={expandedQueries} originalQuery={query} />
             </div>
           )}
-
-          <PositioningSnapshot
-            query={query}
-            domain={domain}
-            camp={camp}
-          />
 
           {/* Example Perspective - Teaching component (only show when no query) */}
           {!query && showExample && (
@@ -154,12 +152,16 @@ function ExplorePageContent() {
             {/* Section Header - Different for search vs browse */}
             {query ? (
               <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 mb-1">
-                  Search Results
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Perspectives matching "{query}"
-                </p>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Search Results
+                  </h2>
+                  {loadedCamps.length > 0 && (
+                    <span className="text-sm text-gray-500">
+                      {loadedCamps.reduce((sum, c) => sum + (c.authorCount || 0), 0)} authors in {loadedCamps.length} perspectives
+                    </span>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-2 mb-4">

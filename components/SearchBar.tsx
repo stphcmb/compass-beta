@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Filter } from 'lucide-react'
+import { Search, Filter, Bookmark, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
 
@@ -25,9 +25,12 @@ interface SearchBarProps {
   initialQuery?: string
   showEdit?: boolean
   onQueryChange?: (query: string) => void
+  showSaveButton?: boolean
+  domain?: string
+  camp?: string
 }
 
-export default function SearchBar({ initialQuery = '', showEdit = false, onQueryChange }: SearchBarProps) {
+export default function SearchBar({ initialQuery = '', showEdit = false, onQueryChange, showSaveButton = false, domain, camp }: SearchBarProps) {
   const router = useRouter()
   const [query, setQuery] = useState(initialQuery)
   const [isEditing, setIsEditing] = useState(showEdit)
@@ -36,6 +39,7 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
   const [selectedCamps, setSelectedCamps] = useState<string[]>([])
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>([])
   const [selectedDateRange, setSelectedDateRange] = useState('Last 12 months')
+  const [isSaved, setIsSaved] = useState(false)
 
   // Data from database
   const [camps, setCamps] = useState<string[]>([])
@@ -132,6 +136,40 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch()
+    }
+  }
+
+  const handleSave = () => {
+    if (!initialQuery) return
+
+    try {
+      const savedSearches = JSON.parse(localStorage.getItem('savedSearches') || '[]')
+      const newSearch = {
+        id: `saved-${Date.now()}`,
+        query: initialQuery,
+        domain,
+        camp,
+        created_at: new Date().toISOString(),
+        filters: {
+          ...(domain && { domain }),
+          ...(camp && { camp })
+        }
+      }
+
+      const exists = savedSearches.some((s: any) =>
+        s.query === initialQuery && s.domain === domain && s.camp === camp
+      )
+
+      if (!exists) {
+        savedSearches.unshift(newSearch)
+        localStorage.setItem('savedSearches', JSON.stringify(savedSearches))
+        window.dispatchEvent(new CustomEvent('saved-search-created', { detail: newSearch }))
+      }
+
+      setIsSaved(true)
+      setTimeout(() => setIsSaved(false), 2000)
+    } catch (error) {
+      console.error('Error saving search:', error)
     }
   }
 
@@ -237,6 +275,20 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
           </button>
         </div>
         <div className="flex items-center" style={{ gap: 'var(--space-3)' }}>
+          {showSaveButton && initialQuery && (
+            <button
+              onClick={handleSave}
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 transition-colors"
+              title={isSaved ? 'Saved!' : 'Save this search'}
+            >
+              {isSaved ? (
+                <Check className="w-4 h-4 text-green-600" />
+              ) : (
+                <Bookmark className="w-4 h-4" />
+              )}
+              <span className="text-xs">{isSaved ? 'Saved' : 'Save'}</span>
+            </button>
+          )}
           <button
             onClick={handleSearch}
             className="label font-semibold text-white transition-all"
