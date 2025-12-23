@@ -11,6 +11,7 @@ const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 export default function AIEditorPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [initialText, setInitialText] = useState('')
+  const [autoAnalyze, setAutoAnalyze] = useState(false)
 
   useEffect(() => {
     const handleSidebarToggle = (e: Event) => {
@@ -30,10 +31,11 @@ export default function AIEditorPage() {
       setSidebarCollapsed(!hasContent)
     }
 
-    // Check for text from MiniAIEditor
+    // Check for text from MiniAIEditor - auto-analyze when coming from homepage
     const miniEditorText = sessionStorage.getItem('miniEditorText')
     if (miniEditorText) {
       setInitialText(miniEditorText)
+      setAutoAnalyze(true)
       sessionStorage.removeItem('miniEditorText')
     }
 
@@ -53,7 +55,7 @@ export default function AIEditorPage() {
       >
         <div className="max-w-4xl mx-auto">
           <FeatureHint featureKey="ai-editor" className="mb-6" />
-          <AIEditor initialText={initialText} />
+          <AIEditor initialText={initialText} autoAnalyze={autoAnalyze} />
         </div>
       </main>
     </div>

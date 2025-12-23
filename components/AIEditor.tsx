@@ -17,9 +17,10 @@ const LOADING_PHASES = [
 
 interface AIEditorProps {
   initialText?: string
+  autoAnalyze?: boolean
 }
 
-export default function AIEditor({ initialText = '' }: AIEditorProps) {
+export default function AIEditor({ initialText = '', autoAnalyze = false }: AIEditorProps) {
   const [text, setText] = useState(initialText)
   const [result, setResult] = useState<AIEditorAnalyzeResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -37,6 +38,9 @@ export default function AIEditor({ initialText = '' }: AIEditorProps) {
   const summaryRef = useRef<HTMLDivElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
 
+  // Track if we've auto-analyzed to prevent re-running
+  const hasAutoAnalyzed = useRef(false)
+
   // Update text when initialText prop changes (e.g., from MiniAIEditor)
   useEffect(() => {
     if (initialText) {
@@ -46,6 +50,18 @@ export default function AIEditor({ initialText = '' }: AIEditorProps) {
       setSavedOnce(false)
     }
   }, [initialText])
+
+  // Auto-analyze when coming from homepage
+  useEffect(() => {
+    if (autoAnalyze && initialText && !hasAutoAnalyzed.current && !loading) {
+      hasAutoAnalyzed.current = true
+      // Small delay to ensure state is settled
+      const timer = setTimeout(() => {
+        handleAnalyze(initialText)
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [autoAnalyze, initialText])
 
   // Listen for load text events from sidebar
   useEffect(() => {
@@ -109,9 +125,12 @@ export default function AIEditor({ initialText = '' }: AIEditorProps) {
     }
   }
 
-  const handleAnalyze = async () => {
-    if (!text.trim()) {
-      setError('Please enter some text to analyze')
+  // Unified analyze function - accepts optional text parameter for auto-analyze
+  const handleAnalyze = async (textOverride?: string) => {
+    const textToAnalyze = textOverride || text
+
+    if (!textToAnalyze.trim()) {
+      if (!textOverride) setError('Please enter some text to analyze')
       return
     }
 
@@ -135,7 +154,6 @@ export default function AIEditor({ initialText = '' }: AIEditorProps) {
       }
     }
 
-    // Start the first timer
     if (LOADING_PHASES[0].duration > 0) {
       phaseTimers.push(setTimeout(advancePhase, LOADING_PHASES[0].duration))
     }
@@ -143,10 +161,8 @@ export default function AIEditor({ initialText = '' }: AIEditorProps) {
     try {
       const response = await fetch('/api/brain/analyze', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToAnalyze }),
       })
 
       const data = await response.json()
@@ -155,13 +171,11 @@ export default function AIEditor({ initialText = '' }: AIEditorProps) {
         setError(data.error || data.message || 'Analysis failed')
       } else {
         setResult(data)
-        // Add to recent searches with cached result
-        addToRecentSearches(text, data)
+        addToRecentSearches(textToAnalyze, data)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error')
     } finally {
-      // Clear all phase timers
       phaseTimers.forEach(timer => clearTimeout(timer))
       setLoading(false)
       setLoadingPhase(0)
@@ -813,7 +827,7 @@ Artificial intelligence is transforming how companies approach innovation. AI-fi
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
         <button
-          onClick={handleAnalyze}
+          onClick={() => handleAnalyze()}
           disabled={loading || !text.trim()}
           style={{
             flex: 1,
