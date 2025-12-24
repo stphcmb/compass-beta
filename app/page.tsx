@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import Header from '@/components/Header'
-import { MiniAIEditor } from '@/components/MiniAIEditor'
+import AIEditor from '@/components/AIEditor'
 import { Users, Compass, Lightbulb, Edit3, Search, Sparkles } from 'lucide-react'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
@@ -129,8 +129,8 @@ export default function Home() {
               Analyze your writing against 200+ thought leaders shaping AI discourse.
             </p>
 
-            {/* Mini AI Editor */}
-            <MiniAIEditor className="mb-0" />
+            {/* AI Editor */}
+            <AIEditor />
           </div>
         </div>
 

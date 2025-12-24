@@ -16,12 +16,11 @@ const LOADING_PHASES = [
 ]
 
 interface AIEditorProps {
-  initialText?: string
-  autoAnalyze?: boolean
+  showTitle?: boolean // When true, shows page title (for standalone page)
 }
 
-export default function AIEditor({ initialText = '', autoAnalyze = false }: AIEditorProps) {
-  const [text, setText] = useState(initialText)
+export default function AIEditor({ showTitle = false }: AIEditorProps) {
+  const [text, setText] = useState('')
   const [result, setResult] = useState<AIEditorAnalyzeResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingPhase, setLoadingPhase] = useState(0)
@@ -37,31 +36,6 @@ export default function AIEditor({ initialText = '', autoAnalyze = false }: AIEd
   const authorsRef = useRef<HTMLDivElement>(null)
   const summaryRef = useRef<HTMLDivElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
-
-  // Track if we've auto-analyzed to prevent re-running
-  const hasAutoAnalyzed = useRef(false)
-
-  // Update text when initialText prop changes (e.g., from MiniAIEditor)
-  useEffect(() => {
-    if (initialText) {
-      setText(initialText)
-      setResult(null)
-      setError(null)
-      setSavedOnce(false)
-    }
-  }, [initialText])
-
-  // Auto-analyze when coming from homepage
-  useEffect(() => {
-    if (autoAnalyze && initialText && !hasAutoAnalyzed.current && !loading) {
-      hasAutoAnalyzed.current = true
-      // Small delay to ensure state is settled
-      const timer = setTimeout(() => {
-        handleAnalyze(initialText)
-      }, 100)
-      return () => clearTimeout(timer)
-    }
-  }, [autoAnalyze, initialText])
 
   // Listen for load text events from sidebar
   useEffect(() => {
@@ -704,150 +678,123 @@ export default function AIEditor({ initialText = '', autoAnalyze = false }: AIEd
     return parts.length > 0 ? parts : text
   }
 
-  return (
-    <div style={{ maxWidth: 'var(--width-wide)' }}>
-      {/* Page Title */}
-      <div style={{ marginBottom: 'var(--space-6)' }}>
-        <h1 style={{ fontSize: 'var(--text-h2)', marginBottom: 'var(--space-2)' }}>
-          AI Editor
-        </h1>
-        <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-mid-gray)' }}>
-          Analyze your draft against 200+ thought leaders
-        </p>
-      </div>
+  const canAnalyze = text.trim().length > 0 && text.length <= 4000 && !loading
 
-      {/* Input Section */}
-      <div style={{
-        backgroundColor: 'var(--color-cloud)',
-        borderRadius: 'var(--radius-base)',
-        padding: 'var(--card-padding-desktop)',
-        marginBottom: 'var(--space-6)',
-        border: '1px solid var(--color-light-gray)'
-      }}>
-        <label htmlFor="ai-editor-text-input" style={{
-          display: 'block',
-          fontSize: 'var(--text-small)',
-          fontWeight: 'var(--weight-medium)',
-          color: 'var(--color-soft-black)',
-          marginBottom: 'var(--space-3)'
-        }}>
-          Your Text
-          <span style={{
-            fontSize: 'var(--text-caption)',
-            fontWeight: 'var(--weight-normal)',
-            color: 'var(--color-mid-gray)',
-            marginLeft: 'var(--space-2)'
+  return (
+    <div style={{ maxWidth: '100%' }}>
+      {/* Page Title - only show when showTitle is true */}
+      {showTitle && (
+        <div style={{ marginBottom: 'var(--space-6)', textAlign: 'center' }}>
+          <h1 style={{
+            fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+            fontWeight: 'var(--weight-bold)',
+            marginBottom: 'var(--space-2)',
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
           }}>
-            (1-3 paragraphs recommended, max 4,000 characters)
-          </span>
-        </label>
+            AI Editor
+          </h1>
+          <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-mid-gray)' }}>
+            Analyze your draft against 200+ thought leaders
+          </p>
+        </div>
+      )}
+
+      {/* Input Section - Glassmorphism style */}
+      <div
+        style={{
+          borderRadius: '16px',
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+          border: '2px solid rgba(139, 92, 246, 0.3)',
+          overflow: 'hidden',
+          marginBottom: result || loading || error ? 'var(--space-6)' : 0
+        }}
+      >
         <textarea
           id="ai-editor-text-input"
-          name="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="ai-editor-textarea"
+          placeholder="Paste your draft, thesis, or argument here..."
+          disabled={loading}
           style={{
             width: '100%',
-            height: '192px',
-            padding: 'var(--space-4)',
-            border: '1px solid var(--color-light-gray)',
-            borderRadius: 'var(--radius-base)',
-            fontSize: 'var(--text-small)',
-            fontFamily: 'ui-monospace, monospace',
-            backgroundColor: 'var(--color-bone)',
-            color: 'var(--color-soft-black)',
+            height: '160px',
+            padding: '20px',
+            border: 'none',
+            fontSize: '16px',
+            lineHeight: '1.6',
+            color: '#1e293b',
+            backgroundColor: 'transparent',
             resize: 'none',
             outline: 'none',
-            transition: 'border-color var(--duration-fast) var(--ease-out)'
+            opacity: loading ? 0.5 : 1
           }}
-          placeholder="Paste your draft here... For example:
-
-Artificial intelligence is transforming how companies approach innovation. AI-first strategies are becoming critical for competitive advantage in the market..."
         />
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginTop: 'var(--space-3)'
-        }}>
-          <p style={{
-            fontSize: 'var(--text-caption)',
-            color: 'var(--color-mid-gray)',
-            margin: 0
-          }}>
-            {text.length} / 4,000 characters
-            {text.length > 4000 && (
-              <span style={{ color: 'var(--color-error)', marginLeft: 'var(--space-2)' }}>
-                Text will be truncated
-              </span>
-            )}
-          </p>
-          <p style={{
-            fontSize: 'var(--text-caption)',
-            color: 'var(--color-mid-gray)',
-            margin: 0
-          }}>
-            Press <kbd style={{
-              padding: '2px 6px',
-              backgroundColor: 'var(--color-pale-gray)',
-              border: '1px solid var(--color-light-gray)',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: 'var(--text-caption)'
-            }}>⌘+Enter</kbd> to analyze
-          </p>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
-        <button
-          onClick={() => handleAnalyze()}
-          disabled={loading || !text.trim()}
+        <div
           style={{
-            flex: 1,
-            backgroundColor: loading || !text.trim() ? 'var(--color-mid-gray)' : 'var(--color-accent)',
-            color: 'white',
-            padding: 'var(--space-4) var(--space-6)',
-            borderRadius: 'var(--radius-base)',
-            fontSize: 'var(--text-body)',
-            fontWeight: 'var(--weight-medium)',
-            border: 'none',
-            cursor: loading || !text.trim() ? 'not-allowed' : 'pointer',
-            transition: 'all var(--duration-fast) var(--ease-out)',
-            boxShadow: 'var(--shadow-sm)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 'var(--space-2)'
+            justifyContent: 'space-between',
+            padding: '12px 20px',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+            borderTop: '1px solid rgba(148, 163, 184, 0.2)',
           }}
-          onMouseEnter={(e) => {
-            if (!loading && text.trim()) {
-              e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)'
-              e.currentTarget.style.boxShadow = 'var(--shadow-base)'
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!loading && text.trim()) {
-              e.currentTarget.style.backgroundColor = 'var(--color-accent)'
-              e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
-            }
-          }}
-          title="Analyze your text to discover which thought leaders agree or disagree with your perspective"
         >
-          {loading ? (
-            <>
-              <Loader2 style={{ width: '20px', height: '20px' }} className="animate-spin" />
-              {LOADING_PHASES[loadingPhase].message}
-            </>
-          ) : (
-            <>
-              <Sparkles style={{ width: '20px', height: '20px' }} />
-              Analyze with AI Editor
-            </>
-          )}
-        </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '12px', color: text.length > 4000 ? '#ef4444' : '#64748b' }}>
+              {text.length > 0 ? `${text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
+            </span>
+            <span style={{ color: '#cbd5e1' }}>•</span>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
+              <kbd style={{
+                padding: '2px 6px',
+                backgroundColor: 'white',
+                border: '1px solid #e2e8f0',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontFamily: 'monospace'
+              }}>⌘↵</kbd>
+            </span>
+          </div>
+          <button
+            onClick={() => handleAnalyze()}
+            disabled={!canAnalyze}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: !canAnalyze
+                ? '#e2e8f0'
+                : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: '10px',
+              fontSize: '16px',
+              fontWeight: '600',
+              border: 'none',
+              cursor: !canAnalyze ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: !canAnalyze ? 'none' : '0 4px 15px rgba(99, 102, 241, 0.4)',
+            }}
+          >
+            {loading ? (
+              <>
+                <Loader2 style={{ width: '18px', height: '18px' }} className="animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Sparkles style={{ width: '18px', height: '18px' }} />
+                Analyze
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Loading Progress Indicator */}

@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
-import { Compass, Users, Sparkles, Home } from 'lucide-react'
+import { Compass, Users, Home } from 'lucide-react'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
 
 interface HeaderProps {
@@ -15,7 +15,6 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home, tooltip: 'Go to homepage' },
-    { href: '/ai-editor', label: TERMINOLOGY.aiEditor, icon: Sparkles, tooltip: 'Get editorial feedback on your writing from diverse perspectives' },
     { href: '/explore', label: TERMINOLOGY.search, icon: Compass, tooltip: `Browse ${TERMINOLOGY.camps.toLowerCase()} and positions on AI discourse` },
     { href: '/authors', label: TERMINOLOGY.authors, icon: Users, tooltip: 'Browse thought leaders and their viewpoints' },
   ]
