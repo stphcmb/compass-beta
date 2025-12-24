@@ -9,8 +9,9 @@ import CampAccordion from '@/components/CampAccordion'
 import BackToTop from '@/components/BackToTop'
 import { ExpandedQueries } from '@/components/search-expansion'
 import { FeatureHint } from '@/components/FeatureHint'
-import ExamplePerspective from '@/components/ExamplePerspective'
+import { HowPerspectivesWorkModal, useHowPerspectivesWorkModal } from '@/components/HowPerspectivesWorkModal'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
+import { HelpCircle } from 'lucide-react'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
@@ -32,7 +33,9 @@ function ExplorePageContent() {
   const [loadedCamps, setLoadedCamps] = useState<any[]>([])
   const [scrollToCampId, setScrollToCampId] = useState<string | null>(null)
   const [activeCampId, setActiveCampId] = useState<string | null>(null)
-  const [showExample, setShowExample] = useState(true)
+
+  // Modal for teaching users how perspectives work
+  const { isOpen: isModalOpen, open: openModal, close: closeModal } = useHowPerspectivesWorkModal()
 
   // Handle camps loaded from CampAccordion
   const handleCampsLoaded = useCallback((camps: any[]) => {
@@ -47,11 +50,7 @@ function ExplorePageContent() {
     setTimeout(() => setScrollToCampId(null), 100)
   }, [])
 
-  // Handle scrolling to camps section from example
-  const handleExploreClick = useCallback(() => {
-    campsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
-
+  
   // Listen for sidebar toggle events
   useEffect(() => {
     const handleSidebarToggle = (e: Event) => {
@@ -113,10 +112,20 @@ function ExplorePageContent() {
         <div className="max-w-5xl mx-auto p-6">
           {/* Page Title */}
           <div className="mb-6">
-            <h1 style={{ fontSize: 'var(--text-h2)', marginBottom: 'var(--space-2)' }}>
-              {TERMINOLOGY.searchFull}
-            </h1>
-            <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-mid-gray)' }}>
+            <div className="flex items-center gap-2">
+              <h1 style={{ fontSize: 'var(--text-h2)', marginBottom: 0 }}>
+                {TERMINOLOGY.searchFull}
+              </h1>
+              <button
+                onClick={openModal}
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                title="How perspectives work"
+                style={{ marginTop: '2px' }}
+              >
+                <HelpCircle size={18} className="text-gray-400 hover:text-indigo-500" />
+              </button>
+            </div>
+            <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-mid-gray)', marginTop: 'var(--space-2)' }}>
               Browse the definitive collection of {TERMINOLOGY.camps.toLowerCase()} shaping AI discourse
             </p>
           </div>
@@ -140,12 +149,8 @@ function ExplorePageContent() {
             </div>
           )}
 
-          {/* Example Perspective - Teaching component (only show when no query) */}
-          {!query && showExample && (
-            <div className="mt-6">
-              <ExamplePerspective onExploreClick={handleExploreClick} />
-            </div>
-          )}
+          {/* How Perspectives Work Modal */}
+          <HowPerspectivesWorkModal isOpen={isModalOpen} onClose={closeModal} />
 
           {/* Perspectives Section */}
           <div ref={campsRef} className="mt-6">
