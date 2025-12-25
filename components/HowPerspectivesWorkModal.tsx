@@ -7,12 +7,12 @@ import { getDomainColor } from './DiscourseMap'
 const STORAGE_KEY = 'howPerspectivesWorkSeenCount'
 const MAX_AUTO_SHOWS = 2
 
-// Curated example data
+// Curated example data - using real perspective and relationships
 const EXAMPLE_DATA = {
-  domain: 'Technology',
+  domain: 'AI Technical Capabilities',
   perspective: {
     name: 'Scaling Will Deliver',
-    blurb: 'Current AI architectures, given sufficient compute and data, will continue improving toward AGI.',
+    blurb: 'More data, more compute, more capability. The path to transformative AI runs through scaling what already works.',
   },
   authors: [
     {
@@ -23,7 +23,9 @@ const EXAMPLE_DATA = {
       workUrl: 'https://www.anthropic.com'
     }
   ],
-  supports: ['Sam Altman', 'Demis Hassabis'],
+  // These match PERSPECTIVE_ALLIES in perspective-relationships.ts
+  supports: ['Sam Altman', 'Jensen Huang'],
+  // These match PERSPECTIVE_OPPOSITES (from "Needs New Approaches")
   challenges: ['Gary Marcus', 'Yann LeCun']
 }
 
@@ -240,7 +242,7 @@ export function HowPerspectivesWorkModal({ isOpen, onClose }: HowPerspectivesWor
                   </div>
                 ))}
 
-                {/* Supports & Challenges */}
+                {/* Cross-Perspective Authors: Supports & Challenges */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div style={{
                     backgroundColor: '#f0fdf4',
@@ -251,9 +253,12 @@ export function HowPerspectivesWorkModal({ isOpen, onClose }: HowPerspectivesWor
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                       <ThumbsUp size={12} style={{ color: '#16a34a' }} />
                       <span style={{ fontSize: '10px', fontWeight: '600', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Supports
+                        Also Supports
                       </span>
                     </div>
+                    <p style={{ fontSize: '10px', color: '#6b7280', marginBottom: '6px' }}>
+                      From other perspectives
+                    </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                       {EXAMPLE_DATA.supports.map((name, idx) => (
                         <span key={idx} style={{
@@ -281,6 +286,9 @@ export function HowPerspectivesWorkModal({ isOpen, onClose }: HowPerspectivesWor
                         Challenges
                       </span>
                     </div>
+                    <p style={{ fontSize: '10px', color: '#6b7280', marginBottom: '6px' }}>
+                      From opposing perspectives
+                    </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                       {EXAMPLE_DATA.challenges.map((name, idx) => (
                         <span key={idx} style={{

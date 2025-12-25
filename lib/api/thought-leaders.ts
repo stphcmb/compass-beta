@@ -7,6 +7,10 @@ import {
   filterByQuality,
   QUALITY_THRESHOLDS
 } from '@/lib/search/editorial-system'
+import {
+  getOpposingPerspectives,
+  getAlliedPerspectives
+} from '@/lib/constants/perspective-relationships'
 
 /**
  * Fetch all thought leaders (authors)
@@ -165,6 +169,112 @@ const DOMAIN_MAP: Record<number, string> = {
 }
 
 /**
+ * Calculate relevancy score for an author based on search query
+ */
+function calculateAuthorRelevancy(author: any, query: string, queryTerms: string[]): number {
+  if (!query || queryTerms.length === 0) {
+    // No query - use credibility tier (lower tier = higher score)
+    return 100 - (author.credibilityTier || 5) * 10
+  }
+
+  let score = 0
+  const searchableText = [
+    author.name || '',
+    author.affiliation || '',
+    author.positionSummary || '',
+    author.key_quote || ''
+  ].join(' ').toLowerCase()
+
+  // Check for query term matches
+  queryTerms.forEach(term => {
+    if (searchableText.includes(term.toLowerCase())) {
+      score += 20
+    }
+  })
+
+  // Exact phrase match bonus
+  if (searchableText.includes(query.toLowerCase())) {
+    score += 30
+  }
+
+  // Credibility tier bonus (tier 1 = +15, tier 2 = +10, tier 3 = +5)
+  const tier = author.credibilityTier || 5
+  score += Math.max(0, (6 - tier) * 5)
+
+  return score
+}
+
+/**
+ * Enrich camps with cross-perspective author data
+ * For each camp, adds:
+ * - challengingAuthors: Top 3 authors from opposing perspectives (ranked by query relevancy)
+ * - supportingAuthors: Top 3 authors from allied perspectives (ranked by query relevancy)
+ */
+function enrichWithCrossPerspectiveAuthors(camps: any[], query?: string, queryTerms: string[] = []): any[] {
+  // Build a map of perspective name -> camp data (including authors)
+  const campsByName: Record<string, any> = {}
+  camps.forEach(camp => {
+    campsByName[camp.name] = camp
+  })
+
+  return camps.map(camp => {
+    // Get opposing perspectives
+    const opposingNames = getOpposingPerspectives(camp.name)
+    const challengingAuthors: any[] = []
+
+    opposingNames.forEach(opposingName => {
+      const opposingCamp = campsByName[opposingName]
+      if (opposingCamp?.authors) {
+        // Get authors from opposing perspective with relevancy scores
+        const authorsWithScores = opposingCamp.authors.map((author: any) => ({
+          ...author,
+          _relevancyScore: calculateAuthorRelevancy(author, query || '', queryTerms),
+          perspective: opposingName
+        }))
+
+        challengingAuthors.push(...authorsWithScores)
+      }
+    })
+
+    // Sort by relevancy and take top 3
+    const topChallengers = challengingAuthors
+      .sort((a, b) => b._relevancyScore - a._relevancyScore)
+      .slice(0, 3)
+      .map(({ id, name, perspective }) => ({ id, name, perspective }))
+
+    // Get allied perspectives for supporting authors
+    const alliedNames = getAlliedPerspectives(camp.name)
+    const supportingAuthors: any[] = []
+
+    alliedNames.forEach(alliedName => {
+      const alliedCamp = campsByName[alliedName]
+      if (alliedCamp?.authors) {
+        // Get authors from allied perspective with relevancy scores
+        const authorsWithScores = alliedCamp.authors.map((author: any) => ({
+          ...author,
+          _relevancyScore: calculateAuthorRelevancy(author, query || '', queryTerms),
+          perspective: alliedName
+        }))
+
+        supportingAuthors.push(...authorsWithScores)
+      }
+    })
+
+    // Sort by relevancy and take top 3
+    const topSupporters = supportingAuthors
+      .sort((a, b) => b._relevancyScore - a._relevancyScore)
+      .slice(0, 3)
+      .map(({ id, name, perspective }) => ({ id, name, perspective }))
+
+    return {
+      ...camp,
+      challengingAuthors: topChallengers,
+      supportingAuthors: topSupporters
+    }
+  })
+}
+
+/**
  * Fetch camps with their associated authors
  * Returns both camps and expanded queries (if query expansion was used)
  */
@@ -285,8 +395,12 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
       console.log('  Camps after filtering:', camps.length)
     }
 
-    console.log('✅ Returning camps:', camps.length)
-    return { camps, expandedQueries: expandedQueriesResult }
+    // Enrich camps with cross-perspective author data (pass query for relevancy ranking)
+    const queryTerms = query ? query.toLowerCase().split(/\s+/).filter(t => t.length > 2) : []
+    const enrichedCamps = enrichWithCrossPerspectiveAuthors(camps, query, queryTerms)
+
+    console.log('✅ Returning camps:', enrichedCamps.length)
+    return { camps: enrichedCamps, expandedQueries: expandedQueriesResult }
   } catch (error) {
     console.error('Error in getCampsWithAuthors:', error)
     return { camps: [], expandedQueries: null }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronUp, Users } from 'lucide-react'
+import { ChevronDown, ChevronUp, Users, ThumbsUp, ThumbsDown } from 'lucide-react'
 import AuthorCard, { authorQuoteMatchesSearch } from './AuthorCard'
 import { TERMINOLOGY, getCampLabel } from '@/lib/constants/terminology'
 import { getDomainColor } from './DiscourseMap'
@@ -420,13 +420,13 @@ export default function CampAccordion({
                       </div>
                     </button>
 
-                    {/* Authors Section */}
+                    {/* Authors Section - Scrollable with 1 author visible initially */}
                     {isExpanded && (
                       <div className="border-t border-gray-100">
-                        {/* Authors List - Scrollable if many authors */}
+                        {/* Authors List - Scrollable, shows ~1 author height initially */}
                         <div
-                          className={`p-4 bg-gray-50/50 space-y-3 ${needsScroll ? 'overflow-y-auto' : ''}`}
-                          style={needsScroll ? { maxHeight: `${AUTHORS_SCROLL_HEIGHT}px` } : undefined}
+                          className="p-4 bg-gray-50/50 space-y-3 overflow-y-auto"
+                          style={{ maxHeight: '180px' }}
                         >
                           {sortedAuthors.map((author: any, index: number) => {
                             const quoteMatches = authorQuoteMatchesSearch(author, query, expandedQueries || [])
@@ -446,6 +446,44 @@ export default function CampAccordion({
                             )
                           })}
                         </div>
+
+                        {/* Cross-Perspective Authors: Top 3 Supports & Challenges - Anchored */}
+                        {(camp.challengingAuthors?.length > 0 || camp.supportingAuthors?.length > 0) && (
+                          <div className="border-t border-gray-100 px-4 py-2.5 bg-gray-50/30">
+                            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+                              {camp.supportingAuthors?.length > 0 && (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <ThumbsUp size={11} className="text-green-600 flex-shrink-0" />
+                                  <span className="text-gray-500">Also supports:</span>
+                                  {camp.supportingAuthors.slice(0, 3).map((author: any) => (
+                                    <Link
+                                      key={author.id}
+                                      href={`/author/${author.id}`}
+                                      className="px-2 py-0.5 bg-green-50 text-green-700 rounded-full hover:bg-green-100 transition-colors"
+                                    >
+                                      {author.name}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                              {camp.challengingAuthors?.length > 0 && (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <ThumbsDown size={11} className="text-red-600 flex-shrink-0" />
+                                  <span className="text-gray-500">Challenges:</span>
+                                  {camp.challengingAuthors.slice(0, 3).map((author: any) => (
+                                    <Link
+                                      key={author.id}
+                                      href={`/author/${author.id}`}
+                                      className="px-2 py-0.5 bg-red-50 text-red-700 rounded-full hover:bg-red-100 transition-colors"
+                                    >
+                                      {author.name}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
