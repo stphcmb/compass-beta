@@ -37,7 +37,7 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href ||
-                  (item.href === '/authors' && pathname.startsWith('/author/')) ||
+                  (item.href === '/authors' && pathname.startsWith('/authors/')) ||
                   (item.href === '/explore' && pathname === '/results')
             return (
               <Link

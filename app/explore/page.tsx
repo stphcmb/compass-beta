@@ -10,17 +10,22 @@ import BackToTop from '@/components/BackToTop'
 import { ExpandedQueries } from '@/components/search-expansion'
 import { FeatureHint } from '@/components/FeatureHint'
 import { HowPerspectivesWorkModal, useHowPerspectivesWorkModal } from '@/components/HowPerspectivesWorkModal'
+import DomainOverview from '@/components/DomainOverview'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
 import { HelpCircle } from 'lucide-react'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
+// Domain panel width constant
+const DOMAIN_PANEL_WIDTH = 220
+
 function ExplorePageContent() {
   const searchParams = useSearchParams()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [activeDomain, setActiveDomain] = useState<string | null>(null)
 
   const query = searchParams.get('q') || ''
-  const domain = searchParams.get('domain') || undefined
+  const domain = activeDomain || searchParams.get('domain') || undefined
   const domains = searchParams.get('domains')?.split(',') || []
   const camp = searchParams.get('camp') || undefined
   const camps = searchParams.get('camps')?.split(',') || []
@@ -100,16 +105,38 @@ function ExplorePageContent() {
     fetchExpandedQueries()
   }, [query])
 
+  // Calculate margins for layout
+  const sidebarWidth = sidebarCollapsed ? 0 : 256
+  const domainPanelLeft = sidebarWidth
+  const mainContentLeft = sidebarWidth + DOMAIN_PANEL_WIDTH
+
   return (
     <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
       <Sidebar />
       <Header sidebarCollapsed={sidebarCollapsed} />
+
+      {/* Domain Overview Panel - Fixed position between sidebar and main */}
+      <aside
+        className="fixed top-16 h-[calc(100vh-64px)] border-r border-gray-200 transition-all duration-300 z-10"
+        style={{
+          left: `${domainPanelLeft}px`,
+          width: `${DOMAIN_PANEL_WIDTH}px`,
+          backgroundColor: 'white'
+        }}
+      >
+        <DomainOverview
+          onDomainFilter={setActiveDomain}
+          activeDomain={activeDomain}
+        />
+      </aside>
+
+      {/* Main Content */}
       <main
         ref={mainRef}
         className="flex-1 mt-16 overflow-y-auto transition-all duration-300"
-        style={{ marginLeft: sidebarCollapsed ? '0' : '256px' }}
+        style={{ marginLeft: `${mainContentLeft}px` }}
       >
-        <div className="max-w-5xl mx-auto p-6">
+        <div className="max-w-4xl mx-auto p-6">
           {/* Page Title */}
           <div className="mb-6">
             <div className="flex items-center gap-2">
@@ -149,6 +176,24 @@ function ExplorePageContent() {
             </div>
           )}
 
+          {/* Domain Filter Indicator */}
+          {activeDomain && !query && (
+            <div className="mb-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-indigo-600 font-medium uppercase tracking-wide">Filtering by Domain</span>
+                  <div className="text-sm font-medium text-gray-900">{activeDomain}</div>
+                </div>
+                <button
+                  onClick={() => setActiveDomain(null)}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                >
+                  Clear filter
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* How Perspectives Work Modal */}
           <HowPerspectivesWorkModal isOpen={isModalOpen} onClose={closeModal} />
 
@@ -172,7 +217,7 @@ function ExplorePageContent() {
               <div className="flex items-center gap-2 mb-4">
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 px-3">
-                  Browse All Perspectives
+                  {activeDomain ? `${activeDomain} Perspectives` : 'Browse All Perspectives'}
                 </span>
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
               </div>

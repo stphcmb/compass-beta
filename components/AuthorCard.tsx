@@ -80,7 +80,7 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
         {/* Name & Affiliation */}
         <div className="flex-1 min-w-0">
           <Link
-            href={`/author/${author?.id || '1'}`}
+            href={`/authors/${author?.id || '1'}`}
             className="font-semibold text-[15px] text-gray-900 hover:text-indigo-600 transition-colors"
           >
             {searchTerms.length > 0 ? highlightText(name, searchTerms) : name}

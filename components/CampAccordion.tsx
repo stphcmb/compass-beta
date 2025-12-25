@@ -300,7 +300,7 @@ export default function CampAccordion({
     .map(([domain]) => domain)
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       {sortedDomains.map((domainName) => {
         const domainCamps = campsByDomain[domainName]
         const colors = getDomainColor(domainName)
@@ -313,31 +313,27 @@ export default function CampAccordion({
 
         return (
           <div key={domainName} className="scroll-mt-4">
-            {/* Domain Header - Sticky for context while scrolling */}
+            {/* Domain Header - Compact sticky header */}
             <div
-              className={`sticky top-0 z-10 mb-4 py-3 px-4 -mx-4 rounded-lg ${colors.bg}`}
+              className={`sticky top-0 z-10 mb-3 py-2 px-3 -mx-3 rounded-lg ${colors.bg}`}
               style={{ backgroundColor: colors.bgSolid || '#f3f4f6' }}
             >
-              <div className="flex items-center gap-3">
-                <div className={`w-3 h-8 rounded-full ${colors.accent || 'bg-gray-400'}`} />
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h2 className={`text-lg font-bold ${colors.text}`}>
-                      {domainName}
-                    </h2>
-                    <span className="text-xs text-gray-500 font-medium">
-                      {domainCamps.length} {domainCamps.length === 1 ? 'perspective' : 'perspectives'} · {domainAuthorCount} authors
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 leading-relaxed mt-1">
-                    {domainDescription}
-                  </p>
-                </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-6 rounded-full ${colors.accent || 'bg-gray-400'}`} />
+                <h2 className={`text-base font-bold ${colors.text}`}>
+                  {domainName}
+                </h2>
+                <span className="text-[11px] text-gray-500">
+                  {domainCamps.length} perspectives · {domainAuthorCount} authors
+                </span>
+                <span className="text-[11px] text-gray-500 hidden sm:inline">
+                  — {domainDescription}
+                </span>
               </div>
             </div>
 
             {/* Perspectives within Domain */}
-            <div className="space-y-3 ml-1 pl-4 border-l-3 border-gray-200">
+            <div className="space-y-2 ml-1 pl-3 border-l-2 border-gray-200">
               {sortedDomainCamps.map((camp) => {
                 const isExpanded = expandedCamps[camp.id] === true
                 const needsScroll = camp.authors.length > MAX_AUTHORS_BEFORE_SCROLL
@@ -364,57 +360,47 @@ export default function CampAccordion({
                       isExpanded ? 'border-gray-300 shadow-md' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                     }`}
                   >
-                    {/* Perspective Header */}
+                    {/* Perspective Header - Compact */}
                     <button
                       onClick={() => toggleCamp(camp.id)}
-                      className="w-full text-left p-4 hover:bg-gray-50/50 transition-colors"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50/50 transition-colors"
                     >
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          {/* Perspective Name with Author Count */}
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-[17px] font-semibold text-gray-900">
+                          {/* Single line: Name + Count + Stance */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-[15px] font-semibold text-gray-900">
                               {camp.name}
                             </h3>
-                            <span className="text-xs text-gray-400 font-medium">
-                              {camp.authorCount} {camp.authorCount === 1 ? 'author' : 'authors'}
+                            <span className="text-[11px] text-gray-400">
+                              {camp.authorCount} authors
                             </span>
-                          </div>
-
-                          {/* Stance Description */}
-                          <p className="text-[13px] text-gray-600 leading-relaxed">
-                            {stanceData}
-                          </p>
-
-                          {/* Theme Chips - Always show for consistency */}
-                          <div className="flex items-center gap-1.5 mt-2">
-                            {themes.length > 0 ? (
-                              <>
+                            {themes.length > 0 && (
+                              <div className="flex items-center gap-1">
                                 {themes.map((theme, idx) => (
                                   <span
                                     key={idx}
-                                    className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${campColors.bg} ${campColors.text}`}
+                                    className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${campColors.bg} ${campColors.text}`}
                                   >
                                     {theme}
                                   </span>
                                 ))}
-                              </>
-                            ) : (
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${campColors.bg} ${campColors.text}`}>
-                                {camp.domain.split(' ')[0]}
-                              </span>
+                              </div>
                             )}
+                            <span className="text-[12px] text-gray-500 hidden sm:inline">
+                              — {stanceData}
+                            </span>
                           </div>
                         </div>
 
                         {/* Expand/Collapse Icon */}
-                        <div className={`flex-shrink-0 p-1.5 rounded-full transition-colors ${
+                        <div className={`flex-shrink-0 p-1 rounded-full transition-colors ${
                           isExpanded ? 'bg-gray-100 text-gray-600' : 'text-gray-400'
                         }`}>
                           {isExpanded ? (
-                            <ChevronUp className="w-5 h-5" />
+                            <ChevronUp className="w-4 h-4" />
                           ) : (
-                            <ChevronDown className="w-5 h-5" />
+                            <ChevronDown className="w-4 h-4" />
                           )}
                         </div>
                       </div>
@@ -458,7 +444,7 @@ export default function CampAccordion({
                                   {camp.supportingAuthors.slice(0, 3).map((author: any) => (
                                     <Link
                                       key={author.id}
-                                      href={`/author/${author.id}`}
+                                      href={`/authors/${author.id}`}
                                       className="px-2 py-0.5 bg-green-50 text-green-700 rounded-full hover:bg-green-100 transition-colors"
                                     >
                                       {author.name}
@@ -473,7 +459,7 @@ export default function CampAccordion({
                                   {camp.challengingAuthors.slice(0, 3).map((author: any) => (
                                     <Link
                                       key={author.id}
-                                      href={`/author/${author.id}`}
+                                      href={`/authors/${author.id}`}
                                       className="px-2 py-0.5 bg-red-50 text-red-700 rounded-full hover:bg-red-100 transition-colors"
                                     >
                                       {author.name}

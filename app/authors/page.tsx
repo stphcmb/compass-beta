@@ -477,219 +477,408 @@ export default function AuthorIndexPage() {
 
         {/* Right Panel - Author Profile */}
         <div
-          className="flex-1 overflow-y-auto"
+          className="flex-1 overflow-y-auto relative"
           style={{
-            backgroundColor: 'var(--color-bone)',
-            padding: 'var(--space-8)'
+            backgroundColor: 'var(--color-bone)'
           }}
         >
-          <FeatureHint featureKey="authors" className="mb-6" />
-          {selectedAuthor ? (
-            <div>
-              {/* Profile Header */}
-              <div
-                className="border"
-                style={{
-                  backgroundColor: 'var(--color-cloud)',
-                  borderColor: 'var(--color-light-gray)',
-                  borderRadius: 'var(--radius-base)',
-                  padding: 'var(--space-5)',
-                  marginBottom: 'var(--space-5)'
-                }}
-              >
-                <h2 style={{ marginBottom: 'var(--space-1)' }}>{formatNameLastFirst(selectedAuthor.name)}</h2>
-                <div className="label" style={{ color: 'var(--color-mid-gray)', marginBottom: 'var(--space-3)' }}>
-                  {selectedAuthor.header_affiliation || selectedAuthor.primary_affiliation || 'Independent'}
-                </div>
-                <div className="flex flex-wrap" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
-                  {/* Credibility Tier - Outlined style for distinction */}
-                  {selectedAuthor.credibility_tier && (
-                    <span
-                      className="caption"
-                      style={{
-                        padding: 'var(--space-1) var(--space-3)',
-                        borderRadius: 'var(--radius-base)',
-                        border: 'var(--border-medium) solid var(--color-accent)',
-                        backgroundColor: 'white',
-                        color: 'var(--color-accent)',
-                        fontWeight: 'var(--weight-semibold)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}
-                    >
-                      {selectedAuthor.credibility_tier}
-                    </span>
-                  )}
+          {/* Decorative gradient at top */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '200px',
+              background: 'linear-gradient(180deg, rgba(99, 102, 241, 0.04) 0%, transparent 100%)',
+              pointerEvents: 'none',
+              zIndex: 0
+            }}
+          />
+          {/* Decorative orb */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '-50px',
+              right: '-50px',
+              width: '300px',
+              height: '300px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(99, 102, 241, 0.06) 0%, transparent 70%)',
+              pointerEvents: 'none',
+              zIndex: 0
+            }}
+          />
 
-                  {/* Author Type - Subtle gray badge */}
-                  {selectedAuthor.author_type && (
-                    <span
-                      className="caption"
-                      style={{
-                        padding: 'var(--space-1) var(--space-2)',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor: 'var(--color-pale-gray)',
-                        border: 'var(--border-thin) solid var(--color-light-gray)',
-                        color: 'var(--color-charcoal)',
-                        fontWeight: 'var(--weight-medium)'
-                      }}
-                    >
-                      {selectedAuthor.author_type}
-                    </span>
-                  )}
-
-                  {/* Domain/Camp Labels - Filled colored badges */}
-                  {getAuthorCamps(selectedAuthor.id).map((camp, idx) => (
-                    <span
-                      key={idx}
-                      className={`caption ${DOMAIN_COLORS[camp.domain] || 'bg-gray-100 text-gray-600'}`}
-                      style={{
-                        padding: 'var(--space-1) var(--space-2)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontWeight: 'var(--weight-medium)'
-                      }}
-                    >
-                      {camp.name}
-                    </span>
-                  ))}
-
-                  {/* If no camps, show "No {TERMINOLOGY.camp.toLowerCase()} assigned" */}
-                  {getAuthorCamps(selectedAuthor.id).length === 0 && (
-                    <span
-                      className="caption"
-                      style={{
-                        padding: 'var(--space-1) var(--space-2)',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor: 'var(--color-pale-gray)',
-                        border: 'var(--border-thin) dashed var(--color-light-gray)',
-                        color: 'var(--color-mid-gray)',
-                        fontWeight: 'var(--weight-normal)',
-                        fontStyle: 'italic'
-                      }}
-                    >
-                      No {TERMINOLOGY.camp.toLowerCase()} assigned
-                    </span>
-                  )}
-                </div>
-
-                {selectedAuthor.notes && (
-                  <div
-                    className="bg-blue-50 border border-blue-200 label"
-                    style={{
-                      borderRadius: 'var(--radius-base)',
-                      padding: 'var(--space-3)',
-                      color: '#1e40af'
-                    }}
-                  >
-                    {selectedAuthor.notes}
-                  </div>
-                )}
-
-                <Link
-                  href={`/author/${selectedAuthor.id}`}
-                  className="inline-block label font-medium hover:underline"
+          <div className="relative z-10" style={{ padding: 'var(--space-8)' }}>
+            <FeatureHint featureKey="authors" className="mb-6" />
+            {selectedAuthor ? (
+              <div>
+                {/* Profile Header - Enhanced */}
+                <div
                   style={{
-                    marginTop: 'var(--space-4)',
-                    color: 'var(--color-accent)'
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: 'var(--radius-lg)',
+                    marginBottom: 'var(--space-5)'
                   }}
                 >
-                  View full profile →
-                </Link>
-              </div>
-
-              {/* Sources Section */}
-              <div
-                className="border"
-                style={{
-                  backgroundColor: 'var(--color-cloud)',
-                  borderColor: 'var(--color-light-gray)',
-                  borderRadius: 'var(--radius-base)',
-                  padding: 'var(--space-5)'
-                }}
-              >
-                <h3 style={{ marginBottom: 'var(--space-4)' }}>
-                  Sources ({selectedAuthor.sources?.length || 0})
-                </h3>
-
-                {selectedAuthor.sources && selectedAuthor.sources.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                    {selectedAuthor.sources.map((source: any, index: number) => (
+                  {/* Card accent line */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '3px',
+                      background: 'linear-gradient(90deg, var(--color-accent)40 0%, var(--color-accent) 50%, var(--color-accent)40 100%)',
+                      zIndex: 1
+                    }}
+                  />
+                  <div
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid var(--color-light-gray)',
+                      borderRadius: 'var(--radius-lg)',
+                      padding: 'var(--space-6)'
+                    }}
+                  >
+                    {/* Avatar and name section */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-5)', marginBottom: 'var(--space-4)' }}>
+                      {/* Avatar */}
                       <div
-                        key={index}
-                        className="border transition-colors"
                         style={{
-                          borderColor: 'var(--color-light-gray)',
-                          borderRadius: 'var(--radius-base)',
-                          padding: 'var(--space-4)',
-                          transition: 'border-color var(--duration-fast) var(--ease-out)'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--color-mid-gray)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: 'var(--radius-full)',
+                          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(99, 102, 241, 0.4) 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          boxShadow: 'var(--shadow-sm)',
+                          border: '2px solid white'
                         }}
                       >
-                        <div className="flex items-start justify-between" style={{ marginBottom: 'var(--space-2)' }}>
-                          <div className="flex-1">
-                            <div className="label font-medium" style={{ marginBottom: 'var(--space-1)', color: 'var(--color-soft-black)' }}>
-                              {source.title}
-                            </div>
-                            <div className="flex caption" style={{ gap: 'var(--space-2)', color: 'var(--color-mid-gray)' }}>
-                              <span
-                                className="bg-gray-100"
-                                style={{
-                                  padding: 'var(--space-1) var(--space-2)',
-                                  borderRadius: 'var(--radius-sm)'
-                                }}
-                              >
-                                {source.type}
-                              </span>
-                              <span>{source.year}</span>
-                            </div>
-                          </div>
-                          {source.url && (
-                            <a
-                              href={source.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="caption font-medium bg-blue-50 hover:bg-blue-100"
-                              style={{
-                                marginLeft: 'var(--space-3)',
-                                padding: 'var(--space-2) var(--space-3)',
-                                color: 'var(--color-accent)',
-                                borderRadius: 'var(--radius-base)'
-                              }}
-                            >
-                              Open ↗
-                            </a>
-                          )}
+                        <span
+                          style={{
+                            fontSize: '1.25rem',
+                            fontWeight: 'var(--weight-bold)',
+                            color: 'var(--color-accent)',
+                            letterSpacing: 'var(--tracking-wide)'
+                          }}
+                        >
+                          {(() => {
+                            const parts = selectedAuthor.name.split(' ').filter(Boolean)
+                            const first = parts[0]?.[0] || ''
+                            const last = parts.length > 1 ? parts[parts.length - 1][0] : ''
+                            return (first + last).toUpperCase()
+                          })()}
+                        </span>
+                      </div>
+
+                      {/* Name and affiliation */}
+                      <div style={{ flex: 1 }}>
+                        <h2 style={{ marginBottom: 'var(--space-1)', fontSize: 'var(--text-h2)' }}>
+                          {formatNameLastFirst(selectedAuthor.name)}
+                        </h2>
+                        <div className="label" style={{ color: 'var(--color-mid-gray)' }}>
+                          {selectedAuthor.header_affiliation || selectedAuthor.primary_affiliation || 'Independent'}
                         </div>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Badges */}
+                    <div className="flex flex-wrap" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+                      {selectedAuthor.credibility_tier && (
+                        <span
+                          className="caption"
+                          style={{
+                            padding: 'var(--space-1) var(--space-3)',
+                            borderRadius: 'var(--radius-full)',
+                            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.2) 100%)',
+                            border: '1px solid rgba(99, 102, 241, 0.3)',
+                            color: 'var(--color-accent)',
+                            fontWeight: 'var(--weight-semibold)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                          }}
+                        >
+                          {selectedAuthor.credibility_tier}
+                        </span>
+                      )}
+
+                      {selectedAuthor.author_type && (
+                        <span
+                          className="caption"
+                          style={{
+                            padding: 'var(--space-1) var(--space-3)',
+                            borderRadius: 'var(--radius-full)',
+                            backgroundColor: 'white',
+                            border: '1px solid var(--color-light-gray)',
+                            color: 'var(--color-charcoal)',
+                            fontWeight: 'var(--weight-medium)'
+                          }}
+                        >
+                          {selectedAuthor.author_type}
+                        </span>
+                      )}
+
+                      {getAuthorCamps(selectedAuthor.id).map((camp, idx) => (
+                        <span
+                          key={idx}
+                          className={`caption ${DOMAIN_COLORS[camp.domain] || 'bg-gray-100 text-gray-600'}`}
+                          style={{
+                            padding: 'var(--space-1) var(--space-3)',
+                            borderRadius: 'var(--radius-full)',
+                            fontWeight: 'var(--weight-medium)'
+                          }}
+                        >
+                          {camp.name}
+                        </span>
+                      ))}
+
+                      {getAuthorCamps(selectedAuthor.id).length === 0 && (
+                        <span
+                          className="caption"
+                          style={{
+                            padding: 'var(--space-1) var(--space-3)',
+                            borderRadius: 'var(--radius-full)',
+                            backgroundColor: 'transparent',
+                            border: '1px dashed var(--color-light-gray)',
+                            color: 'var(--color-mid-gray)',
+                            fontWeight: 'var(--weight-normal)',
+                            fontStyle: 'italic'
+                          }}
+                        >
+                          No {TERMINOLOGY.camp.toLowerCase()} assigned
+                        </span>
+                      )}
+                    </div>
+
+                    {selectedAuthor.notes && (
+                      <div
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(99, 102, 241, 0.1) 100%)',
+                          border: '1px solid rgba(99, 102, 241, 0.15)',
+                          borderRadius: 'var(--radius-md)',
+                          padding: 'var(--space-4)',
+                          marginBottom: 'var(--space-4)'
+                        }}
+                      >
+                        <div
+                          className="caption"
+                          style={{
+                            color: 'var(--color-accent)',
+                            fontWeight: 'var(--weight-semibold)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: 'var(--space-2)'
+                          }}
+                        >
+                          Overview
+                        </div>
+                        <div className="label" style={{ color: 'var(--color-charcoal)', lineHeight: 'var(--leading-relaxed)' }}>
+                          {selectedAuthor.notes}
+                        </div>
+                      </div>
+                    )}
+
+                    <Link
+                      href={`/authors/${selectedAuthor.id}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-2)',
+                        padding: 'var(--space-2) var(--space-4)',
+                        borderRadius: 'var(--radius-full)',
+                        backgroundColor: 'var(--color-accent)',
+                        color: 'white',
+                        fontSize: 'var(--text-small)',
+                        fontWeight: 'var(--weight-medium)',
+                        textDecoration: 'none',
+                        transition: 'all var(--duration-fast) var(--ease-out)',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)'
+                        e.currentTarget.style.boxShadow = 'var(--shadow-md)'
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--color-accent)'
+                        e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
+                        e.currentTarget.style.transform = 'translateY(0)'
+                      }}
+                    >
+                      View full profile
+                      <span>→</span>
+                    </Link>
                   </div>
-                ) : (
-                  <div className="text-center" style={{ paddingTop: 'var(--space-8)', paddingBottom: 'var(--space-8)' }}>
-                    <div style={{ fontSize: 'var(--text-h1)', marginBottom: 'var(--space-2)' }}>📚</div>
-                    <div className="label" style={{ color: 'var(--color-mid-gray)' }}>No sources added yet</div>
+                </div>
+
+                {/* Sources Section - Enhanced */}
+                <div
+                  style={{
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: 'var(--radius-lg)'
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                      backdropFilter: 'blur(4px)',
+                      border: '1px solid var(--color-light-gray)',
+                      borderRadius: 'var(--radius-lg)',
+                      padding: 'var(--space-6)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+                      <h3 style={{ margin: 0 }}>Sources</h3>
+                      {selectedAuthor.sources?.length > 0 && (
+                        <span
+                          className="caption"
+                          style={{
+                            padding: 'var(--space-1) var(--space-2)',
+                            borderRadius: 'var(--radius-full)',
+                            backgroundColor: 'var(--color-pale-gray)',
+                            color: 'var(--color-charcoal)',
+                            fontWeight: 'var(--weight-medium)'
+                          }}
+                        >
+                          {selectedAuthor.sources.length}
+                        </span>
+                      )}
+                    </div>
+
+                    {selectedAuthor.sources && selectedAuthor.sources.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                        {selectedAuthor.sources.map((source: any, index: number) => (
+                          <div
+                            key={index}
+                            style={{
+                              backgroundColor: 'white',
+                              border: '1px solid var(--color-light-gray)',
+                              borderRadius: 'var(--radius-md)',
+                              padding: 'var(--space-4)',
+                              transition: 'all var(--duration-fast) var(--ease-out)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)'
+                              e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
+                              e.currentTarget.style.transform = 'translateY(-1px)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                              e.currentTarget.style.boxShadow = 'none'
+                              e.currentTarget.style.transform = 'translateY(0)'
+                            }}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="label font-medium" style={{ marginBottom: 'var(--space-2)', color: 'var(--color-soft-black)' }}>
+                                  {source.title}
+                                </div>
+                                <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
+                                  <span
+                                    className="caption"
+                                    style={{
+                                      padding: 'var(--space-1) var(--space-2)',
+                                      borderRadius: 'var(--radius-full)',
+                                      backgroundColor: 'var(--color-pale-gray)',
+                                      color: 'var(--color-charcoal)',
+                                      fontWeight: 'var(--weight-medium)'
+                                    }}
+                                  >
+                                    {source.type}
+                                  </span>
+                                  <span className="caption" style={{ color: 'var(--color-mid-gray)' }}>{source.year}</span>
+                                </div>
+                              </div>
+                              {source.url && (
+                                <a
+                                  href={source.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="caption font-medium"
+                                  style={{
+                                    marginLeft: 'var(--space-3)',
+                                    padding: 'var(--space-2) var(--space-3)',
+                                    color: 'var(--color-accent)',
+                                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                                    border: '1px solid rgba(99, 102, 241, 0.2)',
+                                    borderRadius: 'var(--radius-full)',
+                                    textDecoration: 'none',
+                                    transition: 'all var(--duration-fast) var(--ease-out)'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)'
+                                  }}
+                                >
+                                  Open ↗
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center" style={{ padding: 'var(--space-8)' }}>
+                        <div
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: 'var(--radius-full)',
+                            background: 'linear-gradient(135deg, var(--color-pale-gray) 0%, var(--color-light-gray) 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto var(--space-3)',
+                            fontSize: '1.5rem'
+                          }}
+                        >
+                          📚
+                        </div>
+                        <div className="label" style={{ color: 'var(--color-mid-gray)' }}>No sources added yet</div>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-center" style={{ paddingTop: 'var(--space-20)', paddingBottom: 'var(--space-20)' }}>
-              <div style={{ fontSize: '3rem', marginBottom: 'var(--space-4)' }}>👤</div>
-              <h3 style={{ marginBottom: 'var(--space-2)' }}>Select an author</h3>
-              <div className="label" style={{ color: 'var(--color-mid-gray)' }}>Choose from the list on the left</div>
-            </div>
-          )}
+            ) : (
+              <div className="text-center" style={{ paddingTop: 'var(--space-20)', paddingBottom: 'var(--space-20)' }}>
+                <div
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: 'var(--radius-full)',
+                    background: 'linear-gradient(135deg, var(--color-pale-gray) 0%, var(--color-light-gray) 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto var(--space-4)',
+                    fontSize: '2rem'
+                  }}
+                >
+                  👤
+                </div>
+                <h3 style={{ marginBottom: 'var(--space-2)' }}>Select an author</h3>
+                <div className="label" style={{ color: 'var(--color-mid-gray)' }}>Choose from the list on the left</div>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>
   )
 }
 
-// Author Card Component
+// Author Card Component - Enhanced
 function AuthorCard({ author, camps, isSelected, onClick, formatName }: {
   author: any
   camps: any[]
@@ -697,99 +886,166 @@ function AuthorCard({ author, camps, isSelected, onClick, formatName }: {
   onClick: () => void
   formatName: (name: string) => string
 }) {
+  // Get initials from name
+  const getInitials = (name: string) => {
+    const parts = name.split(' ').filter(Boolean)
+    const first = parts[0]?.[0] || ''
+    const last = parts.length > 1 ? parts[parts.length - 1][0] : ''
+    return (first + last).toUpperCase()
+  }
+
   return (
     <div
       onClick={onClick}
-      className="border cursor-pointer"
+      className="cursor-pointer"
       style={{
+        position: 'relative',
         padding: 'var(--space-4)',
-        borderRadius: 'var(--radius-base)',
+        borderRadius: 'var(--radius-md)',
         marginBottom: 'var(--space-2)',
-        borderColor: isSelected ? 'var(--color-accent)' : 'var(--color-light-gray)',
-        backgroundColor: isSelected ? 'var(--color-accent-light)' : 'white',
+        border: `1px solid ${isSelected ? 'var(--color-accent)' : 'var(--color-light-gray)'}`,
+        backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.08)' : 'white',
         transition: 'all var(--duration-fast) var(--ease-out)',
-        boxShadow: isSelected ? 'var(--shadow-sm)' : 'none'
+        boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
+        transform: isSelected ? 'translateX(2px)' : 'none'
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.borderColor = 'var(--color-accent)'
-          e.currentTarget.style.backgroundColor = 'var(--color-accent-light)'
+          e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)'
+          e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.04)'
+          e.currentTarget.style.transform = 'translateX(2px)'
         }
       }}
       onMouseLeave={(e) => {
         if (!isSelected) {
           e.currentTarget.style.borderColor = 'var(--color-light-gray)'
           e.currentTarget.style.backgroundColor = 'white'
+          e.currentTarget.style.transform = 'none'
         }
       }}
     >
-      <div
-        className="label font-semibold"
-        style={{
-          color: 'var(--color-soft-black)',
-          marginBottom: 'var(--space-1)'
-        }}
-      >
-        {formatName(author.name)}
-      </div>
-      <div
-        className="caption"
-        style={{
-          color: 'var(--color-mid-gray)',
-          marginBottom: 'var(--space-2)'
-        }}
-      >
-        {author.header_affiliation || author.primary_affiliation || 'Independent'}
-      </div>
-      <div className="flex flex-wrap" style={{ gap: 'var(--space-1)' }}>
-        {camps.length > 0 ? (
-          <>
-            {camps.slice(0, 2).map((camp, idx) => (
-              <span
-                key={idx}
-                className={`caption ${
-                  DOMAIN_COLORS[camp.domain] || 'bg-gray-100 text-gray-600'
-                }`}
-                style={{
-                  padding: 'var(--space-1) var(--space-2)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontWeight: 'var(--weight-medium)'
-                }}
-              >
-                {camp.name}
-              </span>
-            ))}
-            {camps.length > 2 && (
+      {/* Selected indicator */}
+      {isSelected && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: '3px',
+            background: 'var(--color-accent)',
+            borderRadius: 'var(--radius-md) 0 0 var(--radius-md)'
+          }}
+        />
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
+        {/* Avatar */}
+        <div
+          style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: 'var(--radius-full)',
+            background: isSelected
+              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(99, 102, 241, 0.5) 100%)'
+              : 'linear-gradient(135deg, var(--color-pale-gray) 0%, var(--color-light-gray) 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            transition: 'all var(--duration-fast) var(--ease-out)'
+          }}
+        >
+          <span
+            style={{
+              fontSize: 'var(--text-caption)',
+              fontWeight: 'var(--weight-semibold)',
+              color: isSelected ? 'var(--color-accent)' : 'var(--color-mid-gray)',
+              letterSpacing: '0.02em'
+            }}
+          >
+            {getInitials(author.name)}
+          </span>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            className="label font-semibold"
+            style={{
+              color: isSelected ? 'var(--color-accent)' : 'var(--color-soft-black)',
+              marginBottom: '2px',
+              transition: 'color var(--duration-fast) var(--ease-out)'
+            }}
+          >
+            {formatName(author.name)}
+          </div>
+          <div
+            className="caption"
+            style={{
+              color: 'var(--color-mid-gray)',
+              marginBottom: 'var(--space-2)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {author.header_affiliation || author.primary_affiliation || 'Independent'}
+          </div>
+          <div className="flex flex-wrap" style={{ gap: '4px' }}>
+            {camps.length > 0 ? (
+              <>
+                {camps.slice(0, 2).map((camp, idx) => (
+                  <span
+                    key={idx}
+                    className={`caption ${
+                      DOMAIN_COLORS[camp.domain] || 'bg-gray-100 text-gray-600'
+                    }`}
+                    style={{
+                      padding: '2px var(--space-2)',
+                      borderRadius: 'var(--radius-full)',
+                      fontWeight: 'var(--weight-medium)',
+                      fontSize: '10px'
+                    }}
+                  >
+                    {camp.name}
+                  </span>
+                ))}
+                {camps.length > 2 && (
+                  <span
+                    className="caption"
+                    style={{
+                      padding: '2px var(--space-2)',
+                      borderRadius: 'var(--radius-full)',
+                      backgroundColor: 'var(--color-pale-gray)',
+                      color: 'var(--color-charcoal)',
+                      fontWeight: 'var(--weight-medium)',
+                      fontSize: '10px'
+                    }}
+                  >
+                    +{camps.length - 2}
+                  </span>
+                )}
+              </>
+            ) : (
               <span
                 className="caption"
                 style={{
-                  padding: 'var(--space-1) var(--space-2)',
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: 'var(--color-pale-gray)',
-                  color: 'var(--color-charcoal)',
-                  fontWeight: 'var(--weight-medium)'
+                  padding: '2px var(--space-2)',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: 'transparent',
+                  border: '1px dashed var(--color-light-gray)',
+                  color: 'var(--color-mid-gray)',
+                  fontWeight: 'var(--weight-normal)',
+                  fontStyle: 'italic',
+                  fontSize: '10px'
                 }}
               >
-                +{camps.length - 2}
+                No {TERMINOLOGY.camp.toLowerCase()}
               </span>
             )}
-          </>
-        ) : (
-          <span
-            className="caption"
-            style={{
-              padding: 'var(--space-1) var(--space-2)',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'transparent',
-              border: 'var(--border-thin) dashed var(--color-light-gray)',
-              color: 'var(--color-mid-gray)',
-              fontWeight: 'var(--weight-normal)',
-              fontStyle: 'italic'
-            }}
-          >
-            No {TERMINOLOGY.camp.toLowerCase()}
-          </span>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   )

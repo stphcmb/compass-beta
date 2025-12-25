@@ -647,7 +647,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
       parts.push(
         <Link
           key={`author-link-${linkKey++}`}
-          href={authorId ? `/author/${authorId}` : `/authors`}
+          href={authorId ? `/authors/${authorId}` : `/authors`}
           style={{
             color: 'var(--color-accent)',
             fontWeight: 'var(--weight-semibold)',
@@ -1376,7 +1376,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                                     }}>
                                       {author.id ? (
                                         <Link
-                                          href={`/author/${author.id}`}
+                                          href={`/authors/${author.id}`}
                                           style={{
                                             fontWeight: 'var(--weight-semibold)',
                                             fontSize: 'var(--text-body)',
