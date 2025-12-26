@@ -42,7 +42,7 @@ export default function Home() {
       <main
         className="flex-1 mt-16 flex flex-col items-center justify-start overflow-y-auto transition-all duration-300"
         style={{
-          marginLeft: sidebarCollapsed ? '0' : '256px'
+          marginLeft: sidebarCollapsed ? '0' : '220px'
         }}
       >
         {/* Hero Section */}

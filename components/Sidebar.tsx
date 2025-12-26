@@ -278,186 +278,198 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col overflow-hidden transition-all duration-300 ${
+        className={`fixed left-0 top-16 h-[calc(100vh-64px)] bg-white border-r border-gray-200 flex flex-col overflow-hidden transition-all duration-300 ${
           isCollapsed ? '-translate-x-full' : 'translate-x-0'
         }`}
-        style={{ width: '256px' }}
+        style={{ width: '220px' }}
       >
-        {/* Toggle Button - Inside Sidebar */}
-        <div className="absolute right-2 top-20 z-10">
-          <button
-            onClick={() => setIsCollapsed(true)}
-            className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-            title="Collapse sidebar"
-          >
-            <PanelLeftClose className="w-4 h-4 text-gray-600" />
-          </button>
-        </div>
-
-        {/* Fixed Header Section - only show when on results page */}
-        {isResultsPage && (
-        <div className="p-4 border-b border-gray-200 flex-shrink-0">
-          <button
-            onClick={() => router.push('/')}
-            className="text-sm text-blue-600 mb-3 hover:underline flex items-center gap-1"
-          >
-            <ChevronRight className="w-3 h-3 rotate-180" />
-            New Search
-          </button>
-          {currentQuery && (
-            <div className="p-3 bg-blue-50 rounded">
-              <div className="text-xs text-gray-500 mb-1">Current Search</div>
-              <div className="text-sm font-medium">{currentQuery}</div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-8 pb-4 space-y-6 min-h-0 sidebar-scroll">
-        {/* Saved Searches Section */}
-        <div>
-          {/* Section Header */}
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-blue-100">
-            <div className="flex items-center gap-2" title="Your saved searches">
-              <SearchIcon className="w-4 h-4 text-blue-600" />
-              <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                Saved Searches
-              </h3>
-              {savedSearches.length > 0 && (
+        {/* Header with accent line */}
+        <div className="flex-shrink-0 border-b border-blue-100 relative" style={{ padding: '12px' }}>
+          <div
+            className="absolute top-0 left-0 right-0 h-0.5"
+            style={{ background: 'linear-gradient(90deg, #3b82f6 0%, rgba(59, 130, 246, 0.3) 100%)' }}
+          />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bookmark className="w-4 h-4 text-blue-600" />
+              <h2 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                Saved
+              </h2>
+              {(savedSearches.length + savedAIEditorAnalyses.length) > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-medium text-blue-700 bg-blue-100 rounded-full">
-                  {savedSearches.length}
+                  {savedSearches.length + savedAIEditorAnalyses.length}
                 </span>
               )}
             </div>
-            {savedSearches.length > 0 && (
-              <button
-                onClick={clearAllSavedSearches}
-                className="text-xs text-gray-500 hover:text-red-600 hover:underline transition-colors"
-                title="Clear all saved searches"
-              >
-                Clear
-              </button>
-            )}
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+              title="Collapse sidebar"
+            >
+              <PanelLeftClose className="w-4 h-4 text-gray-500" />
+            </button>
           </div>
+          <p className="text-[10px] text-gray-500 mt-1">
+            {savedSearches.length} searches · {savedAIEditorAnalyses.length} analyses
+          </p>
+        </div>
 
-          {/* Content */}
-          <div className="space-y-2">
-            {savedSearches.length === 0 ? (
-              <div className="text-center py-4 px-3">
-                <SearchIcon className="w-6 h-6 text-gray-300 mx-auto mb-2" />
-                <p className="text-xs text-gray-500">No saved searches</p>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Save searches from Explore
-                </p>
-              </div>
-            ) : (
-              savedSearches.slice(0, 5).map((search) => (
-                <div key={search.id} className="relative group">
+        {/* Fixed Header Section - only show when on results page */}
+        {isResultsPage && currentQuery && (
+          <div className="flex-shrink-0 border-b border-blue-200" style={{ padding: '8px 12px', backgroundColor: '#eff6ff' }}>
+            <span className="text-[10px] text-blue-700 font-medium">Current: {currentQuery}</span>
+          </div>
+        )}
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto min-h-0 sidebar-scroll" style={{ padding: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {/* Saved Searches */}
+            {savedSearches.length > 0 && (
+              <>
+                <div className="flex items-center justify-between px-1 pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <SearchIcon className="w-3 h-3 text-blue-600" />
+                    <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Searches</span>
+                  </div>
                   <button
-                    onClick={() => handleSearchClick(search.query, 'search', undefined, search.cachedResult)}
-                    className="w-full text-left p-2 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition-colors"
+                    onClick={clearAllSavedSearches}
+                    className="text-[9px] text-gray-400 hover:text-red-500 transition-colors"
                   >
-                    <div className="flex items-start gap-2">
-                      <SearchIcon className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0 pr-6">
-                        <div className="text-sm text-gray-800 line-clamp-2">
-                          {search.query}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                          <Clock className="w-3 h-3" />
-                          <span>{timeAgo(search.timestamp)}</span>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                    </div>
-                  </button>
-                  <button
-                    onClick={(e) => deleteSavedSearch(e, search.id)}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
-                    title="Delete saved search"
-                  >
-                    <X className="w-3 h-3 text-red-600" />
+                    Clear
                   </button>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Saved Analyses */}
-        <div>
-        {/* Section Header */}
-        <div className="flex items-center justify-between mb-3 pb-2 border-b border-purple-100">
-          <div className="flex items-center gap-2" title="Your saved AI Editor analyses - click to reload text and results">
-            <Sparkles className="w-4 h-4 text-purple-600" />
-            <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
-              Analyses
-            </h3>
-            {savedAIEditorAnalyses.length > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-medium text-purple-700 bg-purple-100 rounded-full">
-                {savedAIEditorAnalyses.length}
-              </span>
-            )}
-          </div>
-          {savedAIEditorAnalyses.length > 0 && (
-            <button
-              onClick={clearAllSavedAIEditorAnalyses}
-              className="text-xs text-gray-500 hover:text-red-600 hover:underline transition-colors"
-              title="Clear all saved analyses"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="space-y-2">
-          {savedAIEditorAnalyses.length === 0 ? (
-            <div className="text-center py-6 px-3">
-              <Sparkles className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-xs text-gray-500 leading-relaxed">
-                No saved analyses yet
-              </p>
-              <p className="text-[10px] text-gray-400 mt-1">
-                Use AI Editor to analyze your text
-              </p>
-            </div>
-          ) : (
-            savedAIEditorAnalyses.map((analysis) => (
-              <div key={analysis.id} className="relative group">
-                <button
-                  onClick={() => handleAIEditorAnalysisClick(analysis.text)}
-                  className="w-full text-left p-2 bg-purple-50 hover:bg-purple-100 rounded border border-purple-200 transition-colors"
-                >
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-purple-700 mt-0.5" />
-                    <div className="flex-1 min-w-0 pr-6">
-                      <div className="text-sm text-gray-800 line-clamp-2">
-                        {analysis.preview || analysis.text}
+                {savedSearches.slice(0, 5).map((search) => (
+                  <div key={search.id} className="relative group">
+                    <button
+                      onClick={() => handleSearchClick(search.query, 'search', undefined, search.cachedResult)}
+                      className="w-full text-left transition-all duration-150"
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        backgroundColor: 'white'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f9fafb'
+                        e.currentTarget.style.borderColor = '#d1d5db'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white'
+                        e.currentTarget.style.borderColor = '#e5e7eb'
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <SearchIcon className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-medium text-gray-800 line-clamp-2 leading-snug">
+                            {search.query}
+                          </div>
+                          <div className="flex items-center gap-1 text-[9px] text-gray-400 mt-0.5">
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>{timeAgo(search.timestamp)}</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                        <Clock className="w-3 h-3" />
-                        <span>{timeAgo(analysis.timestamp)}</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-purple-700" />
+                    </button>
+                    <button
+                      onClick={(e) => deleteSavedSearch(e, search.id)}
+                      className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded"
+                      title="Delete"
+                    >
+                      <X className="w-2.5 h-2.5 text-red-500" />
+                    </button>
                   </div>
-                </button>
-                <button
-                  onClick={(e) => deleteSavedAIEditorAnalysis(e, analysis.id)}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
-                  title="Delete saved analysis"
-                >
-                  <X className="w-3 h-3 text-red-600" />
-                </button>
+                ))}
+              </>
+            )}
+
+            {/* Saved Analyses */}
+            {savedAIEditorAnalyses.length > 0 && (
+              <>
+                <div className="flex items-center justify-between px-1 pt-2">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-purple-600" />
+                    <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Analyses</span>
+                  </div>
+                  <button
+                    onClick={clearAllSavedAIEditorAnalyses}
+                    className="text-[9px] text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {savedAIEditorAnalyses.map((analysis) => (
+                  <div key={analysis.id} className="relative group">
+                    <button
+                      onClick={() => handleAIEditorAnalysisClick(analysis.text)}
+                      className="w-full text-left transition-all duration-150"
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        backgroundColor: 'white'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f9fafb'
+                        e.currentTarget.style.borderColor = '#d1d5db'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white'
+                        e.currentTarget.style.borderColor = '#e5e7eb'
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-medium text-gray-800 line-clamp-2 leading-snug">
+                            {analysis.preview || analysis.text}
+                          </div>
+                          <div className="flex items-center gap-1 text-[9px] text-gray-400 mt-0.5">
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>{timeAgo(analysis.timestamp)}</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                      </div>
+                    </button>
+                    <button
+                      onClick={(e) => deleteSavedAIEditorAnalysis(e, analysis.id)}
+                      className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded"
+                      title="Delete"
+                    >
+                      <X className="w-2.5 h-2.5 text-red-500" />
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Empty State */}
+            {savedSearches.length === 0 && savedAIEditorAnalyses.length === 0 && (
+              <div className="text-center py-8 px-3">
+                <Bookmark className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                <p className="text-[10px] text-gray-500">No saved items yet</p>
+                <p className="text-[9px] text-gray-400 mt-1">
+                  Save searches or analyses to see them here
+                </p>
               </div>
-            ))
-          )}
+            )}
+          </div>
         </div>
-      </div>
-    </div>
-    </aside>
+
+        {/* Footer Stats */}
+        <div
+          className="flex-shrink-0 border-t border-gray-200"
+          style={{ padding: '8px 12px', backgroundColor: '#f9fafb' }}
+        >
+          <div className="flex items-center justify-between text-[9px] text-gray-500">
+            <span>{savedSearches.length} searches</span>
+            <span>{savedAIEditorAnalyses.length} analyses</span>
+          </div>
+        </div>
+      </aside>
   </>
   )
 }

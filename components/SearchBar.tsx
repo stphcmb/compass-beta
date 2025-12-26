@@ -1,19 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Filter, Bookmark, Check } from 'lucide-react'
+import { Search, Filter, Bookmark, Check, X, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { TERMINOLOGY } from '@/lib/constants/terminology'
-
-const domains = [
-  'Business',
-  'Society',
-  'Workers',
-  'Technology',
-  'Policy & Regulation',
-  'Other'
-]
 
 const dateRanges = [
   'Last 12 months',
@@ -35,27 +25,25 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
   const [query, setQuery] = useState(initialQuery)
   const [isEditing, setIsEditing] = useState(showEdit)
   const [showFilters, setShowFilters] = useState(false)
-  const [selectedDomains, setSelectedDomains] = useState<string[]>([])
-  const [selectedCamps, setSelectedCamps] = useState<string[]>([])
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>([])
   const [selectedDateRange, setSelectedDateRange] = useState('Last 12 months')
   const [isSaved, setIsSaved] = useState(false)
 
   // Data from database
-  const [camps, setCamps] = useState<string[]>([])
   const [authors, setAuthors] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Dropdown open states
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  // Author search state
+  const [authorSearch, setAuthorSearch] = useState('')
+  const [showAuthorDropdown, setShowAuthorDropdown] = useState(false)
 
   useEffect(() => {
     setQuery(initialQuery)
   }, [initialQuery])
 
-  // Fetch camps and authors from database
+  // Fetch authors from database
   useEffect(() => {
-    const fetchFilters = async () => {
+    const fetchAuthors = async () => {
       if (!supabase) {
         console.warn('Supabase not configured')
         setLoading(false)
@@ -64,34 +52,30 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
 
       setLoading(true)
       try {
-        // Fetch camps
-        const { data: campsData } = await supabase
-          .from('camps')
-          .select('label')
-          .order('label')
-
-        // Fetch authors
         const { data: authorsData } = await supabase
           .from('authors')
           .select('name')
           .order('name')
 
-        if (campsData) {
-          setCamps(campsData.map(c => c.label))
-        }
-
         if (authorsData) {
           setAuthors(authorsData.map(a => a.name))
         }
       } catch (error) {
-        console.error('Error fetching filter options:', error)
+        console.error('Error fetching authors:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchFilters()
+    fetchAuthors()
   }, [])
+
+  // Filter authors based on search
+  const filteredAuthors = useMemo(() => {
+    if (!authorSearch.trim()) return authors.slice(0, 10) // Show first 10 when no search
+    const search = authorSearch.toLowerCase()
+    return authors.filter(a => a.toLowerCase().includes(search)).slice(0, 20)
+  }, [authors, authorSearch])
 
   const handleQueryChange = (value: string) => {
     setQuery(value)
@@ -105,32 +89,28 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
 
     const params = new URLSearchParams()
     params.set('q', query.trim())
-    if (selectedDomains.length > 0) params.set('domains', selectedDomains.join(','))
-    if (selectedCamps.length > 0) params.set('camps', selectedCamps.join(','))
     if (selectedAuthors.length > 0) params.set('authors', selectedAuthors.join(','))
     if (selectedDateRange !== 'Last 12 months') params.set('date', selectedDateRange)
 
     router.push(`/explore?${params.toString()}`)
   }
 
-  // Helper functions for multi-select
-  const toggleSelection = (item: string, selected: string[], setSelected: (items: string[]) => void) => {
-    if (selected.includes(item)) {
-      setSelected(selected.filter(i => i !== item))
+  const toggleAuthorSelection = (author: string) => {
+    if (selectedAuthors.includes(author)) {
+      setSelectedAuthors(selectedAuthors.filter(a => a !== author))
     } else {
-      setSelected([...selected, item])
+      setSelectedAuthors([...selectedAuthors, author])
     }
   }
 
-  const clearAllFilters = () => {
-    setSelectedDomains([])
-    setSelectedCamps([])
-    setSelectedAuthors([])
-    setSelectedDateRange('Last 12 months')
+  const removeAuthor = (author: string) => {
+    setSelectedAuthors(selectedAuthors.filter(a => a !== author))
   }
 
-  const toggleDropdown = (dropdownName: string) => {
-    setOpenDropdown(openDropdown === dropdownName ? null : dropdownName)
+  const clearAllFilters = () => {
+    setSelectedAuthors([])
+    setSelectedDateRange('Last 12 months')
+    setAuthorSearch('')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -213,33 +193,25 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
 
   return (
     <div
-      className="bg-gradient-to-br from-white to-blue-50/30 border-2 border-[var(--color-accent)]/20 hover:border-[var(--color-accent)]/40 transition-colors"
+      className="bg-white border border-[var(--color-light-gray)] hover:border-[var(--color-accent)]/30 transition-colors"
       style={{
-        borderRadius: 'var(--radius-lg)',
-        padding: 'var(--space-6)',
-        marginBottom: 'var(--space-8)',
-        boxShadow: '0 4px 20px rgba(0, 51, 255, 0.08)'
+        borderRadius: 'var(--radius-base)',
+        padding: 'var(--space-4)',
+        marginBottom: 'var(--space-4)',
+        boxShadow: 'var(--shadow-subtle)'
       }}
     >
-      {/* Search Prompt Label */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-accent)]">
-          Search Perspectives
-        </span>
-      </div>
-
       {/* Main Search Input */}
       <div
-        className="flex items-center bg-white border border-gray-200 focus-within:border-[var(--color-accent)] focus-within:ring-2 focus-within:ring-[var(--color-accent)]/20 transition-all"
+        className="flex items-center bg-[var(--color-bone)] border border-transparent focus-within:border-[var(--color-accent)] focus-within:bg-white transition-all"
         style={{
-          gap: 'var(--space-3)',
-          padding: 'var(--space-3) var(--space-4)',
-          borderRadius: 'var(--radius-md)',
-          marginBottom: 'var(--space-5)'
+          gap: 'var(--space-2)',
+          padding: 'var(--space-2) var(--space-3)',
+          borderRadius: 'var(--radius-sm)',
+          marginBottom: 'var(--space-3)'
         }}
       >
-        <Search style={{ width: 'var(--space-5)', height: 'var(--space-5)', color: 'var(--color-accent)' }} />
+        <Search style={{ width: '18px', height: '18px', color: 'var(--color-mid-gray)', flexShrink: 0 }} />
         <input
           type="text"
           placeholder="Search by topic, thesis, or keywords..."
@@ -258,20 +230,20 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
       </div>
 
       <div
-        className="flex items-center justify-between border-t border-gray-100"
-        style={{ paddingTop: 'var(--space-5)' }}
+        className="flex items-center justify-between"
+        style={{ paddingTop: 0 }}
       >
-        <div className="flex items-center" style={{ gap: 'var(--space-3)' }}>
+        <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center label hover:text-gray-900"
+            className="flex items-center text-xs hover:text-[var(--color-accent)] transition-colors"
             style={{
-              gap: 'var(--space-2)',
-              color: 'var(--color-charcoal)'
+              gap: '4px',
+              color: 'var(--color-mid-gray)'
             }}
           >
-            <Filter style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
-            Advanced Filters
+            <Filter style={{ width: '14px', height: '14px' }} />
+            Filters
           </button>
         </div>
         <div className="flex items-center" style={{ gap: 'var(--space-3)' }}>
@@ -291,12 +263,11 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
           )}
           <button
             onClick={handleSearch}
-            className="label font-semibold text-white transition-all"
+            className="text-xs font-semibold text-white transition-all"
             style={{
               backgroundColor: 'var(--color-accent)',
-              padding: 'var(--space-2) var(--space-6)',
-              borderRadius: 'var(--radius-md)',
-              boxShadow: 'var(--shadow-sm)'
+              padding: '6px 16px',
+              borderRadius: 'var(--radius-sm)',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)'
@@ -314,218 +285,142 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
         <div
           className="border-t border-gray-100"
           style={{
-            marginTop: 'var(--space-5)',
-            paddingTop: 'var(--space-5)'
+            marginTop: 'var(--space-3)',
+            paddingTop: 'var(--space-3)'
           }}
         >
-          {/* Clear All Filters Button */}
-          <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-4)' }}>
-            <span className="label font-semibold" style={{ color: 'var(--color-charcoal)' }}>
-              Filter Options
+          {/* Header with Clear All */}
+          <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-3)' }}>
+            <span className="text-xs font-medium" style={{ color: 'var(--color-charcoal)' }}>
+              Filter by Author
             </span>
-            {(selectedDomains.length > 0 || selectedCamps.length > 0 || selectedAuthors.length > 0 || selectedDateRange !== 'Last 12 months') && (
+            {(selectedAuthors.length > 0 || selectedDateRange !== 'Last 12 months') && (
               <button
                 onClick={clearAllFilters}
-                className="caption hover:underline"
+                className="text-xs hover:underline"
                 style={{ color: 'var(--color-accent)' }}
               >
-                Clear All Filters
+                Clear All
               </button>
             )}
           </div>
 
-          <div className="grid grid-cols-2" style={{ gap: 'var(--space-4)' }}>
-            {/* Domain Dropdown */}
-            <div className="relative">
-              <label className="block label font-medium" style={{ marginBottom: 'var(--space-2)' }}>
-                {TERMINOLOGY.domain} {selectedDomains.length > 0 && `(${selectedDomains.length})`}
-              </label>
-              <button
-                onClick={() => toggleDropdown('domains')}
-                className="w-full flex items-center justify-between border border-gray-300 hover:border-gray-400 transition-colors"
-                style={{
-                  padding: 'var(--space-2) var(--space-3)',
-                  borderRadius: 'var(--radius-base)',
-                  backgroundColor: 'white'
-                }}
-              >
-                <span className="label" style={{ color: 'var(--color-charcoal)' }}>
-                  {selectedDomains.length > 0 ? `${selectedDomains.length} selected` : `Select ${TERMINOLOGY.domains.toLowerCase()}`}
+          {/* Selected Authors as Chips */}
+          {selectedAuthors.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {selectedAuthors.map((author) => (
+                <span
+                  key={author}
+                  className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
+                >
+                  <Users className="w-3 h-3" />
+                  {author}
+                  <button
+                    onClick={() => removeAuthor(author)}
+                    className="ml-0.5 hover:bg-[var(--color-accent)]/20 rounded p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
-                <svg
-                  className={`transition-transform ${openDropdown === 'domains' ? 'rotate-180' : ''}`}
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {openDropdown === 'domains' && (
-                <div
-                  className="absolute z-10 w-full border border-gray-300 bg-white overflow-auto"
-                  style={{
-                    marginTop: 'var(--space-1)',
-                    borderRadius: 'var(--radius-base)',
-                    maxHeight: '240px',
-                    boxShadow: 'var(--shadow-md)'
-                  }}
-                >
-                  {domains.map((domain) => (
-                    <label
-                      key={domain}
-                      className="flex items-center cursor-pointer hover:bg-gray-50"
-                      style={{ padding: 'var(--space-2) var(--space-3)' }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedDomains.includes(domain)}
-                        onChange={() => toggleSelection(domain, selectedDomains, setSelectedDomains)}
-                        className="mr-2"
-                        style={{ accentColor: 'var(--color-accent)' }}
-                      />
-                      <span className="label">{domain}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
+          )}
 
-            {/* Camp Dropdown */}
+          <div className="grid grid-cols-2" style={{ gap: 'var(--space-3)' }}>
+            {/* Author Search with Dropdown */}
             <div className="relative">
-              <label className="block label font-medium" style={{ marginBottom: 'var(--space-2)' }}>
-                {TERMINOLOGY.camp} {selectedCamps.length > 0 && `(${selectedCamps.length})`}
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-charcoal)' }}>
+                Search Authors
               </label>
-              <button
-                onClick={() => toggleDropdown('camps')}
-                disabled={loading}
-                className="w-full flex items-center justify-between border border-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50"
-                style={{
-                  padding: 'var(--space-2) var(--space-3)',
-                  borderRadius: 'var(--radius-base)',
-                  backgroundColor: 'white'
-                }}
-              >
-                <span className="label" style={{ color: 'var(--color-charcoal)' }}>
-                  {loading ? 'Loading...' : selectedCamps.length > 0 ? `${selectedCamps.length} selected` : `Select ${TERMINOLOGY.camps.toLowerCase()}`}
-                </span>
-                <svg
-                  className={`transition-transform ${openDropdown === 'camps' ? 'rotate-180' : ''}`}
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+              <div className="relative">
+                <Search
+                  className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
+                  style={{ width: '14px', height: '14px' }}
+                />
+                <input
+                  type="text"
+                  value={authorSearch}
+                  onChange={(e) => {
+                    setAuthorSearch(e.target.value)
+                    setShowAuthorDropdown(true)
+                  }}
+                  onFocus={() => setShowAuthorDropdown(true)}
+                  placeholder="Type to search..."
+                  className="w-full border border-gray-300 hover:border-gray-400 focus:border-[var(--color-accent)] outline-none transition-colors text-xs"
+                  style={{
+                    padding: '6px 8px 6px 28px',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: 'white'
+                  }}
+                />
+              </div>
 
-              {openDropdown === 'camps' && !loading && camps.length > 0 && (
+              {showAuthorDropdown && !loading && filteredAuthors.length > 0 && (
                 <div
                   className="absolute z-10 w-full border border-gray-300 bg-white overflow-auto"
                   style={{
-                    marginTop: 'var(--space-1)',
-                    borderRadius: 'var(--radius-base)',
-                    maxHeight: '240px',
+                    marginTop: '4px',
+                    borderRadius: 'var(--radius-sm)',
+                    maxHeight: '180px',
                     boxShadow: 'var(--shadow-md)'
                   }}
                 >
-                  {camps.map((camp) => (
-                    <label
-                      key={camp}
-                      className="flex items-center cursor-pointer hover:bg-gray-50"
-                      style={{ padding: 'var(--space-2) var(--space-3)' }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedCamps.includes(camp)}
-                        onChange={() => toggleSelection(camp, selectedCamps, setSelectedCamps)}
-                        className="mr-2"
-                        style={{ accentColor: 'var(--color-accent)' }}
-                      />
-                      <span className="label">{camp}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Author Dropdown */}
-            <div className="relative">
-              <label className="block label font-medium" style={{ marginBottom: 'var(--space-2)' }}>
-                Author Name {selectedAuthors.length > 0 && `(${selectedAuthors.length})`}
-              </label>
-              <button
-                onClick={() => toggleDropdown('authors')}
-                disabled={loading}
-                className="w-full flex items-center justify-between border border-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50"
-                style={{
-                  padding: 'var(--space-2) var(--space-3)',
-                  borderRadius: 'var(--radius-base)',
-                  backgroundColor: 'white'
-                }}
-              >
-                <span className="label" style={{ color: 'var(--color-charcoal)' }}>
-                  {loading ? 'Loading...' : selectedAuthors.length > 0 ? `${selectedAuthors.length} selected` : 'Select authors'}
-                </span>
-                <svg
-                  className={`transition-transform ${openDropdown === 'authors' ? 'rotate-180' : ''}`}
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {openDropdown === 'authors' && !loading && authors.length > 0 && (
-                <div
-                  className="absolute z-10 w-full border border-gray-300 bg-white overflow-auto"
-                  style={{
-                    marginTop: 'var(--space-1)',
-                    borderRadius: 'var(--radius-base)',
-                    maxHeight: '240px',
-                    boxShadow: 'var(--shadow-md)'
-                  }}
-                >
-                  {authors.map((author) => (
-                    <label
+                  {filteredAuthors.map((author) => (
+                    <button
                       key={author}
-                      className="flex items-center cursor-pointer hover:bg-gray-50"
-                      style={{ padding: 'var(--space-2) var(--space-3)' }}
+                      onClick={() => {
+                        toggleAuthorSelection(author)
+                        setAuthorSearch('')
+                      }}
+                      className={`w-full flex items-center gap-2 text-left text-xs cursor-pointer hover:bg-gray-50 transition-colors ${
+                        selectedAuthors.includes(author) ? 'bg-[var(--color-accent)]/5' : ''
+                      }`}
+                      style={{ padding: '8px 10px' }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={selectedAuthors.includes(author)}
-                        onChange={() => toggleSelection(author, selectedAuthors, setSelectedAuthors)}
-                        className="mr-2"
-                        style={{ accentColor: 'var(--color-accent)' }}
-                      />
-                      <span className="label">{author}</span>
-                    </label>
+                      <div
+                        className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                          selectedAuthors.includes(author)
+                            ? 'bg-[var(--color-accent)] border-[var(--color-accent)]'
+                            : 'border-gray-300'
+                        }`}
+                      >
+                        {selectedAuthors.includes(author) && (
+                          <Check className="w-2.5 h-2.5 text-white" />
+                        )}
+                      </div>
+                      <span style={{ color: 'var(--color-charcoal)' }}>{author}</span>
+                    </button>
                   ))}
+                </div>
+              )}
+
+              {showAuthorDropdown && !loading && authorSearch && filteredAuthors.length === 0 && (
+                <div
+                  className="absolute z-10 w-full border border-gray-300 bg-white"
+                  style={{
+                    marginTop: '4px',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '12px',
+                    boxShadow: 'var(--shadow-md)'
+                  }}
+                >
+                  <p className="text-xs text-gray-500 text-center">No authors found</p>
                 </div>
               )}
             </div>
 
-            {/* Publication Date Single Select */}
+            {/* Publication Date */}
             <div>
-              <label className="block label font-medium" style={{ marginBottom: 'var(--space-2)' }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-charcoal)' }}>
                 Publication Date
               </label>
               <select
                 value={selectedDateRange}
                 onChange={(e) => setSelectedDateRange(e.target.value)}
-                className="w-full border border-gray-300 hover:border-gray-400 transition-colors label"
+                className="w-full border border-gray-300 hover:border-gray-400 transition-colors text-xs"
                 style={{
-                  padding: 'var(--space-2) var(--space-3)',
-                  borderRadius: 'var(--radius-base)',
+                  padding: '6px 8px',
+                  borderRadius: 'var(--radius-sm)',
                   backgroundColor: 'white',
                   color: 'var(--color-charcoal)'
                 }}
@@ -536,6 +431,14 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
               </select>
             </div>
           </div>
+
+          {/* Click outside to close dropdown */}
+          {showAuthorDropdown && (
+            <div
+              className="fixed inset-0 z-0"
+              onClick={() => setShowAuthorDropdown(false)}
+            />
+          )}
         </div>
       )}
     </div>

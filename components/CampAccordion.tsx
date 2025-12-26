@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronUp, Users, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { ChevronDown, ChevronUp, Users, ThumbsUp, ThumbsDown, Layers } from 'lucide-react'
 import AuthorCard, { authorQuoteMatchesSearch } from './AuthorCard'
 import { TERMINOLOGY, getCampLabel } from '@/lib/constants/terminology'
 import { getDomainColor } from './DiscourseMap'
@@ -10,90 +10,87 @@ import { getDomainColor } from './DiscourseMap'
 const MAX_AUTHORS_BEFORE_SCROLL = 4
 const AUTHORS_SCROLL_HEIGHT = 480 // pixels
 
-// Domain descriptions for onboarding (keys match DOMAIN_MAP in thought-leaders.ts)
+// Domain descriptions as framing questions (keys match DOMAIN_MAP in thought-leaders.ts)
 const DOMAIN_DESCRIPTIONS: Record<string, string> = {
-  'AI Technical Capabilities': 'The technical trajectory of AI—debates on scaling, architectures, and paths to more capable systems.',
-  'AI & Society': 'How AI reshapes jobs, creativity, and daily life—perspectives on the human impact of intelligent machines.',
-  'Enterprise AI Adoption': 'AI in the enterprise—perspectives on adoption, transformation, and competitive advantage.',
-  'AI Governance & Oversight': 'Who controls AI and how—perspectives on regulation, safety standards, and global coordination.',
-  'Future of Work': 'How AI changes employment, skills, and the workplace—perspectives on automation and human potential.',
+  'AI Technical Capabilities': 'What technical path leads to transformative AI?',
+  'AI & Society': 'How should AI reshape daily life and human potential?',
+  'Enterprise AI Adoption': 'How should organizations integrate AI for competitive advantage?',
+  'AI Governance & Oversight': 'Who should control AI and how should it be regulated?',
+  'Future of Work': 'How will AI transform employment, skills, and the workplace?',
 }
 
-// Perspective stance data - natural editorial voice, keys match database labels exactly
-const PERSPECTIVE_STANCES: Record<string, { belief: string; themes: string[] }> = {
+// Perspective stance data - thought-provoking questions, keys match database labels exactly
+const PERSPECTIVE_STANCES: Record<string, { stance: string; themes: string[] }> = {
   // Domain 1: AI Technical Capabilities
   'Scaling Will Deliver': {
-    belief: 'More data, more compute, more capability. The path to transformative AI runs through scaling what already works.',
+    stance: 'What if more data and compute is all we need? The path to transformative AI may run through scaling what already works.',
     themes: ['Scale', 'Progress']
   },
   'Needs New Approaches': {
-    belief: 'Current architectures have fundamental limits. The next breakthrough requires new paradigms, not just bigger models.',
+    stance: 'What if current architectures have fundamental limits? The next breakthrough may require new paradigms, not just bigger models.',
     themes: ['Innovation', 'Research']
   },
   // Domain 2: AI & Society
   'Safety First': {
-    belief: 'Advanced AI could pose existential threats. Safety isn\'t a feature request—it\'s the priority before we scale further.',
+    stance: 'What if advanced AI poses existential threats? Perhaps safety isn\'t a feature request—it\'s the priority before we scale further.',
     themes: ['Safety', 'Risk']
   },
   'Democratize Fast': {
-    belief: 'AI\'s benefits should reach everyone quickly. Broad access and rapid deployment outweigh hypothetical risks.',
+    stance: 'What if AI\'s benefits should reach everyone quickly? Perhaps broad access and rapid deployment outweigh hypothetical risks.',
     themes: ['Access', 'Speed']
   },
   // Domain 3: Enterprise AI Adoption
   'Co-Evolution': {
-    belief: 'Technology and organizations must evolve together. AI transformation requires changing culture, not just tools.',
+    stance: 'What if technology and organizations must evolve together? AI transformation may require changing culture, not just tools.',
     themes: ['Culture', 'Change']
   },
   'Technology Leads': {
-    belief: 'Deploy the tech first, let organizations adapt. Technical capabilities drive business transformation.',
+    stance: 'What if we deploy the tech first and let organizations adapt? Technical capabilities may drive business transformation.',
     themes: ['Tech-First', 'Innovation']
   },
   'Business Whisperers': {
-    belief: 'Start with the business problem, not the technology. AI succeeds when it solves real operational pain points.',
+    stance: 'What if we start with the business problem, not the technology? AI may succeed best when it solves real operational pain points.',
     themes: ['Business', 'ROI']
   },
   'Tech Builders': {
-    belief: 'Build robust AI infrastructure now. The companies with the best technical foundations will win.',
+    stance: 'What if robust AI infrastructure is the key? The companies with the best technical foundations may win.',
     themes: ['Infrastructure', 'Engineering']
   },
   // Domain 4: AI Governance & Oversight
   'Adaptive Governance': {
-    belief: 'Regulation must evolve with the technology. Rigid rules will either stifle innovation or become obsolete.',
+    stance: 'What if regulation must evolve with the technology? Rigid rules may either stifle innovation or become obsolete.',
     themes: ['Flexible', 'Evolving']
   },
   'Innovation First': {
-    belief: 'Move fast, regulate later. Premature rules will stifle progress and hand leadership to less cautious players.',
+    stance: 'What if we move fast and regulate later? Premature rules may stifle progress and hand leadership to less cautious players.',
     themes: ['Innovation', 'Competition']
   },
   'Regulatory Interventionist': {
-    belief: 'Guardrails before growth. Strong oversight must be in place before AI capabilities advance further.',
+    stance: 'What if guardrails must come before growth? Strong oversight may need to be in place before AI capabilities advance further.',
     themes: ['Policy', 'Oversight']
   },
   // Domain 5: Future of Work
   'Displacement Realist': {
-    belief: 'Automation will reshape labor markets dramatically. Many jobs will disappear, and policy must prepare for this shift.',
+    stance: 'What if automation reshapes labor markets dramatically? Many jobs may disappear, and policy must prepare for this shift.',
     themes: ['Labor', 'Disruption']
   },
   'Human–AI Collaboration': {
-    belief: 'The future isn\'t humans versus machines—it\'s humans with machines. AI works best when it amplifies what people do.',
+    stance: 'What if the future isn\'t humans versus machines—but humans with machines? AI may work best when it amplifies what people do.',
     themes: ['Collaboration', 'Augmentation']
   },
 }
 
-// Helper to generate a stance blurb from perspective name and domain
-function generateStanceBlurb(name: string, domain: string, positionSummary?: string): string {
-  // Prefer our editorial content first
+// Helper to get stance blurb from perspective name
+function getStanceBlurb(name: string, domain: string, positionSummary?: string): string {
   const stanceData = PERSPECTIVE_STANCES[name]
   if (stanceData) {
-    return stanceData.belief
+    return stanceData.stance
   }
-
   // Fall back to database positionSummary if no editorial content
   if (positionSummary) {
     const cleaned = positionSummary.replace(/^(these authors |they )?(believe |argue |think )?/i, '')
     return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
   }
-
   return `Perspectives on how ${domain.toLowerCase()} shapes the future of AI.`
 }
 
@@ -313,23 +310,39 @@ export default function CampAccordion({
 
         return (
           <div key={domainName} className="scroll-mt-4">
-            {/* Domain Header - Compact sticky header */}
+            {/* Domain Header - Light pastel background with dark readable text */}
             <div
-              className={`sticky top-0 z-10 mb-3 py-2 px-3 -mx-3 rounded-lg ${colors.bg}`}
-              style={{ backgroundColor: colors.bgSolid || '#f3f4f6' }}
+              className="sticky top-0 z-10 mb-2 py-2.5 px-3 -mx-3 rounded-lg"
+              style={{
+                backgroundColor: colors.bgLight || '#f0f0ff',
+                borderLeft: `4px solid ${colors.bgSolid || '#6366f1'}`,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              }}
             >
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-6 rounded-full ${colors.accent || 'bg-gray-400'}`} />
-                <h2 className={`text-base font-bold ${colors.text}`}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm font-bold" style={{ color: colors.textDark || '#1e3a5f' }}>
                   {domainName}
                 </h2>
-                <span className="text-[11px] text-gray-500">
-                  {domainCamps.length} perspectives · {domainAuthorCount} authors
+                {/* Stats chips */}
+                <span
+                  className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-medium"
+                  style={{ backgroundColor: colors.bgSolid, color: 'white' }}
+                >
+                  <Layers className="w-2.5 h-2.5" />
+                  {domainCamps.length}
                 </span>
-                <span className="text-[11px] text-gray-500 hidden sm:inline">
-                  — {domainDescription}
+                <span
+                  className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-medium"
+                  style={{ backgroundColor: colors.bgSolid, color: 'white' }}
+                >
+                  <Users className="w-2.5 h-2.5" />
+                  {domainAuthorCount}
                 </span>
               </div>
+              {/* Domain framing question */}
+              <p className="text-[11px] mt-1 font-medium" style={{ color: colors.textDark || '#1e3a5f', opacity: 0.8 }}>
+                {domainDescription}
+              </p>
             </div>
 
             {/* Perspectives within Domain */}
@@ -339,7 +352,7 @@ export default function CampAccordion({
                 const needsScroll = camp.authors.length > MAX_AUTHORS_BEFORE_SCROLL
                 const campColors = getDomainColor(camp.domain)
                 const themes = getThemes(camp.name)
-                const stanceData = generateStanceBlurb(camp.name, camp.domain, camp.positionSummary)
+                const stanceBlurb = getStanceBlurb(camp.name, camp.domain, camp.positionSummary)
 
                 // Sort authors: those with matching quotes first, then alphabetically
                 const sortedAuthors = [...camp.authors].sort((a: any, b: any) => {
@@ -360,41 +373,47 @@ export default function CampAccordion({
                       isExpanded ? 'border-gray-300 shadow-md' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                     }`}
                   >
-                    {/* Perspective Header - Compact */}
+                    {/* Perspective Header - Clean with question framing */}
                     <button
                       onClick={() => toggleCamp(camp.id)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50/50 transition-colors"
+                      className="w-full text-left px-3 py-2.5 hover:bg-gray-50/50 transition-colors"
                     >
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          {/* Single line: Name + Count + Stance */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-[15px] font-semibold text-gray-900">
+                          <div className="flex items-center gap-2">
+                            {/* Perspective name */}
+                            <h3 className="text-[14px] font-semibold text-gray-900">
                               {camp.name}
                             </h3>
-                            <span className="text-[11px] text-gray-400">
-                              {camp.authorCount} authors
-                            </span>
+                            {/* Theme chips */}
                             {themes.length > 0 && (
                               <div className="flex items-center gap-1">
                                 {themes.map((theme, idx) => (
                                   <span
                                     key={idx}
-                                    className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${campColors.bg} ${campColors.text}`}
+                                    className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${campColors.bg} ${campColors.text}`}
                                   >
                                     {theme}
                                   </span>
                                 ))}
                               </div>
                             )}
-                            <span className="text-[12px] text-gray-500 hidden sm:inline">
-                              — {stanceData}
+                            {/* Author count chip */}
+                            <span
+                              className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500"
+                            >
+                              <Users className="w-2.5 h-2.5" />
+                              {camp.authorCount}
                             </span>
                           </div>
+                          {/* Stance blurb - thought-provoking question with em-dash */}
+                          <p className="text-[11px] text-gray-500 mt-0.5">
+                            — {stanceBlurb}
+                          </p>
                         </div>
 
                         {/* Expand/Collapse Icon */}
-                        <div className={`flex-shrink-0 p-1 rounded-full transition-colors ${
+                        <div className={`flex-shrink-0 p-1 rounded transition-colors ${
                           isExpanded ? 'bg-gray-100 text-gray-600' : 'text-gray-400'
                         }`}>
                           {isExpanded ? (

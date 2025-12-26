@@ -12,16 +12,18 @@ import { FeatureHint } from '@/components/FeatureHint'
 import { HowPerspectivesWorkModal, useHowPerspectivesWorkModal } from '@/components/HowPerspectivesWorkModal'
 import DomainOverview from '@/components/DomainOverview'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
-import { HelpCircle } from 'lucide-react'
+import { HelpCircle, Layers } from 'lucide-react'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
-// Domain panel width constant
+// Layout constants - must match Sidebar.tsx width
+const SIDEBAR_WIDTH = 220
 const DOMAIN_PANEL_WIDTH = 220
 
 function ExplorePageContent() {
   const searchParams = useSearchParams()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [domainPanelCollapsed, setDomainPanelCollapsed] = useState(false)
   const [activeDomain, setActiveDomain] = useState<string | null>(null)
 
   const query = searchParams.get('q') || ''
@@ -106,28 +108,61 @@ function ExplorePageContent() {
   }, [query])
 
   // Calculate margins for layout
-  const sidebarWidth = sidebarCollapsed ? 0 : 256
+  const sidebarWidth = sidebarCollapsed ? 0 : SIDEBAR_WIDTH
   const domainPanelLeft = sidebarWidth
-  const mainContentLeft = sidebarWidth + DOMAIN_PANEL_WIDTH
+  const actualDomainPanelWidth = domainPanelCollapsed ? 0 : DOMAIN_PANEL_WIDTH
+  const mainContentLeft = sidebarWidth + actualDomainPanelWidth
 
   return (
     <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
       <Sidebar />
       <Header sidebarCollapsed={sidebarCollapsed} />
 
+      {/* Domain Panel Expand Button - animated appearance */}
+      <button
+        onClick={() => setDomainPanelCollapsed(false)}
+        className={`fixed top-20 z-20 p-2 bg-white border border-gray-200 rounded-lg shadow-md hover:bg-gray-50 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 ${
+          domainPanelCollapsed
+            ? 'opacity-100 translate-x-0'
+            : 'opacity-0 -translate-x-2 pointer-events-none'
+        }`}
+        style={{
+          left: `${sidebarWidth + 16}px`,
+          transitionDelay: domainPanelCollapsed ? '150ms' : '0ms'
+        }}
+        title="Expand domain panel"
+      >
+        <Layers className="w-5 h-5 text-indigo-600" />
+      </button>
+
       {/* Domain Overview Panel - Fixed position between sidebar and main */}
       <aside
-        className="fixed top-16 h-[calc(100vh-64px)] border-r border-gray-200 transition-all duration-300 z-10"
+        className="fixed top-16 h-[calc(100vh-64px)] border-r border-gray-200 z-10 overflow-hidden"
         style={{
           left: `${domainPanelLeft}px`,
-          width: `${DOMAIN_PANEL_WIDTH}px`,
-          backgroundColor: 'white'
+          width: domainPanelCollapsed ? '0px' : `${DOMAIN_PANEL_WIDTH}px`,
+          opacity: domainPanelCollapsed ? 0 : 1,
+          backgroundColor: 'white',
+          transition: 'width 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease-out',
+          transitionDelay: domainPanelCollapsed ? '0ms' : '50ms'
         }}
       >
-        <DomainOverview
-          onDomainFilter={setActiveDomain}
-          activeDomain={activeDomain}
-        />
+        <div
+          className="h-full"
+          style={{
+            width: `${DOMAIN_PANEL_WIDTH}px`,
+            transform: domainPanelCollapsed ? 'translateX(-20px)' : 'translateX(0)',
+            opacity: domainPanelCollapsed ? 0 : 1,
+            transition: 'transform 250ms ease-out, opacity 200ms ease-out',
+            transitionDelay: domainPanelCollapsed ? '0ms' : '100ms'
+          }}
+        >
+          <DomainOverview
+            onDomainFilter={setActiveDomain}
+            activeDomain={activeDomain}
+            onToggleCollapse={() => setDomainPanelCollapsed(true)}
+          />
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -136,29 +171,29 @@ function ExplorePageContent() {
         className="flex-1 mt-16 overflow-y-auto transition-all duration-300"
         style={{ marginLeft: `${mainContentLeft}px` }}
       >
-        <div className="max-w-4xl mx-auto p-6">
+        <div className="max-w-4xl mx-auto" style={{ padding: '20px 24px' }}>
           {/* Page Title */}
-          <div className="mb-6">
+          <div style={{ marginBottom: '16px' }}>
             <div className="flex items-center gap-2">
-              <h1 style={{ fontSize: 'var(--text-h2)', marginBottom: 0 }}>
+              <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: 0, color: 'var(--color-soft-black)' }}>
                 {TERMINOLOGY.searchFull}
               </h1>
               <button
                 onClick={openModal}
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                className="hover:bg-gray-100 transition-colors"
                 title="How perspectives work"
-                style={{ marginTop: '2px' }}
+                style={{ padding: '4px', borderRadius: 'var(--radius-sm)' }}
               >
-                <HelpCircle size={18} className="text-gray-400 hover:text-indigo-500" />
+                <HelpCircle size={16} style={{ color: 'var(--color-mid-gray)' }} className="hover:text-[var(--color-accent)]" />
               </button>
             </div>
-            <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-mid-gray)', marginTop: 'var(--space-2)' }}>
+            <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-mid-gray)', marginTop: '4px' }}>
               Browse the definitive collection of {TERMINOLOGY.camps.toLowerCase()} shaping AI discourse
             </p>
           </div>
 
           {/* Feature Hint */}
-          <FeatureHint featureKey="explore" className="mb-6" />
+          <FeatureHint featureKey="explore" className="mb-4" />
 
           {/* Search Bar - Prominent styling */}
           <SearchBar
@@ -171,26 +206,34 @@ function ExplorePageContent() {
 
           {/* Show expanded queries beneath search bar */}
           {query && expandedQueries && expandedQueries.length > 0 && (
-            <div className="mb-4">
+            <div style={{ marginBottom: '12px' }}>
               <ExpandedQueries queries={expandedQueries} originalQuery={query} />
             </div>
           )}
 
           {/* Domain Filter Indicator */}
           {activeDomain && !query && (
-            <div className="mb-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-indigo-600 font-medium uppercase tracking-wide">Filtering by Domain</span>
-                  <div className="text-sm font-medium text-gray-900">{activeDomain}</div>
-                </div>
-                <button
-                  onClick={() => setActiveDomain(null)}
-                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-                >
-                  Clear filter
-                </button>
+            <div
+              className="flex items-center justify-between"
+              style={{
+                marginBottom: '12px',
+                padding: '8px 12px',
+                backgroundColor: '#eef2ff',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid #c7d2fe'
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '9px', color: 'var(--color-accent)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filtering</span>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-soft-black)' }}>{activeDomain}</div>
               </div>
+              <button
+                onClick={() => setActiveDomain(null)}
+                style={{ fontSize: '11px', color: 'var(--color-accent)', fontWeight: 500 }}
+                className="hover:underline"
+              >
+                Clear
+              </button>
             </div>
           )}
 
@@ -198,28 +241,28 @@ function ExplorePageContent() {
           <HowPerspectivesWorkModal isOpen={isModalOpen} onClose={closeModal} />
 
           {/* Perspectives Section */}
-          <div ref={campsRef} className="mt-6">
+          <div ref={campsRef} style={{ marginTop: '16px' }}>
             {/* Section Header - Different for search vs browse */}
             {query ? (
-              <div className="mb-4">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Search Results
+              <div style={{ marginBottom: '12px' }}>
+                <div className="flex items-center gap-2">
+                  <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-soft-black)' }}>
+                    Results
                   </h2>
                   {loadedCamps.length > 0 && (
-                    <span className="text-sm text-gray-500">
-                      {loadedCamps.reduce((sum, c) => sum + (c.authorCount || 0), 0)} authors in {loadedCamps.length} perspectives
+                    <span style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
+                      {loadedCamps.reduce((sum, c) => sum + (c.authorCount || 0), 0)} authors · {loadedCamps.length} perspectives
                     </span>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 px-3">
-                  {activeDomain ? `${activeDomain} Perspectives` : 'Browse All Perspectives'}
+              <div className="flex items-center gap-2" style={{ marginBottom: '12px' }}>
+                <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, var(--color-light-gray), transparent)' }} />
+                <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-mid-gray)', padding: '0 8px' }}>
+                  {activeDomain ? `${activeDomain}` : 'All Perspectives'}
                 </span>
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+                <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, var(--color-light-gray), transparent)' }} />
               </div>
             )}
 
