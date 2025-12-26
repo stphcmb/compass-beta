@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { AIEditorAnalyzeResponse } from '@/lib/ai-editor'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
+import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark, Copy, FileDown } from 'lucide-react'
 
 // Loading phase messages for progressive feedback
@@ -20,6 +21,7 @@ interface AIEditorProps {
 }
 
 export default function AIEditor({ showTitle = false }: AIEditorProps) {
+  const { openPanel } = useAuthorPanel()
   const [text, setText] = useState('')
   const [result, setResult] = useState<AIEditorAnalyzeResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -645,16 +647,21 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
 
       // Add the linked author name
       parts.push(
-        <Link
+        <button
           key={`author-link-${linkKey++}`}
-          href={authorId ? `/authors/${authorId}` : `/authors`}
+          onClick={() => authorId && openPanel(authorId)}
           style={{
             color: 'var(--color-accent)',
             fontWeight: 'var(--weight-semibold)',
             textDecoration: 'underline',
             textDecorationColor: 'rgba(99, 102, 241, 0.3)',
             textUnderlineOffset: '2px',
-            transition: 'all var(--duration-fast) var(--ease-out)'
+            transition: 'all var(--duration-fast) var(--ease-out)',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            font: 'inherit',
+            cursor: authorId ? 'pointer' : 'default'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.textDecorationColor = 'var(--color-accent)'
@@ -664,7 +671,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
           }}
         >
           {authorName}
-        </Link>
+        </button>
       )
 
       lastIndex = regex.lastIndex
@@ -1375,21 +1382,25 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                                       marginBottom: 'var(--space-1)'
                                     }}>
                                       {author.id ? (
-                                        <Link
-                                          href={`/authors/${author.id}`}
+                                        <button
+                                          onClick={() => openPanel(author.id as string)}
                                           style={{
                                             fontWeight: 'var(--weight-semibold)',
                                             fontSize: 'var(--text-body)',
                                             color: 'var(--color-accent)',
                                             textDecoration: 'none',
                                             margin: 0,
+                                            background: 'none',
+                                            border: 'none',
+                                            padding: 0,
+                                            cursor: 'pointer',
                                             transition: 'color var(--duration-fast) var(--ease-out)'
                                           }}
                                           onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent-hover)'}
                                           onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-accent)'}
                                         >
                                           {author.name} →
-                                        </Link>
+                                        </button>
                                       ) : (
                                         <h4 style={{
                                           fontWeight: 'var(--weight-semibold)',

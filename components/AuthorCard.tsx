@@ -1,8 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { ExternalLink, Quote } from 'lucide-react'
 import { highlightText, findMatchingTerms, extractSearchTerms } from '@/lib/utils/highlight'
+import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 
 interface AuthorCardProps {
   author: any
@@ -54,6 +54,7 @@ function getSourceTitle(url: string, sources: any[]): string {
 }
 
 export default function AuthorCard({ author, query, expandedQueries = [], showMismatchNote = false }: AuthorCardProps) {
+  const { openPanel } = useAuthorPanel()
   const name = author?.name || 'Author Name'
   const affiliation = author?.affiliation || ''
   const hasQuote = author?.key_quote && author.key_quote !== 'Quote coming soon'
@@ -65,6 +66,12 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
   // Check if quote matches search terms
   const quoteMatchedTerms = hasQuote ? findMatchingTerms(author.key_quote, searchTerms) : []
   const quoteRelevant = quoteMatchedTerms.length > 0
+
+  const handleAuthorClick = () => {
+    if (author?.id) {
+      openPanel(author.id)
+    }
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm hover:border-gray-300 transition-all">
@@ -79,12 +86,12 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
 
         {/* Name & Affiliation */}
         <div className="flex-1 min-w-0">
-          <Link
-            href={`/authors/${author?.id || '1'}`}
-            className="font-semibold text-[15px] text-gray-900 hover:text-indigo-600 transition-colors"
+          <button
+            onClick={handleAuthorClick}
+            className="font-semibold text-[15px] text-gray-900 hover:text-indigo-600 transition-colors text-left"
           >
             {searchTerms.length > 0 ? highlightText(name, searchTerms) : name}
-          </Link>
+          </button>
           {affiliation && (
             <p className="text-xs text-gray-500 leading-tight">
               {searchTerms.length > 0 ? highlightText(affiliation, searchTerms) : affiliation}

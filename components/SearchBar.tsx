@@ -193,7 +193,7 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
 
   return (
     <div
-      className="bg-white border border-[var(--color-light-gray)] hover:border-[var(--color-accent)]/30 transition-colors"
+      className="bg-white border border-[var(--color-light-gray)] hover:border-[var(--color-accent)]/30 transition-colors relative z-20"
       style={{
         borderRadius: 'var(--radius-base)',
         padding: 'var(--space-4)',
@@ -357,7 +357,7 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
 
               {showAuthorDropdown && !loading && filteredAuthors.length > 0 && (
                 <div
-                  className="absolute z-10 w-full border border-gray-300 bg-white overflow-auto"
+                  className="absolute z-50 w-full border border-gray-300 bg-white overflow-auto"
                   style={{
                     marginTop: '4px',
                     borderRadius: 'var(--radius-sm)',
@@ -396,7 +396,7 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
 
               {showAuthorDropdown && !loading && authorSearch && filteredAuthors.length === 0 && (
                 <div
-                  className="absolute z-10 w-full border border-gray-300 bg-white"
+                  className="absolute z-50 w-full border border-gray-300 bg-white"
                   style={{
                     marginTop: '4px',
                     borderRadius: 'var(--radius-sm)',

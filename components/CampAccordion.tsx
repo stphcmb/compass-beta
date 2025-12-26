@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
 import { ChevronDown, ChevronUp, Users, ThumbsUp, ThumbsDown, Layers } from 'lucide-react'
 import AuthorCard, { authorQuoteMatchesSearch } from './AuthorCard'
 import { TERMINOLOGY, getCampLabel } from '@/lib/constants/terminology'
 import { getDomainColor } from './DiscourseMap'
+import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 
 const MAX_AUTHORS_BEFORE_SCROLL = 4
 const AUTHORS_SCROLL_HEIGHT = 480 // pixels
@@ -121,6 +121,7 @@ export default function CampAccordion({
   onCampsLoaded,
   scrollToCampId
 }: CampAccordionProps) {
+  const { openPanel } = useAuthorPanel()
   const [camps, setCamps] = useState<any[]>([])
   const [expandedQueries, setExpandedQueries] = useState<any[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -461,13 +462,13 @@ export default function CampAccordion({
                                   <ThumbsUp size={11} className="text-green-600 flex-shrink-0" />
                                   <span className="text-gray-500">Also supports:</span>
                                   {camp.supportingAuthors.slice(0, 3).map((author: any) => (
-                                    <Link
+                                    <button
                                       key={author.id}
-                                      href={`/authors/${author.id}`}
+                                      onClick={() => openPanel(author.id)}
                                       className="px-2 py-0.5 bg-green-50 text-green-700 rounded-full hover:bg-green-100 transition-colors"
                                     >
                                       {author.name}
-                                    </Link>
+                                    </button>
                                   ))}
                                 </div>
                               )}
@@ -476,13 +477,13 @@ export default function CampAccordion({
                                   <ThumbsDown size={11} className="text-red-600 flex-shrink-0" />
                                   <span className="text-gray-500">Challenges:</span>
                                   {camp.challengingAuthors.slice(0, 3).map((author: any) => (
-                                    <Link
+                                    <button
                                       key={author.id}
-                                      href={`/authors/${author.id}`}
+                                      onClick={() => openPanel(author.id)}
                                       className="px-2 py-0.5 bg-red-50 text-red-700 rounded-full hover:bg-red-100 transition-colors"
                                     >
                                       {author.name}
-                                    </Link>
+                                    </button>
                                   ))}
                                 </div>
                               )}
