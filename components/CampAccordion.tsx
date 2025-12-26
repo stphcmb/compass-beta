@@ -263,12 +263,39 @@ export default function CampAccordion({
 
   if (filteredCamps.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-        <div className="text-gray-400 mb-2">
-          <Users className="w-12 h-12 mx-auto" />
+      <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
+        <div
+          className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
+          style={{ background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)' }}
+        >
+          <Users className="w-7 h-7 text-gray-500" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-1">No results found</h3>
-        <p className="text-gray-500 text-sm">Try adjusting your search terms</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">No matching perspectives</h3>
+        <p className="text-gray-500 text-sm max-w-md mx-auto mb-4 leading-relaxed">
+          {query
+            ? `We couldn't find any perspectives matching "${query}". Try different keywords or browse all perspectives.`
+            : domain
+              ? `No perspectives found in the "${domain}" domain. Try removing the filter to see all perspectives.`
+              : 'No perspectives are currently available. Check back soon for new content.'}
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          {query && (
+            <a
+              href="/explore"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+            >
+              Browse all perspectives
+            </a>
+          )}
+          {domain && (
+            <button
+              onClick={() => window.location.href = '/explore'}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Clear filter
+            </button>
+          )}
+        </div>
       </div>
     )
   }

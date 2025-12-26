@@ -212,35 +212,56 @@ export default function AuthorIndexPage() {
       >
         {/* Page Header */}
         <div style={{
-          padding: '16px 24px',
+          padding: '20px 24px',
           borderBottom: '1px solid var(--color-light-gray)',
           backgroundColor: 'white'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: 600, margin: 0, color: 'var(--color-soft-black)' }}>
-              Thought Leaders
-            </h1>
-            <button
-              onClick={openModal}
-              className="hover:bg-gray-100 transition-colors"
-              style={{
-                padding: '4px',
-                background: 'none',
-                border: 'none',
-                borderRadius: 'var(--radius-sm)',
-                cursor: 'pointer',
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)'
+              }}>
+                <Users size={24} style={{ color: 'white' }} />
+              </div>
+              <div>
+                <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+                  Thought Leaders
+                </h1>
+                <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0' }}>
+                  Explore the experts shaping AI discourse and their positions
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={openModal}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                background: 'white',
+                color: '#6b7280',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer'
               }}
-              title="About thought leaders"
             >
-              <HelpCircle size={16} style={{ color: 'var(--color-mid-gray)' }} />
+              <HelpCircle size={16} />
+              How it works
             </button>
           </div>
-          <p style={{ fontSize: '14px', color: 'var(--color-mid-gray)', margin: 0 }}>
-            Explore the experts shaping AI discourse, their positions, and supporting evidence
-          </p>
         </div>
 
         {/* Split panel area */}
@@ -469,7 +490,63 @@ export default function AuthorIndexPage() {
 
             {/* Author list */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
-              {groupBy === 'alphabet' ? (
+              {/* Empty state when no authors match */}
+              {totalFiltered === 0 && (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '32px 16px',
+                  textAlign: 'center',
+                  height: '100%'
+                }}>
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '16px'
+                  }}>
+                    <Search style={{ width: '24px', height: '24px', color: '#9ca3af' }} />
+                  </div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-soft-black)', marginBottom: '6px' }}>
+                    No authors found
+                  </h4>
+                  <p style={{ fontSize: '12px', color: 'var(--color-mid-gray)', lineHeight: 1.5, marginBottom: '16px' }}>
+                    {searchQuery
+                      ? `No authors match "${searchQuery}"`
+                      : domainFilter
+                        ? `No authors in the ${domainFilter} domain`
+                        : 'No authors available'}
+                  </p>
+                  {(searchQuery || domainFilter) && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('')
+                        setDomainFilter(null)
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#4f46e5',
+                        backgroundColor: '#eef2ff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {totalFiltered > 0 && (groupBy === 'alphabet' ? (
                 // A-Z View
                 ALPHABET.map(letter => {
                   const letterAuthors = authorsByLetter[letter] || []
@@ -624,7 +701,7 @@ export default function AuthorIndexPage() {
                     </div>
                   )}
                 </>
-              )}
+              ))}
             </div>
           </div>
         </div>

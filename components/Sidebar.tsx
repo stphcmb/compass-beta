@@ -22,11 +22,6 @@ export default function Sidebar() {
   useEffect(() => {
     setMounted(true)
 
-    // Check if user has any saved content
-    const savedSearches = JSON.parse(localStorage.getItem('savedSearches') || '[]')
-    const savedAnalyses = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
-    const hasContent = savedSearches.length > 0 || savedAnalyses.length > 0
-
     // Load user's explicit preference if set
     const userPreference = localStorage.getItem('sidebarCollapsed')
 
@@ -34,8 +29,8 @@ export default function Sidebar() {
       // User has explicitly set a preference - respect it
       setIsCollapsed(userPreference === 'true')
     } else {
-      // No explicit preference - collapse by default unless they have saved content
-      setIsCollapsed(!hasContent)
+      // First time visitor - default to collapsed
+      setIsCollapsed(true)
     }
   }, [])
 
@@ -448,12 +443,33 @@ export default function Sidebar() {
 
             {/* Empty State */}
             {savedSearches.length === 0 && savedAIEditorAnalyses.length === 0 && (
-              <div className="text-center py-8 px-3">
-                <Bookmark className="w-6 h-6 text-gray-300 mx-auto mb-2" />
-                <p className="text-[10px] text-gray-500">No saved items yet</p>
-                <p className="text-[9px] text-gray-400 mt-1">
-                  Save searches or analyses to see them here
+              <div className="text-center py-6 px-4">
+                <div
+                  className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)' }}
+                >
+                  <Bookmark className="w-5 h-5 text-blue-600" />
+                </div>
+                <p className="text-[11px] font-medium text-gray-700 mb-1">No saved items yet</p>
+                <p className="text-[10px] text-gray-500 leading-relaxed">
+                  Save your searches and AI analyses to quickly access them later
                 </p>
+                <div className="mt-4 space-y-2">
+                  <a
+                    href="/explore"
+                    className="flex items-center gap-2 px-3 py-2 text-[10px] font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <SearchIcon className="w-3.5 h-3.5" />
+                    Explore perspectives
+                  </a>
+                  <a
+                    href="/"
+                    className="flex items-center gap-2 px-3 py-2 text-[10px] font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Try AI analysis
+                  </a>
+                </div>
               </div>
             )}
           </div>

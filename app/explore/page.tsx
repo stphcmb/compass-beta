@@ -12,7 +12,7 @@ import { FeatureHint } from '@/components/FeatureHint'
 import { HowPerspectivesWorkModal, useHowPerspectivesWorkModal } from '@/components/HowPerspectivesWorkModal'
 import DomainOverview from '@/components/DomainOverview'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
-import { HelpCircle, Layers } from 'lucide-react'
+import { HelpCircle, Layers, Compass } from 'lucide-react'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
@@ -173,23 +173,52 @@ function ExplorePageContent() {
       >
         <div className="max-w-4xl mx-auto" style={{ padding: '20px 24px' }}>
           {/* Page Title */}
-          <div style={{ marginBottom: '16px' }}>
-            <div className="flex items-center gap-2">
-              <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: 0, color: 'var(--color-soft-black)' }}>
-                {TERMINOLOGY.searchFull}
-              </h1>
-              <button
-                onClick={openModal}
-                className="hover:bg-gray-100 transition-colors"
-                title="How perspectives work"
-                style={{ padding: '4px', borderRadius: 'var(--radius-sm)' }}
-              >
-                <HelpCircle size={16} style={{ color: 'var(--color-mid-gray)' }} className="hover:text-[var(--color-accent)]" />
-              </button>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '20px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+              }}>
+                <Compass size={24} style={{ color: 'white' }} />
+              </div>
+              <div>
+                <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+                  {TERMINOLOGY.searchFull}
+                </h1>
+                <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0' }}>
+                  Browse the definitive collection of {TERMINOLOGY.camps.toLowerCase()} shaping AI discourse
+                </p>
+              </div>
             </div>
-            <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-mid-gray)', marginTop: '4px' }}>
-              Browse the definitive collection of {TERMINOLOGY.camps.toLowerCase()} shaping AI discourse
-            </p>
+            <button
+              onClick={openModal}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                background: 'white',
+                color: '#6b7280',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <HelpCircle size={16} />
+              How it works
+            </button>
           </div>
 
           {/* Feature Hint */}

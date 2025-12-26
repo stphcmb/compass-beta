@@ -17,7 +17,9 @@ import {
   HelpCircle,
   MessageSquare,
   Edit3,
-  Check
+  Check,
+  Users,
+  Compass
 } from 'lucide-react'
 import Header from '@/components/Header'
 import { supabase } from '@/lib/supabase'
@@ -642,28 +644,129 @@ export default function HistoryPage() {
             </Section>
           )}
 
-          {/* Empty State */}
-          {filteredRecentSearches.length === 0 &&
+          {/* Tab-specific Empty States */}
+          {activeTab === 'searches' && filteredRecentSearches.length === 0 && filteredSavedSearches.length === 0 && (
+            <EmptyState
+              icon={<Search size={40} style={{ color: '#3b82f6' }} />}
+              title="No saved searches yet"
+              description="When you search for topics and save them, they'll appear here for quick access."
+              actionLabel="Start Exploring"
+              actionHref="/explore"
+              gradient="linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)"
+            />
+          )}
+
+          {activeTab === 'analyses' && filteredAnalyses.length === 0 && (
+            <EmptyState
+              icon={<Sparkles size={40} style={{ color: '#8b5cf6' }} />}
+              title="No saved analyses yet"
+              description="Use the AI Editor to analyze text and save your analyses here for future reference."
+              actionLabel="Try AI Editor"
+              actionHref="/"
+              gradient="linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)"
+            />
+          )}
+
+          {activeTab === 'notes' && filteredAuthorNotes.length === 0 && (
+            <EmptyState
+              icon={<MessageSquare size={40} style={{ color: '#6366f1' }} />}
+              title="No author notes yet"
+              description="Add personal notes to any author's profile to keep track of your thoughts and research insights."
+              actionLabel="Browse Authors"
+              actionHref="/authors"
+              gradient="linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)"
+            />
+          )}
+
+          {activeTab === 'favorites' && filteredFavorites.length === 0 && (
+            <EmptyState
+              icon={<Star size={40} style={{ color: '#f59e0b' }} />}
+              title="No favorite authors yet"
+              description="Star authors you want to follow closely. Their profiles will be easily accessible here."
+              actionLabel="Discover Authors"
+              actionHref="/authors"
+              gradient="linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)"
+            />
+          )}
+
+          {/* Overall Empty State (All Activity tab with no data) */}
+          {activeTab === 'all' &&
+           filteredRecentSearches.length === 0 &&
            filteredSavedSearches.length === 0 &&
            filteredAnalyses.length === 0 &&
            filteredAuthorNotes.length === 0 &&
            filteredFavorites.length === 0 && (
             <div style={{
               textAlign: 'center',
-              padding: '64px 24px',
+              padding: '48px 24px',
               background: 'white',
-              borderRadius: '12px',
-              border: '1px solid #e5e7eb'
+              borderRadius: '16px',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
             }}>
-              <History size={48} style={{ color: '#d1d5db', marginBottom: '16px' }} />
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-                {timeFilter !== 'all' ? 'No activity in this time period' : 'No history yet'}
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px'
+              }}>
+                <History size={36} style={{ color: '#6366f1' }} />
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
+                {timeFilter !== 'all' ? 'No activity in this time period' : 'Your research journey starts here'}
               </h3>
-              <p style={{ fontSize: '14px', color: '#6b7280', maxWidth: '400px', margin: '0 auto' }}>
+              <p style={{ fontSize: '14px', color: '#6b7280', maxWidth: '420px', margin: '0 auto 24px', lineHeight: '1.6' }}>
                 {timeFilter !== 'all'
                   ? 'Try selecting a different time range to see more activity.'
-                  : 'Start exploring perspectives and your activity will appear here. Search for topics, analyze content, and favorite authors to build your research history.'}
+                  : 'As you explore perspectives, save searches, analyze content, and bookmark authors, your activity will be tracked here.'}
               </p>
+              {timeFilter === 'all' && (
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <a
+                    href="/explore"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '10px 20px',
+                      backgroundColor: '#6366f1',
+                      color: 'white',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      textDecoration: 'none',
+                      transition: 'background-color 0.2s'
+                    }}
+                  >
+                    <Search size={16} />
+                    Explore Perspectives
+                  </a>
+                  <a
+                    href="/authors"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '10px 20px',
+                      backgroundColor: 'white',
+                      color: '#374151',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      textDecoration: 'none',
+                      border: '1px solid #e5e7eb',
+                      transition: 'border-color 0.2s'
+                    }}
+                  >
+                    <Users size={16} />
+                    Browse Authors
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1575,6 +1678,75 @@ function AboutHistoryModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// Reusable Empty State Component
+function EmptyState({
+  icon,
+  title,
+  description,
+  actionLabel,
+  actionHref,
+  gradient
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  actionLabel?: string
+  actionHref?: string
+  gradient: string
+}) {
+  return (
+    <div style={{
+      textAlign: 'center',
+      padding: '48px 24px',
+      background: 'white',
+      borderRadius: '16px',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+    }}>
+      <div style={{
+        width: '72px',
+        height: '72px',
+        borderRadius: '50%',
+        background: gradient,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '0 auto 20px'
+      }}>
+        {icon}
+      </div>
+      <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
+        {title}
+      </h3>
+      <p style={{ fontSize: '14px', color: '#6b7280', maxWidth: '360px', margin: '0 auto', lineHeight: '1.5' }}>
+        {description}
+      </p>
+      {actionLabel && actionHref && (
+        <a
+          href={actionHref}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginTop: '20px',
+            padding: '10px 20px',
+            backgroundColor: '#6366f1',
+            color: 'white',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '500',
+            textDecoration: 'none',
+            transition: 'background-color 0.2s'
+          }}
+        >
+          <Compass size={16} />
+          {actionLabel}
+        </a>
+      )}
     </div>
   )
 }
