@@ -32,6 +32,8 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
   const [allAuthors, setAllAuthors] = useState<Array<{ id: string; name: string }>>([])
   const [copying, setCopying] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [likedSummary, setLikedSummary] = useState(false)
+  const [likedCamps, setLikedCamps] = useState<Set<number>>(new Set())
   const { showToast } = useToast()
 
   const suggestionsRef = useRef<HTMLDivElement>(null)
@@ -200,6 +202,60 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
     } finally {
       setSaving(false)
     }
+  }
+
+  // Save a helpful insight to history
+  const saveHelpfulInsight = (type: 'summary' | 'camp', content: string, campLabel?: string, campIdx?: number) => {
+    try {
+      const insights = JSON.parse(localStorage.getItem('helpfulInsights') || '[]')
+
+      const newInsight = {
+        id: `insight-${Date.now()}`,
+        type,
+        content,
+        campLabel: campLabel || null,
+        originalText: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+        fullText: text, // Store full text for restoration
+        cachedResult: result, // Store full result for restoration
+        timestamp: new Date().toISOString()
+      }
+
+      // Add to beginning
+      insights.unshift(newInsight)
+
+      // Keep only last 50 insights
+      const limited = insights.slice(0, 50)
+      localStorage.setItem('helpfulInsights', JSON.stringify(limited))
+
+      // Update local state
+      if (type === 'summary') {
+        setLikedSummary(true)
+      } else if (campIdx !== undefined) {
+        setLikedCamps(prev => new Set([...prev, campIdx]))
+      }
+
+      showToast('Saved to your helpful insights!')
+
+      // Dispatch event for history page to pick up
+      window.dispatchEvent(new CustomEvent('helpful-insight-added', { detail: newInsight }))
+    } catch (e) {
+      console.error('Error saving helpful insight:', e)
+      showToast('Failed to save insight', 'error')
+    }
+  }
+
+  // Remove a helpful insight
+  const removeHelpfulInsight = (type: 'summary' | 'camp', campIdx?: number) => {
+    if (type === 'summary') {
+      setLikedSummary(false)
+    } else if (campIdx !== undefined) {
+      setLikedCamps(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(campIdx)
+        return newSet
+      })
+    }
+    showToast('Removed from helpful insights')
   }
 
   const formatAnalysisAsText = () => {
@@ -1108,15 +1164,46 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
             border: '1px solid var(--color-light-gray)',
             scrollMarginTop: '96px'
           }}>
-            <h2 style={{
-              marginBottom: 'var(--space-3)',
+            <div style={{
               display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-2)'
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              marginBottom: 'var(--space-3)'
             }}>
-              <CheckCircle style={{ width: '20px', height: '20px', color: 'var(--color-success)' }} />
-              Summary
-            </h2>
+              <h2 style={{
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)'
+              }}>
+                <CheckCircle style={{ width: '20px', height: '20px', color: 'var(--color-success)' }} />
+                Summary
+              </h2>
+              <button
+                onClick={() => likedSummary
+                  ? removeHelpfulInsight('summary')
+                  : saveHelpfulInsight('summary', result.summary)
+                }
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '16px',
+                  border: likedSummary ? '1px solid #10b981' : '1px solid #e5e7eb',
+                  backgroundColor: likedSummary ? '#d1fae5' : 'white',
+                  color: likedSummary ? '#059669' : '#6b7280',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                title={likedSummary ? 'Remove from helpful insights' : 'Save as helpful'}
+              >
+                <ThumbsUp style={{ width: '14px', height: '14px', fill: likedSummary ? '#059669' : 'none' }} />
+                {likedSummary ? 'Helpful!' : 'This is helpful'}
+              </button>
+            </div>
             <p style={{
               color: 'var(--color-charcoal)',
               lineHeight: 'var(--leading-relaxed)',
@@ -1321,27 +1408,57 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                     >
                       {/* Camp Header */}
                       <div style={{ marginBottom: 'var(--space-4)' }}>
-                        <Link
-                          href={`/results?q=${encodeURIComponent(camp.campLabel)}`}
-                          style={{
-                            fontWeight: 'var(--weight-semibold)',
-                            fontSize: 'var(--text-h3)',
-                            color: 'var(--color-soft-black)',
-                            marginBottom: 'var(--space-2)',
-                            display: 'block',
-                            textDecoration: 'none',
-                            transition: 'color var(--duration-fast) var(--ease-out)',
-                            cursor: 'pointer'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.color = 'var(--color-accent)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.color = 'var(--color-soft-black)'
-                          }}
-                        >
-                          {camp.campLabel}
-                        </Link>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          marginBottom: 'var(--space-2)'
+                        }}>
+                          <Link
+                            href={`/results?q=${encodeURIComponent(camp.campLabel)}`}
+                            style={{
+                              fontWeight: 'var(--weight-semibold)',
+                              fontSize: 'var(--text-h3)',
+                              color: 'var(--color-soft-black)',
+                              textDecoration: 'none',
+                              transition: 'color var(--duration-fast) var(--ease-out)',
+                              cursor: 'pointer'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = 'var(--color-accent)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = 'var(--color-soft-black)'
+                            }}
+                          >
+                            {camp.campLabel}
+                          </Link>
+                          <button
+                            onClick={() => likedCamps.has(idx)
+                              ? removeHelpfulInsight('camp', idx)
+                              : saveHelpfulInsight('camp', camp.explanation, camp.campLabel, idx)
+                            }
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '5px 10px',
+                              borderRadius: '14px',
+                              border: likedCamps.has(idx) ? '1px solid #10b981' : '1px solid #e5e7eb',
+                              backgroundColor: likedCamps.has(idx) ? '#d1fae5' : 'white',
+                              color: likedCamps.has(idx) ? '#059669' : '#6b7280',
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              flexShrink: 0
+                            }}
+                            title={likedCamps.has(idx) ? 'Remove from helpful insights' : 'Save as helpful'}
+                          >
+                            <ThumbsUp style={{ width: '12px', height: '12px', fill: likedCamps.has(idx) ? '#059669' : 'none' }} />
+                            {likedCamps.has(idx) ? 'Saved' : 'Helpful'}
+                          </button>
+                        </div>
                         <p style={{
                           fontSize: 'var(--text-small)',
                           color: 'var(--color-charcoal)',

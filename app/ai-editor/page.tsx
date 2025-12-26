@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import Header from '@/components/Header'
 import AIEditor from '@/components/AIEditor'
+import BackToTop from '@/components/BackToTop'
 
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
 export default function AIEditorPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const mainRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     const handleSidebarToggle = (e: Event) => {
@@ -37,6 +39,7 @@ export default function AIEditorPage() {
       <Sidebar />
       <Header sidebarCollapsed={sidebarCollapsed} />
       <main
+        ref={mainRef}
         className="flex-1 mt-16 overflow-y-auto transition-all duration-300"
         style={{
           marginLeft: sidebarCollapsed ? '0' : '256px'
@@ -63,6 +66,7 @@ export default function AIEditorPage() {
             <AIEditor showTitle={true} />
           </div>
         </div>
+        <BackToTop containerRef={mainRef} />
       </main>
     </div>
   )

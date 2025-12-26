@@ -260,20 +260,20 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                   {author.header_affiliation || author.primary_affiliation || 'Independent'}
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {author.credibility_tier && (
+                  {author.author_type && (
                     <span style={{
                       padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 600,
                       backgroundColor: colors.text, color: 'white', textTransform: 'uppercase'
                     }}>
-                      {author.credibility_tier}
+                      {author.author_type}
                     </span>
                   )}
-                  {author.author_type && (
+                  {author.credibility_tier && (
                     <span style={{
                       padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 500,
                       backgroundColor: 'white', color: '#374151', border: '1px solid #e5e7eb'
                     }}>
-                      {author.author_type}
+                      {author.credibility_tier}
                     </span>
                   )}
                 </div>
@@ -716,10 +716,18 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                   {author.header_affiliation || author.primary_affiliation || 'Independent'}
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {author.credibility_tier && (
+                  {author.author_type && (
                     <span style={{
                       padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 600,
                       backgroundColor: colors.text, color: 'white', textTransform: 'uppercase'
+                    }}>
+                      {author.author_type}
+                    </span>
+                  )}
+                  {author.credibility_tier && (
+                    <span style={{
+                      padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 500,
+                      backgroundColor: 'white', color: '#374151', border: '1px solid #e5e7eb'
                     }}>
                       {author.credibility_tier}
                     </span>

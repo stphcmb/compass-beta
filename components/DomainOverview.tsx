@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronRight, Users, Layers, X, PanelLeftClose, PanelLeft } from 'lucide-react'
+import { ChevronRight, Layers, X, PanelLeftClose } from 'lucide-react'
 import { getDomainColor } from './DiscourseMap'
 
 // Domain metadata with context for new users
@@ -12,6 +12,8 @@ interface DomainInfo {
   icon: string
   coreQuestion: string
   keyTension: string
+  description: string
+  youWillFind: string
 }
 
 const DOMAIN_INFO: DomainInfo[] = [
@@ -20,35 +22,45 @@ const DOMAIN_INFO: DomainInfo[] = [
     shortName: 'Technical',
     icon: '🔬',
     coreQuestion: 'How should AI systems be built?',
-    keyTension: 'Scaling vs. New Approaches'
+    keyTension: 'Scaling vs. New Approaches',
+    description: 'The foundational debate about AI\'s trajectory. Some experts believe current architectures just need more data and compute to reach transformative intelligence. Others argue we\'re hitting fundamental limits and need entirely new approaches.',
+    youWillFind: 'Research scientists, ML engineers, and technical leaders debating whether scaling laws will continue or if breakthroughs require new paradigms.'
   },
   {
     name: 'AI & Society',
     shortName: 'Society',
     icon: '🌍',
     coreQuestion: 'How should AI be deployed?',
-    keyTension: 'Safety First vs. Democratize Fast'
+    keyTension: 'Safety First vs. Democratize Fast',
+    description: 'The tension between caution and access. Safety advocates worry about existential risks and want to slow deployment until we understand AI better. Democratizers argue that broad access empowers people and that delay concentrates power.',
+    youWillFind: 'Ethicists, public intellectuals, and policy thinkers wrestling with how AI should reshape daily life and human potential.'
   },
   {
     name: 'Enterprise AI Adoption',
     shortName: 'Enterprise',
     icon: '🏢',
     coreQuestion: 'How should orgs integrate AI?',
-    keyTension: 'Business-led vs. Tech-led'
+    keyTension: 'Business-led vs. Tech-led',
+    description: 'The practical challenge of making AI work in organizations. Should transformation start with business problems and ROI? Or should you build robust technical infrastructure first and let capabilities drive strategy?',
+    youWillFind: 'CTOs, consultants, and transformation leaders sharing what actually works when deploying AI at scale.'
   },
   {
     name: 'AI Governance & Oversight',
     shortName: 'Governance',
     icon: '⚖️',
     coreQuestion: 'How should AI be regulated?',
-    keyTension: 'Regulate vs. Innovate'
+    keyTension: 'Regulate vs. Innovate',
+    description: 'The policy battleground. Interventionists want guardrails before capabilities advance further. Innovation advocates worry premature rules will stifle progress and hand leadership to less cautious nations.',
+    youWillFind: 'Policymakers, legal scholars, and tech leaders debating who should control AI and what rules should apply.'
   },
   {
     name: 'Future of Work',
     shortName: 'Work',
     icon: '💼',
     coreQuestion: 'How will AI change jobs?',
-    keyTension: 'Displacement vs. Collaboration'
+    keyTension: 'Displacement vs. Collaboration',
+    description: 'The question that affects everyone. Will AI automate jobs away, requiring massive policy responses? Or will humans and AI collaborate, with machines amplifying what people do rather than replacing them?',
+    youWillFind: 'Economists, HR leaders, and futurists examining how AI will transform employment, skills, and the workplace.'
   }
 ]
 
@@ -71,6 +83,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
   const [domainData, setDomainData] = useState<Record<string, DomainData>>({})
   const [loading, setLoading] = useState(true)
   const [hoveredDomain, setHoveredDomain] = useState<string | null>(null)
+  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null)
   const [totalAuthors, setTotalAuthors] = useState(0)
   const [totalPerspectives, setTotalPerspectives] = useState(0)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -132,20 +145,28 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
     }
   }
 
-  const handleMouseEnter = (domainName: string) => {
+  const handleMouseEnter = (domainName: string, event: React.MouseEvent<HTMLDivElement>) => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
     }
-    hoverTimeoutRef.current = setTimeout(() => {
-      setHoveredDomain(domainName)
-    }, 200)
+    const rect = event.currentTarget.getBoundingClientRect()
+    // Show tooltip immediately
+    setHoveredDomain(domainName)
+    setTooltipPosition({
+      top: rect.top,
+      left: rect.right + 8
+    })
   }
 
   const handleMouseLeave = () => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
     }
-    setHoveredDomain(null)
+    // Small delay before hiding to allow mouse to move to tooltip
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredDomain(null)
+      setTooltipPosition(null)
+    }, 100)
   }
 
   const clearFilter = () => {
@@ -182,11 +203,8 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-indigo-600" />
             <h2 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
-              Domains
+              The Core Debates
             </h2>
-            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-medium text-indigo-700 bg-indigo-100 rounded-full">
-              {DOMAIN_INFO.length}
-            </span>
           </div>
           {onToggleCollapse && (
             <button
@@ -199,7 +217,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
           )}
         </div>
         <p className="text-[10px] text-gray-500 mt-1">
-          {totalPerspectives} perspectives · {totalAuthors} authors
+          Five domains shaping AI discourse
         </p>
       </div>
 
@@ -238,19 +256,19 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
             <div
               key={domain.name}
               className="relative"
-              onMouseEnter={() => handleMouseEnter(domain.name)}
+              onMouseEnter={(e) => handleMouseEnter(domain.name, e)}
               onMouseLeave={handleMouseLeave}
             >
               <button
                 onClick={() => handleDomainClick(domain.name)}
-                className="w-full text-left transition-all duration-150"
+                className="w-full text-left transition-all duration-200"
                 style={{
-                  padding: '10px',
+                  padding: isHovered ? '12px' : '10px',
                   borderRadius: '8px',
-                  borderLeft: `3px solid ${isActive ? colors.bgSolid : 'transparent'}`,
-                  border: `1px solid ${isActive ? colors.bgSolid : isHovered ? '#d1d5db' : '#e5e7eb'}`,
-                  backgroundColor: isActive ? colors.bgLight : isHovered ? '#f9fafb' : 'white',
-                  boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'
+                  borderLeft: `3px solid ${isActive ? colors.bgSolid : isHovered ? colors.bgSolid : 'transparent'}`,
+                  border: `1px solid ${isActive ? colors.bgSolid : isHovered ? colors.bgSolid : '#e5e7eb'}`,
+                  backgroundColor: isActive ? colors.bgLight : isHovered ? colors.bgLight : 'white',
+                  boxShadow: isHovered ? '0 4px 12px rgba(0,0,0,0.1)' : isActive ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'
                 }}
               >
                 {/* Domain Header */}
@@ -260,7 +278,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                     className="font-semibold flex-1"
                     style={{
                       fontSize: '12px',
-                      color: isActive ? colors.textDark : '#1f2937'
+                      color: isActive || isHovered ? colors.textDark : '#1f2937'
                     }}
                   >
                     {domain.shortName}
@@ -270,148 +288,106 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                     style={{
                       width: '12px',
                       height: '12px',
-                      color: isActive ? colors.bgSolid : '#9ca3af',
+                      color: isActive || isHovered ? colors.bgSolid : '#9ca3af',
                       transform: isHovered ? 'translateX(2px)' : 'none'
                     }}
                   />
                 </div>
 
-                {/* Core Question */}
+                {/* Core Question - Always visible */}
                 <p
                   className="leading-snug"
                   style={{
                     fontSize: '10px',
-                    color: isActive ? colors.textDark : '#6b7280',
+                    color: isActive || isHovered ? colors.textDark : '#6b7280',
                     marginTop: '4px',
-                    marginBottom: '6px'
+                    marginBottom: isHovered ? '8px' : '0'
                   }}
                 >
                   {domain.coreQuestion}
                 </p>
 
-                {/* Stats Row */}
-                <div className="flex items-center gap-3">
-                  <div
-                    className="flex items-center gap-1"
-                    style={{
-                      fontSize: '9px',
-                      color: '#9ca3af'
-                    }}
-                  >
-                    <Layers style={{ width: '10px', height: '10px' }} />
-                    <span>{data.perspectives.length}</span>
+                {/* Expanded content on hover */}
+                {isHovered && (
+                  <div style={{
+                    marginTop: '8px',
+                    paddingTop: '8px',
+                    borderTop: `1px solid ${colors.bgSolid}40`
+                  }}>
+                    {/* Description */}
+                    <p style={{
+                      fontSize: '11px',
+                      lineHeight: '1.5',
+                      color: '#374151',
+                      marginBottom: '8px'
+                    }}>
+                      {domain.description}
+                    </p>
+
+                    {/* You'll find */}
+                    <div style={{
+                      padding: '8px',
+                      borderRadius: '6px',
+                      backgroundColor: 'rgba(255,255,255,0.7)',
+                      marginBottom: '8px'
+                    }}>
+                      <div style={{
+                        fontSize: '9px',
+                        fontWeight: 600,
+                        color: colors.textDark,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: '4px'
+                      }}>
+                        You'll find
+                      </div>
+                      <p style={{
+                        fontSize: '10px',
+                        lineHeight: '1.4',
+                        color: '#4b5563',
+                        margin: 0
+                      }}>
+                        {domain.youWillFind}
+                      </p>
+                    </div>
+
+                    {/* Central debate badge */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      flexWrap: 'wrap'
+                    }}>
+                      <span style={{
+                        fontSize: '9px',
+                        fontWeight: 600,
+                        color: '#6b7280',
+                        textTransform: 'uppercase'
+                      }}>
+                        Debate:
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          padding: '3px 8px',
+                          borderRadius: '10px',
+                          backgroundColor: colors.bgSolid,
+                          color: 'white'
+                        }}
+                      >
+                        {domain.keyTension}
+                      </span>
+                    </div>
                   </div>
-                  <div
-                    className="flex items-center gap-1 font-medium"
-                    style={{
-                      fontSize: '9px',
-                      color: colors.bgSolid
-                    }}
-                  >
-                    <Users style={{ width: '10px', height: '10px' }} />
-                    <span>{data.authorCount}</span>
-                  </div>
-                </div>
+                )}
               </button>
-
-              {/* Hover Tooltip - Positioned to the right */}
-              {isHovered && !isActive && (
-                <div
-                  className="absolute left-full top-0 ml-2 z-50"
-                  style={{
-                    width: '220px',
-                    padding: '10px',
-                    borderRadius: 'var(--radius-base)',
-                    backgroundColor: 'white',
-                    border: '1px solid var(--color-light-gray)',
-                    boxShadow: 'var(--shadow-md)',
-                    animation: 'fadeIn 0.15s ease-out'
-                  }}
-                >
-                  {/* Tooltip Header */}
-                  <div
-                    className="flex items-center gap-2 pb-2 mb-2"
-                    style={{ borderBottom: `1px solid ${colors.bgSolid}` }}
-                  >
-                    <span style={{ fontSize: '14px' }}>{domain.icon}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-soft-black)' }}>
-                      {domain.name}
-                    </span>
-                  </div>
-
-                  {/* Key Tension */}
-                  <div style={{ marginBottom: '8px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--color-mid-gray)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-                      Key Tension
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 500,
-                        padding: '4px 8px',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor: `${colors.bgSolid}10`,
-                        color: colors.bgSolid
-                      }}
-                    >
-                      {domain.keyTension}
-                    </div>
-                  </div>
-
-                  {/* Perspectives List */}
-                  <div style={{ marginBottom: '8px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--color-mid-gray)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-                      Perspectives
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      {data.perspectives.map((p) => (
-                        <div
-                          key={p}
-                          className="flex items-center gap-1.5"
-                          style={{ fontSize: '10px', color: 'var(--color-charcoal)' }}
-                        >
-                          <span
-                            className="flex-shrink-0"
-                            style={{ width: '4px', height: '4px', borderRadius: '1px', backgroundColor: colors.bgSolid }}
-                          />
-                          <span className="truncate">{p}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* CTA */}
-                  <div
-                    className="flex items-center gap-1"
-                    style={{
-                      fontSize: '9px',
-                      fontWeight: 500,
-                      paddingTop: '6px',
-                      color: colors.bgSolid,
-                      borderTop: '1px solid var(--color-light-gray)'
-                    }}
-                  >
-                    Click to filter
-                    <ChevronRight style={{ width: '10px', height: '10px' }} />
-                  </div>
-                </div>
-              )}
             </div>
           )
         })}
         </div>
       </div>
 
-      {/* Footer Stats - Minimal */}
-      <div
-        className="flex-shrink-0 border-t border-gray-200"
-        style={{ padding: '8px 12px', backgroundColor: '#f9fafb' }}
-      >
-        <div className="flex items-center justify-between text-[9px] text-gray-500">
-          <span>{totalAuthors} authors</span>
-          <span>{totalPerspectives} perspectives</span>
-        </div>
-      </div>
 
       {/* Tooltip animation */}
       <style jsx global>{`

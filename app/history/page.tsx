@@ -19,7 +19,8 @@ import {
   Edit3,
   Check,
   Users,
-  Compass
+  Compass,
+  ThumbsUp
 } from 'lucide-react'
 import Header from '@/components/Header'
 import { supabase } from '@/lib/supabase'
@@ -60,7 +61,18 @@ interface AuthorNote {
   updatedAt: string
 }
 
-type TabType = 'all' | 'searches' | 'analyses' | 'notes' | 'favorites'
+interface HelpfulInsight {
+  id: string
+  type: 'summary' | 'camp'
+  content: string
+  campLabel?: string
+  originalText: string
+  fullText?: string
+  cachedResult?: any
+  timestamp: string
+}
+
+type TabType = 'all' | 'searches' | 'analyses' | 'insights' | 'notes' | 'favorites'
 type TimeFilter = 'all' | 'today' | 'week' | 'month'
 
 export default function HistoryPage() {
@@ -77,6 +89,7 @@ export default function HistoryPage() {
   const [savedAnalyses, setSavedAnalyses] = useState<AnalysisItem[]>([])
   const [favoriteAuthors, setFavoriteAuthors] = useState<FavoriteAuthor[]>([])
   const [authorNotes, setAuthorNotes] = useState<AuthorNote[]>([])
+  const [helpfulInsights, setHelpfulInsights] = useState<HelpfulInsight[]>([])
   const [authorDetails, setAuthorDetails] = useState<Record<string, any>>({})
 
   // Listen for sidebar toggle
@@ -125,9 +138,21 @@ export default function HistoryPage() {
     }
     window.addEventListener('favorite-author-added', handleFavoriteAdded)
 
+    // Listen for helpful insights added from AI Editor
+    const handleInsightAdded = () => {
+      try {
+        const insights = JSON.parse(localStorage.getItem('helpfulInsights') || '[]')
+        setHelpfulInsights(insights)
+      } catch {
+        setHelpfulInsights([])
+      }
+    }
+    window.addEventListener('helpful-insight-added', handleInsightAdded)
+
     return () => {
       window.removeEventListener('author-note-updated', handleNoteUpdated as EventListener)
       window.removeEventListener('favorite-author-added', handleFavoriteAdded)
+      window.removeEventListener('helpful-insight-added', handleInsightAdded)
     }
   }, [])
 
@@ -161,6 +186,12 @@ export default function HistoryPage() {
       const notes = JSON.parse(localStorage.getItem('authorNotes') || '[]')
       setAuthorNotes(notes)
     } catch { setAuthorNotes([]) }
+
+    // Load helpful insights
+    try {
+      const insights = JSON.parse(localStorage.getItem('helpfulInsights') || '[]')
+      setHelpfulInsights(insights)
+    } catch { setHelpfulInsights([]) }
 
     // Load author details from database for both favorites and notes
     try {
@@ -351,9 +382,10 @@ export default function HistoryPage() {
   }
 
   const tabs = [
-    { id: 'all' as TabType, label: 'All Activity', count: recentSearches.length + savedSearches.length + savedAnalyses.length + authorNotes.length },
+    { id: 'all' as TabType, label: 'All Activity', count: recentSearches.length + savedSearches.length + savedAnalyses.length + authorNotes.length + helpfulInsights.length },
     { id: 'searches' as TabType, label: 'Searches', count: savedSearches.length },
     { id: 'analyses' as TabType, label: 'Analyses', count: savedAnalyses.length },
+    { id: 'insights' as TabType, label: 'Helpful Insights', count: helpfulInsights.length },
     { id: 'notes' as TabType, label: 'Author Notes', count: authorNotes.length },
     { id: 'favorites' as TabType, label: 'Favorites', count: favoriteAuthors.length },
   ]
@@ -361,6 +393,7 @@ export default function HistoryPage() {
   const filteredRecentSearches = filterByTime(recentSearches)
   const filteredSavedSearches = filterByTime(savedSearches)
   const filteredAnalyses = filterByTime(savedAnalyses)
+  const filteredInsights = filterByTime(helpfulInsights)
   const filteredAuthorNotes = filterByTime(authorNotes.map(n => ({ ...n, timestamp: n.updatedAt })))
   const filteredFavorites = filterByTime(favoriteAuthors)
 
@@ -578,6 +611,123 @@ export default function HistoryPage() {
             </Section>
           )}
 
+          {/* Helpful Insights Section */}
+          {(activeTab === 'all' || activeTab === 'insights') && filteredInsights.length > 0 && (
+            <Section
+              title="Helpful Insights"
+              icon={<ThumbsUp size={16} style={{ color: '#10b981' }} />}
+              count={filteredInsights.length}
+              onClear={() => {
+                localStorage.setItem('helpfulInsights', '[]')
+                setHelpfulInsights([])
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {filteredInsights.slice(0, activeTab === 'all' ? 5 : undefined).map((insight: HelpfulInsight) => (
+                  <div
+                    key={insight.id}
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '10px',
+                      padding: '14px 16px',
+                      border: '1px solid #e5e7eb',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onClick={() => {
+                      // Restore the cached session in AI Editor
+                      if (insight.fullText || insight.cachedResult) {
+                        router.push('/ai-editor')
+                        setTimeout(() => {
+                          window.dispatchEvent(new CustomEvent('load-ai-editor-text', {
+                            detail: {
+                              text: insight.fullText || '',
+                              cachedResult: insight.cachedResult
+                            }
+                          }))
+                        }, 100)
+                      } else {
+                        router.push('/ai-editor')
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        backgroundColor: '#d1fae5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <ThumbsUp size={16} style={{ color: '#059669' }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: '#059669',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.02em'
+                          }}>
+                            {insight.type === 'summary' ? 'Summary' : insight.campLabel || 'Perspective'}
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+                            {timeAgo(insight.timestamp)}
+                          </span>
+                        </div>
+                        <p style={{
+                          fontSize: '13px',
+                          color: '#374151',
+                          margin: 0,
+                          lineHeight: 1.5,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {insight.content}
+                        </p>
+                        {insight.originalText && (
+                          <p style={{
+                            fontSize: '11px',
+                            color: '#9ca3af',
+                            margin: '6px 0 0',
+                            fontStyle: 'italic'
+                          }}>
+                            From: "{insight.originalText}"
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const filtered = helpfulInsights.filter(i => i.id !== insight.id)
+                          localStorage.setItem('helpfulInsights', JSON.stringify(filtered))
+                          setHelpfulInsights(filtered)
+                        }}
+                        style={{
+                          padding: '4px',
+                          borderRadius: '4px',
+                          border: 'none',
+                          background: 'none',
+                          color: '#9ca3af',
+                          cursor: 'pointer'
+                        }}
+                        title="Remove insight"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
           {/* Author Notes Section */}
           {(activeTab === 'all' || activeTab === 'notes') && filteredAuthorNotes.length > 0 && (
             <Section
@@ -662,8 +812,19 @@ export default function HistoryPage() {
               title="No saved analyses yet"
               description="Use the AI Editor to analyze text and save your analyses here for future reference."
               actionLabel="Try AI Editor"
-              actionHref="/"
+              actionHref="/ai-editor"
               gradient="linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)"
+            />
+          )}
+
+          {activeTab === 'insights' && filteredInsights.length === 0 && (
+            <EmptyState
+              icon={<ThumbsUp size={40} style={{ color: '#10b981' }} />}
+              title="No helpful insights yet"
+              description="When you find summaries or perspectives helpful in the AI Editor, mark them with a thumbs up to save them here."
+              actionLabel="Try AI Editor"
+              actionHref="/ai-editor"
+              gradient="linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)"
             />
           )}
 
@@ -694,6 +855,7 @@ export default function HistoryPage() {
            filteredRecentSearches.length === 0 &&
            filteredSavedSearches.length === 0 &&
            filteredAnalyses.length === 0 &&
+           filteredInsights.length === 0 &&
            filteredAuthorNotes.length === 0 &&
            filteredFavorites.length === 0 && (
             <div style={{
