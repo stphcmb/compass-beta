@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { X, Quote, ExternalLink, BookOpen, FileText, Video, Mic, Newspaper, GraduationCap } from 'lucide-react'
+import { X, Quote, ExternalLink, BookOpen, FileText, Video, Mic, Newspaper, GraduationCap, Star, MessageSquare, Edit3, Check } from 'lucide-react'
 import { getAuthorWithDetails } from '@/lib/api/thought-leaders'
 
 interface AuthorDetailPanelProps {
@@ -45,6 +45,11 @@ function getSourceIcon(type: string) {
 export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded = false }: AuthorDetailPanelProps) {
   const [author, setAuthor] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
+  const [authorNote, setAuthorNote] = useState('')
+  const [isEditingNote, setIsEditingNote] = useState(false)
+  const [noteText, setNoteText] = useState('')
+  const [noteUpdatedAt, setNoteUpdatedAt] = useState('')
 
   useEffect(() => {
     if (authorId && isOpen) {
@@ -70,6 +75,132 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose])
+
+  // Check if author is in favorites
+  useEffect(() => {
+    if (author?.name) {
+      try {
+        const favorites = JSON.parse(localStorage.getItem('favoriteAuthors') || '[]')
+        setIsFavorite(favorites.some((f: any) => f.name === author.name))
+      } catch {
+        setIsFavorite(false)
+      }
+    }
+  }, [author?.name])
+
+  // Load author note (separate from favorites)
+  useEffect(() => {
+    if (author?.name) {
+      try {
+        const notes = JSON.parse(localStorage.getItem('authorNotes') || '[]')
+        const existingNote = notes.find((n: any) => n.name === author.name)
+        if (existingNote) {
+          setAuthorNote(existingNote.note)
+          setNoteText(existingNote.note)
+          setNoteUpdatedAt(existingNote.updatedAt)
+        } else {
+          setAuthorNote('')
+          setNoteText('')
+          setNoteUpdatedAt('')
+        }
+      } catch {
+        setAuthorNote('')
+        setNoteText('')
+        setNoteUpdatedAt('')
+      }
+    }
+  }, [author?.name])
+
+  // Listen for favorite removal events from history page
+  useEffect(() => {
+    const handleFavoriteRemoved = (e: CustomEvent<{ name: string }>) => {
+      if (e.detail.name === author?.name) {
+        setIsFavorite(false)
+      }
+    }
+    window.addEventListener('favorite-author-removed', handleFavoriteRemoved as EventListener)
+    return () => window.removeEventListener('favorite-author-removed', handleFavoriteRemoved as EventListener)
+  }, [author?.name])
+
+  // Listen for note updates from history page
+  useEffect(() => {
+    const handleNoteUpdated = (e: CustomEvent<{ name: string; note: string }>) => {
+      if (e.detail.name === author?.name) {
+        setAuthorNote(e.detail.note)
+        setNoteText(e.detail.note)
+      }
+    }
+    window.addEventListener('author-note-updated', handleNoteUpdated as EventListener)
+    return () => window.removeEventListener('author-note-updated', handleNoteUpdated as EventListener)
+  }, [author?.name])
+
+  const saveAuthorNote = () => {
+    if (!author?.name) return
+    try {
+      const notes = JSON.parse(localStorage.getItem('authorNotes') || '[]')
+      const existingIndex = notes.findIndex((n: any) => n.name === author.name)
+      const now = new Date().toISOString()
+
+      if (noteText.trim()) {
+        // Add or update note
+        if (existingIndex >= 0) {
+          notes[existingIndex] = { ...notes[existingIndex], note: noteText, updatedAt: now }
+        } else {
+          notes.unshift({
+            id: `note-${Date.now()}`,
+            name: author.name,
+            note: noteText,
+            updatedAt: now
+          })
+        }
+      } else if (existingIndex >= 0) {
+        // Remove empty note
+        notes.splice(existingIndex, 1)
+      }
+
+      localStorage.setItem('authorNotes', JSON.stringify(notes))
+      setAuthorNote(noteText)
+      setNoteUpdatedAt(now)
+      setIsEditingNote(false)
+      // Dispatch event to sync with history page
+      window.dispatchEvent(new CustomEvent('author-note-updated', {
+        detail: { name: author.name, note: noteText }
+      }))
+    } catch (error) {
+      console.error('Error saving note:', error)
+    }
+  }
+
+  const cancelEditNote = () => {
+    setNoteText(authorNote)
+    setIsEditingNote(false)
+  }
+
+  const toggleFavorite = () => {
+    if (!author?.name) return
+    try {
+      const favorites = JSON.parse(localStorage.getItem('favoriteAuthors') || '[]')
+      if (isFavorite) {
+        // Remove from favorites
+        const filtered = favorites.filter((f: any) => f.name !== author.name)
+        localStorage.setItem('favoriteAuthors', JSON.stringify(filtered))
+        setIsFavorite(false)
+        window.dispatchEvent(new CustomEvent('favorite-author-removed', { detail: { name: author.name } }))
+      } else {
+        // Add to favorites
+        favorites.unshift({
+          id: `fav-${Date.now()}`,
+          name: author.name,
+          addedAt: new Date().toISOString()
+        })
+        localStorage.setItem('favoriteAuthors', JSON.stringify(favorites))
+        setIsFavorite(true)
+        window.dispatchEvent(new CustomEvent('favorite-author-added', { detail: { name: author.name } }))
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error)
+    }
+  }
 
   const primaryDomain = author?.camps?.[0]?.domain
   const colors = primaryDomain ? DOMAIN_COLORS[primaryDomain] : DEFAULT_COLORS
@@ -148,7 +279,175 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                 </div>
               </div>
 
+              {/* Favorite Button */}
+              <button
+                onClick={toggleFavorite}
+                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  border: isFavorite ? '1px solid #f59e0b' : '1px solid #e5e7eb',
+                  backgroundColor: isFavorite ? '#fef3c7' : 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Star
+                  size={18}
+                  style={{
+                    color: isFavorite ? '#f59e0b' : '#9ca3af',
+                    fill: isFavorite ? '#f59e0b' : 'none'
+                  }}
+                />
+              </button>
             </div>
+
+            {/* Personal Note Section - Always visible */}
+            <div style={{
+              padding: '12px 20px',
+              borderBottom: '1px solid #e5e7eb',
+              backgroundColor: authorNote ? '#fefce8' : '#f9fafb'
+            }}>
+                {!isEditingNote ? (
+                  <div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: authorNote ? '8px' : 0
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#92400e',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        <MessageSquare size={12} />
+                        Your Note
+                      </div>
+                      <button
+                        onClick={() => setIsEditingNote(true)}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: authorNote ? '#fef3c7' : '#fde68a',
+                          color: '#92400e',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {authorNote ? <Edit3 size={12} /> : <MessageSquare size={12} />}
+                        {authorNote ? 'Edit' : 'Add note'}
+                      </button>
+                    </div>
+                    {authorNote && (
+                      <p style={{
+                        fontSize: '13px',
+                        color: '#78350f',
+                        margin: 0,
+                        fontStyle: 'italic',
+                        lineHeight: 1.5
+                      }}>
+                        "{authorNote}"
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#92400e',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      marginBottom: '8px'
+                    }}>
+                      <MessageSquare size={12} />
+                      Your Note
+                    </div>
+                    <textarea
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      placeholder="Add your personal note about this author..."
+                      autoFocus
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #fcd34d',
+                        fontSize: '13px',
+                        lineHeight: 1.5,
+                        resize: 'none',
+                        minHeight: '70px',
+                        outline: 'none',
+                        fontFamily: 'inherit',
+                        backgroundColor: 'white'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#f59e0b'
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#fcd34d'
+                      }}
+                    />
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      gap: '8px',
+                      marginTop: '8px'
+                    }}>
+                      <button
+                        onClick={cancelEditNote}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #e5e7eb',
+                          background: 'white',
+                          color: '#6b7280',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveAuthorNote}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: '#f59e0b',
+                          color: 'white',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Check size={12} />
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
             {/* Content */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
@@ -427,6 +726,32 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                   )}
                 </div>
               </div>
+              {/* Favorite Button */}
+              <button
+                onClick={toggleFavorite}
+                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '6px',
+                  border: isFavorite ? '1px solid #f59e0b' : '1px solid rgba(0,0,0,0.1)',
+                  backgroundColor: isFavorite ? '#fef3c7' : 'rgba(255,255,255,0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Star
+                  size={16}
+                  style={{
+                    color: isFavorite ? '#f59e0b' : '#6b7280',
+                    fill: isFavorite ? '#f59e0b' : 'none'
+                  }}
+                />
+              </button>
               <button
                 onClick={onClose}
                 style={{
@@ -439,6 +764,148 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                 <X style={{ width: '14px', height: '14px', color: '#374151' }} />
               </button>
             </div>
+
+            {/* Personal Note Section - Always visible */}
+            <div style={{
+              padding: '12px 20px',
+              borderBottom: '1px solid #e5e7eb',
+              backgroundColor: authorNote ? '#fefce8' : '#f9fafb'
+            }}>
+                {!isEditingNote ? (
+                  <div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: authorNote ? '8px' : 0
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#92400e',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        <MessageSquare size={12} />
+                        Your Note
+                      </div>
+                      <button
+                        onClick={() => setIsEditingNote(true)}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: authorNote ? '#fef3c7' : '#fde68a',
+                          color: '#92400e',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {authorNote ? <Edit3 size={12} /> : <MessageSquare size={12} />}
+                        {authorNote ? 'Edit' : 'Add note'}
+                      </button>
+                    </div>
+                    {authorNote && (
+                      <p style={{
+                        fontSize: '13px',
+                        color: '#78350f',
+                        margin: 0,
+                        fontStyle: 'italic',
+                        lineHeight: 1.5
+                      }}>
+                        "{authorNote}"
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#92400e',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      marginBottom: '8px'
+                    }}>
+                      <MessageSquare size={12} />
+                      Your Note
+                    </div>
+                    <textarea
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      placeholder="Add your personal note about this author..."
+                      autoFocus
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #fcd34d',
+                        fontSize: '13px',
+                        lineHeight: 1.5,
+                        resize: 'none',
+                        minHeight: '70px',
+                        outline: 'none',
+                        fontFamily: 'inherit',
+                        backgroundColor: 'white'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#f59e0b'
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#fcd34d'
+                      }}
+                    />
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      gap: '8px',
+                      marginTop: '8px'
+                    }}>
+                      <button
+                        onClick={cancelEditNote}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #e5e7eb',
+                          background: 'white',
+                          color: '#6b7280',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveAuthorNote}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: '#f59e0b',
+                          color: 'white',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Check size={12} />
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
             {/* Content */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>

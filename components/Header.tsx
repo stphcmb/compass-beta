@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
-import { Compass, Users, Home } from 'lucide-react'
+import { Compass, Users, Home, History } from 'lucide-react'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
 
 interface HeaderProps {
@@ -17,6 +17,7 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
     { href: '/', label: 'Home', icon: Home, tooltip: 'Go to homepage' },
     { href: '/explore', label: TERMINOLOGY.search, icon: Compass, tooltip: `Browse ${TERMINOLOGY.camps.toLowerCase()} and positions on AI discourse` },
     { href: '/authors', label: TERMINOLOGY.authors, icon: Users, tooltip: 'Browse thought leaders and their viewpoints' },
+    { href: '/history', label: 'History', icon: History, tooltip: 'View your search history, saved analyses, and favorite authors' },
   ]
 
   return (
@@ -59,7 +60,8 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
             const Icon = item.icon
             const isActive = pathname === item.href ||
                   (item.href === '/authors' && pathname.startsWith('/authors/')) ||
-                  (item.href === '/explore' && pathname === '/results')
+                  (item.href === '/explore' && pathname === '/results') ||
+                  (item.href === '/history' && pathname.startsWith('/history'))
             return (
               <Link
                 key={item.href}
