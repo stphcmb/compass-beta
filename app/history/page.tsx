@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import Header from '@/components/Header'
 import PageHeader from '@/components/PageHeader'
+import EmptyStateComponent from '@/components/EmptyState'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 import { supabase } from '@/lib/supabase'
 
@@ -956,46 +957,66 @@ export default function HistoryPage() {
 
           {/* Tab-specific Empty States */}
           {activeTab === 'searches' && filteredRecentSearches.length === 0 && filteredSavedSearches.length === 0 && (
-            <EmptyState
-              icon={<Search size={40} style={{ color: '#3b82f6' }} />}
+            <EmptyStateComponent
+              icon={Search}
+              iconColor="#3b82f6"
+              iconBgFrom="#dbeafe"
+              iconBgTo="#bfdbfe"
               title="No saved searches yet"
               description="When you search for topics and save them, they'll appear here for quick access."
-              actionLabel="Start Exploring"
-              actionHref="/explore"
-              gradient="linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)"
+              action={{
+                label: "Start Exploring",
+                onClick: () => router.push('/explore'),
+                icon: Compass
+              }}
             />
           )}
 
           {activeTab === 'analyses' && filteredAnalyses.length === 0 && (
-            <EmptyState
-              icon={<Sparkles size={40} style={{ color: '#8b5cf6' }} />}
+            <EmptyStateComponent
+              icon={Sparkles}
+              iconColor="#8b5cf6"
+              iconBgFrom="#f3e8ff"
+              iconBgTo="#e9d5ff"
               title="No saved analyses yet"
               description="Use the AI Editor to analyze text and save your analyses here for future reference."
-              actionLabel="Try AI Editor"
-              actionHref="/ai-editor"
-              gradient="linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)"
+              action={{
+                label: "Try AI Editor",
+                onClick: () => router.push('/ai-editor'),
+                icon: Sparkles
+              }}
             />
           )}
 
           {activeTab === 'insights' && filteredInsights.length === 0 && (
-            <EmptyState
-              icon={<ThumbsUp size={40} style={{ color: '#10b981' }} />}
+            <EmptyStateComponent
+              icon={ThumbsUp}
+              iconColor="#10b981"
+              iconBgFrom="#d1fae5"
+              iconBgTo="#a7f3d0"
               title="No helpful insights yet"
               description="When you find summaries or perspectives helpful in the AI Editor, mark them with a thumbs up to save them here."
-              actionLabel="Try AI Editor"
-              actionHref="/ai-editor"
-              gradient="linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)"
+              action={{
+                label: "Try AI Editor",
+                onClick: () => router.push('/ai-editor'),
+                icon: Sparkles
+              }}
             />
           )}
 
           {activeTab === 'authors' && getUniqueAuthorsCount() === 0 && (
-            <EmptyState
-              icon={<Users size={40} style={{ color: '#6366f1' }} />}
+            <EmptyStateComponent
+              icon={Users}
+              iconColor="#6366f1"
+              iconBgFrom="#e0e7ff"
+              iconBgTo="#c7d2fe"
               title="No saved authors yet"
               description="Star your favorite authors or add notes to any author's profile. They'll appear here for quick access."
-              actionLabel="Discover Authors"
-              actionHref="/authors"
-              gradient="linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)"
+              action={{
+                label: "Discover Authors",
+                onClick: () => router.push('/authors'),
+                icon: Users
+              }}
             />
           )}
 
@@ -1006,78 +1027,22 @@ export default function HistoryPage() {
            filteredAnalyses.length === 0 &&
            filteredInsights.length === 0 &&
            getUniqueAuthorsCount() === 0 && (
-            <div style={{
-              textAlign: 'center',
-              padding: '48px 24px',
-              background: 'white',
-              borderRadius: '16px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-            }}>
-              <div style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px'
-              }}>
-                <History size={36} style={{ color: '#6366f1' }} />
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
-                {timeFilter !== 'all' ? 'No activity in this time period' : 'Your research journey starts here'}
-              </h3>
-              <p style={{ fontSize: '14px', color: '#6b7280', maxWidth: '420px', margin: '0 auto 24px', lineHeight: '1.6' }}>
-                {timeFilter !== 'all'
-                  ? 'Try selecting a different time range to see more activity.'
-                  : 'As you explore perspectives, save searches, analyze content, and bookmark authors, your activity will be tracked here.'}
-              </p>
-              {timeFilter === 'all' && (
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <a
-                    href="/explore"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '10px 20px',
-                      backgroundColor: '#6366f1',
-                      color: 'white',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      textDecoration: 'none',
-                      transition: 'background-color 0.2s'
-                    }}
-                  >
-                    <Search size={16} />
-                    Explore Perspectives
-                  </a>
-                  <a
-                    href="/authors"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '10px 20px',
-                      backgroundColor: 'white',
-                      color: '#374151',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      textDecoration: 'none',
-                      border: '1px solid #e5e7eb',
-                      transition: 'border-color 0.2s'
-                    }}
-                  >
-                    <Users size={16} />
-                    Browse Authors
-                  </a>
-                </div>
-              )}
-            </div>
+            <EmptyStateComponent
+              icon={History}
+              iconColor="var(--color-indigo-500)"
+              iconBgFrom="var(--color-indigo-50)"
+              iconBgTo="var(--color-indigo-100)"
+              title={timeFilter !== 'all' ? 'No activity in this time period' : 'Your research journey starts here'}
+              description={timeFilter !== 'all'
+                ? 'Try selecting a different time range to see more activity.'
+                : 'As you explore perspectives, save searches, analyze content, and bookmark authors, your activity will be tracked here.'}
+              action={timeFilter === 'all' ? {
+                label: "Explore Perspectives",
+                onClick: () => router.push('/explore'),
+                icon: Compass
+              } : undefined}
+              size="lg"
+            />
           )}
         </div>
         </div>
@@ -2292,71 +2257,3 @@ function AboutHistoryModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-// Reusable Empty State Component
-function EmptyState({
-  icon,
-  title,
-  description,
-  actionLabel,
-  actionHref,
-  gradient
-}: {
-  icon: React.ReactNode
-  title: string
-  description: string
-  actionLabel?: string
-  actionHref?: string
-  gradient: string
-}) {
-  return (
-    <div style={{
-      textAlign: 'center',
-      padding: '48px 24px',
-      background: 'white',
-      borderRadius: '16px',
-      border: '1px solid #e5e7eb',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-    }}>
-      <div style={{
-        width: '72px',
-        height: '72px',
-        borderRadius: '50%',
-        background: gradient,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        margin: '0 auto 20px'
-      }}>
-        {icon}
-      </div>
-      <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
-        {title}
-      </h3>
-      <p style={{ fontSize: '14px', color: '#6b7280', maxWidth: '360px', margin: '0 auto', lineHeight: '1.5' }}>
-        {description}
-      </p>
-      {actionLabel && actionHref && (
-        <a
-          href={actionHref}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginTop: '20px',
-            padding: '10px 20px',
-            backgroundColor: '#6366f1',
-            color: 'white',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '500',
-            textDecoration: 'none',
-            transition: 'background-color 0.2s'
-          }}
-        >
-          <Compass size={16} />
-          {actionLabel}
-        </a>
-      )}
-    </div>
-  )
-}

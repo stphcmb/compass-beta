@@ -3,66 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronRight, Layers, X, PanelLeftClose } from 'lucide-react'
-import { getDomainColor } from './DiscourseMap'
-
-// Domain metadata with context for new users
-interface DomainInfo {
-  name: string
-  shortName: string
-  icon: string
-  coreQuestion: string
-  keyTension: string
-  description: string
-  youWillFind: string
-}
-
-const DOMAIN_INFO: DomainInfo[] = [
-  {
-    name: 'AI Technical Capabilities',
-    shortName: 'Technical',
-    icon: '🔬',
-    coreQuestion: 'How should AI systems be built?',
-    keyTension: 'Scaling vs. New Approaches',
-    description: 'The foundational debate about AI\'s trajectory. Some experts believe current architectures just need more data and compute to reach transformative intelligence. Others argue we\'re hitting fundamental limits and need entirely new approaches.',
-    youWillFind: 'Research scientists, ML engineers, and technical leaders debating whether scaling laws will continue or if breakthroughs require new paradigms.'
-  },
-  {
-    name: 'AI & Society',
-    shortName: 'Society',
-    icon: '🌍',
-    coreQuestion: 'How should AI be deployed?',
-    keyTension: 'Safety First vs. Democratize Fast',
-    description: 'The tension between caution and access. Safety advocates worry about existential risks and want to slow deployment until we understand AI better. Democratizers argue that broad access empowers people and that delay concentrates power.',
-    youWillFind: 'Ethicists, public intellectuals, and policy thinkers wrestling with how AI should reshape daily life and human potential.'
-  },
-  {
-    name: 'Enterprise AI Adoption',
-    shortName: 'Enterprise',
-    icon: '🏢',
-    coreQuestion: 'How should orgs integrate AI?',
-    keyTension: 'Business-led vs. Tech-led',
-    description: 'The practical challenge of making AI work in organizations. Should transformation start with business problems and ROI? Or should you build robust technical infrastructure first and let capabilities drive strategy?',
-    youWillFind: 'CTOs, consultants, and transformation leaders sharing what actually works when deploying AI at scale.'
-  },
-  {
-    name: 'AI Governance & Oversight',
-    shortName: 'Governance',
-    icon: '⚖️',
-    coreQuestion: 'How should AI be regulated?',
-    keyTension: 'Regulate vs. Innovate',
-    description: 'The policy battleground. Interventionists want guardrails before capabilities advance further. Innovation advocates worry premature rules will stifle progress and hand leadership to less cautious nations.',
-    youWillFind: 'Policymakers, legal scholars, and tech leaders debating who should control AI and what rules should apply.'
-  },
-  {
-    name: 'Future of Work',
-    shortName: 'Work',
-    icon: '💼',
-    coreQuestion: 'How will AI change jobs?',
-    keyTension: 'Displacement vs. Collaboration',
-    description: 'The question that affects everyone. Will AI automate jobs away, requiring massive policy responses? Or will humans and AI collaborate, with machines amplifying what people do rather than replacing them?',
-    youWillFind: 'Economists, HR leaders, and futurists examining how AI will transform employment, skills, and the workplace.'
-  }
-]
+import { DOMAINS, getDomainConfig } from '@/lib/constants/domains'
 
 interface DomainData {
   name: string
@@ -231,7 +172,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
           }}
         >
           <span className="text-[12px] text-indigo-700 font-medium">
-            Filtering: {DOMAIN_INFO.find(d => d.name === activeDomain)?.shortName}
+            Filtering: {DOMAINS.find(d => d.name === activeDomain)?.shortName}
           </span>
           <button
             onClick={clearFilter}
@@ -245,9 +186,9 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
       {/* Domain List - Scrollable */}
       <div className="flex-1 overflow-y-auto" style={{ padding: '8px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {DOMAIN_INFO.map((domain) => {
+        {DOMAINS.map((domain) => {
           const data = domainData[domain.name] || { perspectives: [], authorCount: 0 }
-          const colors = getDomainColor(domain.name)
+          const colors = getDomainConfig(domain.name)
           const isActive = activeDomain === domain.name
           const isFiltered = activeDomain && activeDomain !== domain.name
           const isHovered = hoveredDomain === domain.name
@@ -278,7 +219,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                     className="font-semibold flex-1"
                     style={{
                       fontSize: '14px',
-                      color: isActive || isHovered ? colors.textDark : '#1f2937'
+                      color: isActive || isHovered ? colors.text : '#1f2937'
                     }}
                   >
                     {domain.shortName}
@@ -299,7 +240,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                   className="leading-snug"
                   style={{
                     fontSize: '12px',
-                    color: isActive || isHovered ? colors.textDark : '#6b7280',
+                    color: isActive || isHovered ? colors.text : '#6b7280',
                     marginTop: '4px',
                     marginBottom: isHovered ? '8px' : '0'
                   }}
@@ -334,7 +275,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                       <div style={{
                         fontSize: '11px',
                         fontWeight: 600,
-                        color: colors.textDark,
+                        color: colors.text,
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                         marginBottom: '4px'

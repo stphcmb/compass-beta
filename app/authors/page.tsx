@@ -5,24 +5,23 @@ import { useSearchParams } from 'next/navigation'
 import { Search, X, Users } from 'lucide-react'
 import Header from '@/components/Header'
 import PageHeader from '@/components/PageHeader'
-import SearchBar from '@/components/SearchBar'
 import AuthorDetailPanel from '@/components/AuthorDetailPanel'
+import EmptyState from '@/components/EmptyState'
 import { AboutThoughtLeadersModal, useAboutThoughtLeadersModal } from '@/components/AboutThoughtLeadersModal'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { getCampsWithAuthors } from '@/lib/api/thought-leaders'
+import { DOMAINS, getDomainConfig } from '@/lib/constants/domains'
 
-// Domain colors
-const DOMAINS = [
-  { name: 'AI Technical Capabilities', short: 'Tech', bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
-  { name: 'AI & Society', short: 'Society', bg: '#f3e8ff', text: '#7c3aed', border: '#c4b5fd' },
-  { name: 'Enterprise AI Adoption', short: 'Enterprise', bg: '#d1fae5', text: '#059669', border: '#6ee7b7' },
-  { name: 'AI Governance & Oversight', short: 'Governance', bg: '#fee2e2', text: '#dc2626', border: '#fca5a5' },
-  { name: 'Future of Work', short: 'Work', bg: '#fef3c7', text: '#d97706', border: '#fcd34d' },
-]
-
+// Helper to get domain style for components
 const getDomainStyle = (domain: string | null) => {
-  const d = DOMAINS.find(d => d.name === domain)
-  return d || { name: 'Other', short: 'Other', bg: '#f3f4f6', text: '#6b7280', border: '#d1d5db' }
+  const config = getDomainConfig(domain)
+  return {
+    name: config.name,
+    short: config.shortName,
+    bg: config.bgLight,
+    text: config.text,
+    border: config.border
+  }
 }
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
@@ -344,7 +343,7 @@ function AuthorIndexPageContent() {
                         padding: '5px 10px',
                         borderRadius: '14px',
                         border: isActive ? `1.5px solid ${d.text}` : '1px solid var(--color-light-gray)',
-                        backgroundColor: isActive ? d.bg : 'var(--color-air-white)',
+                        backgroundColor: isActive ? d.bgLight : 'var(--color-air-white)',
                         cursor: 'pointer',
                         fontSize: '12px',
                         fontWeight: 500,
@@ -353,7 +352,7 @@ function AuthorIndexPageContent() {
                       }}
                       onMouseEnter={(e) => {
                         if (!isActive) {
-                          e.currentTarget.style.backgroundColor = d.bg
+                          e.currentTarget.style.backgroundColor = d.bgLight
                           e.currentTarget.style.borderColor = d.border
                           e.currentTarget.style.color = d.text
                         }
@@ -370,7 +369,7 @@ function AuthorIndexPageContent() {
                         width: '6px', height: '6px', borderRadius: '50%',
                         backgroundColor: d.text
                       }} />
-                      {d.short}
+                      {d.shortName}
                     </button>
                   )
                 })}
@@ -567,7 +566,7 @@ function AuthorIndexPageContent() {
                         <div style={{
                           display: 'flex', alignItems: 'center', gap: '8px',
                           padding: '8px 12px', borderRadius: '6px',
-                          backgroundColor: domain.bg, marginBottom: '6px',
+                          backgroundColor: domain.bgLight, marginBottom: '6px',
                           position: 'sticky', top: 0, zIndex: 1
                         }}>
                           <span style={{
@@ -591,11 +590,11 @@ function AuthorIndexPageContent() {
                                 style={{
                                   display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
                                   padding: '6px 8px 6px 12px', borderRadius: '4px', border: 'none',
-                                  backgroundColor: isSelected ? domain.bg : 'transparent',
+                                  backgroundColor: isSelected ? domain.bgLight : 'transparent',
                                   cursor: 'pointer', transition: 'all 60ms ease-out', textAlign: 'left'
                                 }}
                                 onMouseEnter={(e) => {
-                                  if (!isSelected) e.currentTarget.style.backgroundColor = domain.bg
+                                  if (!isSelected) e.currentTarget.style.backgroundColor = domain.bgLight
                                 }}
                                 onMouseLeave={(e) => {
                                   if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'
@@ -727,14 +726,14 @@ function AuthorIndexPageContent() {
                         gap: '5px',
                         padding: '5px 12px',
                         borderRadius: 'var(--radius-full)',
-                        backgroundColor: d.bg,
+                        backgroundColor: d.bgLight,
                         fontSize: '12px',
                         color: d.text,
                         fontWeight: 500
                       }}
                     >
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: d.text }} />
-                      {d.short}
+                      {d.shortName}
                     </span>
                   ))}
                   <span style={{ fontSize: '12px', color: 'var(--color-mid-gray)', padding: '5px 0' }}>
