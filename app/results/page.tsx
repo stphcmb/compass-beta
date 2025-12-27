@@ -2,15 +2,12 @@
 
 import { Suspense, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import Header from '@/components/Header'
 import SearchBar from '@/components/SearchBar'
 import PositioningSnapshot from '@/components/PositioningSnapshot'
 import CampAccordion from '@/components/CampAccordion'
 import BackToTop from '@/components/BackToTop'
 import { ExpandedQueries } from '@/components/search-expansion'
-
-const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
 function ResultsPageContent() {
   const searchParams = useSearchParams()
@@ -54,9 +51,8 @@ function ResultsPageContent() {
 
   return (
     <div className="h-screen bg-gray-50 flex">
-      <Sidebar />
-      <Header />
-      <main ref={mainRef} className="flex-1 ml-64 mt-16 overflow-y-auto">
+      <Header sidebarCollapsed={true} />
+      <main ref={mainRef} className="flex-1 mt-16 overflow-y-auto">
         <div className="max-w-5xl mx-auto p-6">
           <div className="mb-6">
             <SearchBar initialQuery={query} showEdit={true} />

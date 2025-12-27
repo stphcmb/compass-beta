@@ -8,6 +8,10 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 
 export default function Sidebar() {
+  // TEMPORARILY HIDDEN - Keep code for potential reactivation
+  // To re-enable: remove this early return
+  return null
+
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -218,12 +222,12 @@ export default function Sidebar() {
     }
   }
 
-  const handleAIEditorAnalysisClick = (text: string) => {
-    // Navigate to AI editor page and dispatch event with text to load
+  const handleAIEditorAnalysisClick = (text: string, cachedResult?: any) => {
+    // Navigate to AI editor page and dispatch event with text and cached result
     router.push('/ai-editor')
     // Use setTimeout to ensure navigation completes before dispatching event
     setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('load-ai-editor-text', { detail: { text } }))
+      window.dispatchEvent(new CustomEvent('load-ai-editor-text', { detail: { text, cachedResult } }))
     }, 100)
   }
 
@@ -398,7 +402,7 @@ export default function Sidebar() {
                 {savedAIEditorAnalyses.map((analysis) => (
                   <div key={analysis.id} className="relative group">
                     <button
-                      onClick={() => handleAIEditorAnalysisClick(analysis.text)}
+                      onClick={() => handleAIEditorAnalysisClick(analysis.text, analysis.cachedResult)}
                       className="w-full text-left transition-all duration-150"
                       style={{
                         padding: '8px 10px',

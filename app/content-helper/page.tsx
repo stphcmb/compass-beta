@@ -1,13 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import Header from '@/components/Header'
 import CampAccordion from '@/components/CampAccordion'
-
-const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
 
 export default function ContentHelperPage({
   searchParams,
@@ -26,9 +23,8 @@ export default function ContentHelperPage({
 
   return (
     <div className="h-screen bg-gray-50 flex">
-      <Sidebar />
-      <Header />
-      <main className="flex-1 ml-64 mt-16 overflow-y-auto">
+      <Header sidebarCollapsed={true} />
+      <main className="flex-1 mt-16 overflow-y-auto">
         <div className="max-w-5xl mx-auto p-6">
           {/* Back button */}
           <Link

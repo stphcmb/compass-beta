@@ -229,16 +229,32 @@ Act like an editorial partner, not a taxonomy classifier. Give concrete feedback
 
 CRITICAL: Use the EXACT IDs provided in the context above. For campId, use the "Camp ID" value. For authorId, use the "ID" value listed with each author. Do not make up or modify these IDs.
 
-CRITICAL CONSTRAINT - AUTHOR CONSISTENCY:
-- ANY author you mention by name in editorialSuggestions MUST also appear in the topAuthors array of at least one rankedCamp.
-- Before mentioning an author in presentPerspectives or missingPerspectives, ensure they are included in a camp's topAuthors list.
-- If you want to mention an author in editorial suggestions, you MUST first add them to a relevant camp's topAuthors (you can include 3-5 authors per camp).
-- This ensures all mentioned authors appear in the "Thought Leaders" section below the editorial suggestions.
+CRITICAL CONSTRAINT - AUTHOR CONSISTENCY (MUST FOLLOW):
+- NEVER mention an author name in executiveSummary or editorialSuggestions unless they appear in topAuthors of at least one rankedCamp.
+- The executiveSummary and editorialSuggestions are a SUMMARY of the detailed rankedCamps analysis below them.
+- First decide which authors to include in rankedCamps.topAuthors, THEN write executiveSummary/editorialSuggestions referencing ONLY those authors.
+- If you mention "Sam Altman" in suggestions, he MUST be in a camp's topAuthors array.
+
+EXECUTIVE SUMMARY GUIDELINES:
+- The executiveSummary should capture the GIST of the detailed analysis in 2-4 bullet points.
+- Focus on the key themes and takeaways, not exhaustive author lists.
+- Keep it concise - no need to name every author. Summarize the main strengths and gaps.
+- Do NOT over-quote or list many author names. Distill the essence.
 
 Return ONLY valid JSON (no markdown, no extra text):
 
 {
   "summary": "What the user is arguing...",
+  "executiveSummary": {
+    "strengths": [
+      "Your draft effectively captures [key theme] - this aligns with mainstream thinking from leaders like [1-2 names max]",
+      "Strong grounding in [perspective] strengthens your argument"
+    ],
+    "improvements": [
+      "Consider the counterargument that [specific gap] - voices like [1-2 names] offer important pushback",
+      "Your draft could benefit from addressing [missing angle]"
+    ]
+  },
   "rankedCamps": [
     {
       "campId": "exact-camp-id-from-context",
@@ -261,7 +277,7 @@ Return ONLY valid JSON (no markdown, no extra text):
   ],
   "editorialSuggestions": {
     "presentPerspectives": [
-      "You're citing [Author]'s view that [specific point]. This strengthens your argument by...",
+      "You're drawing on [Author]'s view that [specific point]. This strengthens your argument by...",
       "Your emphasis on [specific theme] aligns with [Author]'s position on..."
     ],
     "missingPerspectives": [
@@ -305,6 +321,14 @@ Return ONLY valid JSON (no markdown, no extra text):
     // Validate the structure
     if (!result.summary || !result.rankedCamps || !result.editorialSuggestions) {
       throw new Error('Invalid response structure from Gemini')
+    }
+
+    // Ensure executiveSummary exists (provide fallback if missing)
+    if (!result.executiveSummary) {
+      result.executiveSummary = {
+        strengths: result.editorialSuggestions.presentPerspectives?.slice(0, 2) || [],
+        improvements: result.editorialSuggestions.missingPerspectives?.slice(0, 2) || []
+      }
     }
 
     return result

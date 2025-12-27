@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AIEditorAnalyzeResponse } from '@/lib/ai-editor'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
-import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark, Copy, FileDown } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Plus } from 'lucide-react'
 
 // Loading phase messages for progressive feedback
 const LOADING_PHASES = [
@@ -21,6 +22,7 @@ interface AIEditorProps {
 }
 
 export default function AIEditor({ showTitle = false }: AIEditorProps) {
+  const router = useRouter()
   const { openPanel } = useAuthorPanel()
   const [text, setText] = useState('')
   const [result, setResult] = useState<AIEditorAnalyzeResponse | null>(null)
@@ -34,6 +36,8 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
   const [exporting, setExporting] = useState(false)
   const [likedSummary, setLikedSummary] = useState(false)
   const [likedCamps, setLikedCamps] = useState<Set<number>>(new Set())
+  const [savedAnalyses, setSavedAnalyses] = useState<any[]>([])
+  const [pendingFromHome, setPendingFromHome] = useState<boolean | null>(null) // null = checking, true/false = resolved
   const { showToast } = useToast()
 
   const suggestionsRef = useRef<HTMLDivElement>(null)
@@ -41,22 +45,120 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
   const summaryRef = useRef<HTMLDivElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
 
-  // Listen for load text events from sidebar
+  // Check for pending analysis from home page (via sessionStorage) on mount
+  useEffect(() => {
+    const runPendingAnalysis = async () => {
+      try {
+        const pending = sessionStorage.getItem('pendingAnalysis')
+        if (pending) {
+          const { text: pendingText, autoAnalyze, timestamp } = JSON.parse(pending)
+          // Only use if recent (within 10 seconds) to avoid stale data
+          if (autoAnalyze && Date.now() - timestamp < 10000) {
+            sessionStorage.removeItem('pendingAnalysis')
+            setText(pendingText)
+            setLoading(true)
+            setLoadingPhase(0)
+            setPendingFromHome(true)
+
+            // Start cycling through loading phases
+            const phaseTimers: NodeJS.Timeout[] = []
+            let currentPhase = 0
+
+            const advancePhase = () => {
+              if (currentPhase < LOADING_PHASES.length - 1) {
+                currentPhase++
+                setLoadingPhase(currentPhase)
+                const nextDuration = LOADING_PHASES[currentPhase].duration
+                if (nextDuration > 0) {
+                  phaseTimers.push(setTimeout(advancePhase, nextDuration))
+                }
+              }
+            }
+
+            if (LOADING_PHASES[0].duration > 0) {
+              phaseTimers.push(setTimeout(advancePhase, LOADING_PHASES[0].duration))
+            }
+
+            // Call the API
+            try {
+              const res = await fetch('/api/brain/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: pendingText }),
+              })
+              const data = await res.json()
+
+              if (!res.ok) {
+                setError(data.error || data.message || 'Analysis failed')
+                phaseTimers.forEach(timer => clearTimeout(timer))
+                setLoading(false)
+                setLoadingPhase(0)
+                setPendingFromHome(false)
+              } else {
+                // Save and navigate to results
+                const analysisId = addToRecentSearches(pendingText, data)
+                updateSavedAnalysisCache(pendingText, data)
+                phaseTimers.forEach(timer => clearTimeout(timer))
+                setLoading(false)
+                setLoadingPhase(0)
+                navigateToResults(analysisId)
+              }
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Network error')
+              phaseTimers.forEach(timer => clearTimeout(timer))
+              setLoading(false)
+              setLoadingPhase(0)
+              setPendingFromHome(false)
+            }
+            return
+          }
+          sessionStorage.removeItem('pendingAnalysis')
+        }
+      } catch (e) {
+        console.error('Error checking pending analysis:', e)
+      }
+      setPendingFromHome(false)
+    }
+
+    runPendingAnalysis()
+  }, [])
+
+  // Listen for load text events from sidebar/home
   useEffect(() => {
     const handleLoadText = (e: Event) => {
-      const ev = e as CustomEvent<{ text: string; cachedResult?: AIEditorAnalyzeResponse }>
+      const ev = e as CustomEvent<{ text: string; cachedResult?: AIEditorAnalyzeResponse; autoAnalyze?: boolean; id?: string }>
       if (ev?.detail?.text) {
-        setText(ev.detail.text)
-        // If there's a cached result, restore it; otherwise clear
-        setResult(ev.detail.cachedResult || null)
-        setError(null)
-        setSavedOnce(false)
+        const textToLoad = ev.detail.text
+
+        if (ev.detail.cachedResult && ev.detail.id) {
+          // Navigate directly to results page
+          router.push(`/ai-editor/results/${ev.detail.id}`)
+        } else if (ev.detail.autoAnalyze) {
+          // Auto-analyze - set text and trigger analysis
+          setText(textToLoad)
+          setError(null)
+          setLikedSummary(false)
+          setLikedCamps(new Set())
+          setResult(null)
+          setSavedOnce(false)
+          setTimeout(() => {
+            handleAnalyze(textToLoad)
+          }, 50)
+        } else {
+          // Just load text without analyzing
+          setText(textToLoad)
+          setError(null)
+          setLikedSummary(false)
+          setLikedCamps(new Set())
+          setResult(null)
+          setSavedOnce(false)
+        }
       }
     }
 
     window.addEventListener('load-ai-editor-text', handleLoadText as EventListener)
     return () => window.removeEventListener('load-ai-editor-text', handleLoadText as EventListener)
-  }, [])
+  }, [router])
 
   // Fetch all authors on mount for linkification
   useEffect(() => {
@@ -71,11 +173,86 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
     fetchAuthors()
   }, [])
 
+  // Load saved analyses for history dropdown
+  useEffect(() => {
+    const loadSavedAnalyses = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+        setSavedAnalyses(saved.slice(0, 10))
+      } catch (error) {
+        console.error('Error loading saved analyses:', error)
+      }
+    }
+    loadSavedAnalyses()
+
+    // Listen for new saves
+    const handleNewSave = () => loadSavedAnalyses()
+    window.addEventListener('ai-editor-saved', handleNewSave)
+    return () => window.removeEventListener('ai-editor-saved', handleNewSave)
+  }, [])
+
+  // Load a saved analysis - navigate to results page if cached, auto-analyze if not
+  const loadSavedAnalysis = (analysis: any) => {
+    if (analysis.cachedResult && analysis.id) {
+      // Navigate directly to results page
+      navigateToResults(analysis.id)
+    } else {
+      // No cache - set text and trigger analysis
+      setText(analysis.text)
+      setError(null)
+      setSavedOnce(true)
+      setLikedSummary(false)
+      setLikedCamps(new Set())
+      setResult(null)
+      setTimeout(() => {
+        handleAnalyze(analysis.text)
+      }, 50)
+    }
+  }
+
+  // Clear and start a new analysis
+  const startNewAnalysis = () => {
+    setText('')
+    setResult(null)
+    setError(null)
+    setSavedOnce(false)
+    setLikedSummary(false)
+    setLikedCamps(new Set())
+  }
+
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const addToRecentSearches = (searchText: string, analysisResult: AIEditorAnalyzeResponse) => {
+  // Update cached result for existing saved analyses
+  const updateSavedAnalysisCache = (searchText: string, analysisResult: AIEditorAnalyzeResponse) => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+      const trimmedText = searchText.trim()
+
+      let updated = false
+      const updatedSaved = saved.map((s: any) => {
+        if (s.text?.trim() === trimmedText) {
+          updated = true
+          return { ...s, cachedResult: analysisResult }
+        }
+        return s
+      })
+
+      if (updated) {
+        localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(updatedSaved))
+        // Refresh the local state
+        setSavedAnalyses(updatedSaved.slice(0, 10))
+        // Notify sidebar
+        window.dispatchEvent(new CustomEvent('ai-editor-saved'))
+      }
+    } catch (error) {
+      console.error('Error updating saved analysis cache:', error)
+    }
+  }
+
+  const addToRecentSearches = (searchText: string, analysisResult: AIEditorAnalyzeResponse): string => {
+    const analysisId = `${Date.now()}`
     try {
       const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
 
@@ -87,7 +264,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
 
       // Add to beginning with cached result
       filtered.unshift({
-        id: `recent-ai-editor-${Date.now()}`,
+        id: analysisId,
         query: preview,
         type: 'ai-editor',
         fullText: searchText,
@@ -98,9 +275,43 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
       // Keep only last 20
       const limited = filtered.slice(0, 20)
       localStorage.setItem('recentSearches', JSON.stringify(limited))
+
+      // Also save to savedAIEditorAnalyses for the results page
+      const saved = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+      const savedFiltered = saved.filter((s: any) => s.text?.trim() !== searchText.trim())
+      savedFiltered.unshift({
+        id: analysisId,
+        text: searchText.trim(),
+        preview,
+        cachedResult: analysisResult,
+        timestamp: new Date().toISOString()
+      })
+      localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(savedFiltered.slice(0, 20)))
+      window.dispatchEvent(new CustomEvent('ai-editor-saved'))
     } catch (error) {
       console.error('Error adding to recent searches:', error)
     }
+    return analysisId
+  }
+
+  // Navigate to the results page for a given analysis
+  const navigateToResults = (analysisId: string) => {
+    router.push(`/ai-editor/results/${analysisId}`)
+  }
+
+  // Check if we have a cached result for given text
+  const findCachedResult = (searchText: string): AIEditorAnalyzeResponse | null => {
+    const trimmedText = searchText.trim()
+    // Check saved analyses
+    const cached = savedAnalyses.find(a => a.text?.trim() === trimmedText && a.cachedResult)
+    if (cached?.cachedResult) return cached.cachedResult
+    // Check recent searches
+    try {
+      const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+      const recentCached = recent.find((s: any) => s.fullText?.trim() === trimmedText && s.cachedResult)
+      if (recentCached?.cachedResult) return recentCached.cachedResult
+    } catch {}
+    return null
   }
 
   // Unified analyze function - accepts optional text parameter for auto-analyze
@@ -109,6 +320,22 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
 
     if (!textToAnalyze.trim()) {
       if (!textOverride) setError('Please enter some text to analyze')
+      return
+    }
+
+    // Check for cached result first - instant loading!
+    const cached = findCachedResult(textToAnalyze)
+    if (cached) {
+      // Find the existing ID or create new one
+      const savedAnalyses = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+      const existing = savedAnalyses.find((a: any) => a.text?.trim() === textToAnalyze.trim() && a.cachedResult)
+      if (existing?.id) {
+        navigateToResults(existing.id)
+        return
+      }
+      // Fallback: save and navigate
+      const newId = addToRecentSearches(textToAnalyze, cached)
+      navigateToResults(newId)
       return
     }
 
@@ -147,13 +374,20 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
 
       if (!response.ok) {
         setError(data.error || data.message || 'Analysis failed')
+        phaseTimers.forEach(timer => clearTimeout(timer))
+        setLoading(false)
+        setLoadingPhase(0)
       } else {
-        setResult(data)
-        addToRecentSearches(textToAnalyze, data)
+        // Save and navigate to results
+        const analysisId = addToRecentSearches(textToAnalyze, data)
+        updateSavedAnalysisCache(textToAnalyze, data)
+        phaseTimers.forEach(timer => clearTimeout(timer))
+        setLoading(false)
+        setLoadingPhase(0)
+        navigateToResults(analysisId)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error')
-    } finally {
       phaseTimers.forEach(timer => clearTimeout(timer))
       setLoading(false)
       setLoadingPhase(0)
@@ -179,11 +413,12 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
       // Remove if already exists (to avoid duplicates)
       const filtered = saved.filter((s: any) => s.text !== text.trim())
 
-      // Add to beginning
+      // Add to beginning with cached result for instant loading
       filtered.unshift({
         id: `ai-editor-${Date.now()}`,
         text: text.trim(),
         preview,
+        cachedResult: result, // Store the analysis result for instant loading
         timestamp: new Date().toISOString()
       })
 
@@ -194,7 +429,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
       setSavedOnce(true)
       showToast('Analysis saved successfully')
       window.dispatchEvent(new CustomEvent('ai-editor-saved', {
-        detail: { text: text.trim(), preview, timestamp: new Date().toISOString() }
+        detail: { text: text.trim(), preview, cachedResult: result, timestamp: new Date().toISOString() }
       }))
     } catch (e) {
       console.error('Error saving AI editor analysis:', e)
@@ -707,10 +942,10 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
           key={`author-link-${linkKey++}`}
           onClick={() => authorId && openPanel(authorId)}
           style={{
-            color: 'var(--color-accent)',
+            color: '#0158AE',
             fontWeight: 'var(--weight-semibold)',
             textDecoration: 'underline',
-            textDecorationColor: 'rgba(99, 102, 241, 0.3)',
+            textDecorationColor: 'rgba(1, 88, 174, 0.3)',
             textUnderlineOffset: '2px',
             transition: 'all var(--duration-fast) var(--ease-out)',
             background: 'none',
@@ -720,10 +955,10 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
             cursor: authorId ? 'pointer' : 'default'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.textDecorationColor = 'var(--color-accent)'
+            e.currentTarget.style.textDecorationColor = '#0158AE'
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.textDecorationColor = 'rgba(99, 102, 241, 0.3)'
+            e.currentTarget.style.textDecorationColor = 'rgba(1, 88, 174, 0.3)'
           }}
         >
           {authorName}
@@ -743,6 +978,21 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
 
   const canAnalyze = text.trim().length > 0 && text.length <= 4000 && !loading
 
+  // Show loading state while checking for pending analysis from home
+  if (pendingFromHome === null) {
+    return (
+      <div style={{
+        maxWidth: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '200px'
+      }}>
+        <Loader2 className="animate-spin" style={{ width: '32px', height: '32px', color: '#1075DC' }} />
+      </div>
+    )
+  }
+
   return (
     <div style={{ maxWidth: '100%' }}>
       {/* Page Title - only show when showTitle is true */}
@@ -752,120 +1002,319 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
             fontSize: 'clamp(1.5rem, 4vw, 2rem)',
             fontWeight: 'var(--weight-bold)',
             marginBottom: 'var(--space-2)',
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+            background: 'linear-gradient(135deg, #162950 0%, #1075DC 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
           }}>
             AI Editor
           </h1>
-          <p style={{ fontSize: 'var(--text-body)', color: 'var(--color-mid-gray)' }}>
+          <p style={{ fontSize: 'var(--text-body)', color: '#64748b' }}>
             Analyze your draft against 200+ thought leaders
           </p>
         </div>
       )}
 
-      {/* Input Section - Glassmorphism style */}
-      <div
-        style={{
-          borderRadius: '16px',
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(20px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-          border: '2px solid rgba(139, 92, 246, 0.3)',
-          overflow: 'hidden',
-          marginBottom: result || loading || error ? 'var(--space-6)' : 0
-        }}
-      >
-        <textarea
-          id="ai-editor-text-input"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Paste your draft, thesis, or argument here..."
-          disabled={loading}
-          style={{
-            width: '100%',
-            height: '160px',
-            padding: '20px',
-            border: 'none',
-            fontSize: '16px',
-            lineHeight: '1.6',
-            color: '#1e293b',
-            backgroundColor: 'transparent',
-            resize: 'none',
-            outline: 'none',
-            opacity: loading ? 0.5 : 1
-          }}
-        />
+      {/* Input Section - Two modes: Edit (no result) and View (has result) */}
+      {!result ? (
+        /* Edit Mode - Editable textarea with Analyze button */
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 20px',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-            borderTop: '1px solid rgba(148, 163, 184, 0.2)',
+            borderRadius: '12px',
+            background: '#FFFFFF',
+            boxShadow: '0 4px 24px rgba(22, 41, 80, 0.08)',
+            border: '1px solid #AADAF9',
+            overflow: 'hidden',
+            marginBottom: loading || error ? 'var(--space-6)' : 0
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', color: text.length > 4000 ? '#ef4444' : '#64748b' }}>
-              {text.length > 0 ? `${text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
-            </span>
-            <span style={{ color: '#cbd5e1' }}>•</span>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>
-              <kbd style={{
-                padding: '2px 6px',
-                backgroundColor: 'white',
-                border: '1px solid #e2e8f0',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontFamily: 'monospace'
-              }}>⌘↵</kbd>
-            </span>
-          </div>
-          <button
-            onClick={() => handleAnalyze()}
-            disabled={!canAnalyze}
+          <textarea
+            id="ai-editor-text-input"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Paste your draft, thesis, or argument here..."
+            disabled={loading}
+            style={{
+              width: '100%',
+              height: '160px',
+              padding: '20px',
+              border: 'none',
+              fontSize: '15px',
+              lineHeight: '1.7',
+              color: '#141414',
+              backgroundColor: 'transparent',
+              resize: 'none',
+              outline: 'none',
+              opacity: loading ? 0.5 : 1,
+              fontFamily: 'inherit'
+            }}
+          />
+          <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              background: !canAnalyze
-                ? '#e2e8f0'
-                : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
-              color: 'white',
-              padding: '12px 24px',
-              borderRadius: '10px',
-              fontSize: '16px',
-              fontWeight: '600',
-              border: 'none',
-              cursor: !canAnalyze ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: !canAnalyze ? 'none' : '0 4px 15px rgba(99, 102, 241, 0.4)',
+              justifyContent: 'space-between',
+              padding: '12px 20px',
+              background: '#DCF2FA',
+              borderTop: '1px solid #AADAF9',
             }}
           >
-            {loading ? (
-              <>
-                <Loader2 style={{ width: '18px', height: '18px' }} className="animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Sparkles style={{ width: '18px', height: '18px' }} />
-                Analyze
-              </>
-            )}
-          </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '13px', color: text.length > 4000 ? '#ef4444' : '#162950', fontWeight: 500 }}>
+                {text.length > 0 ? `${text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
+              </span>
+              <span style={{ color: '#AADAF9' }}>•</span>
+              <span style={{ fontSize: '12px', color: '#162950' }}>
+                <kbd style={{
+                  padding: '2px 6px',
+                  backgroundColor: 'white',
+                  border: '1px solid #AADAF9',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontFamily: 'monospace'
+                }}>⌘↵</kbd>
+              </span>
+            </div>
+            <button
+              onClick={() => handleAnalyze()}
+              disabled={!canAnalyze}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: !canAnalyze
+                  ? '#e2e8f0'
+                  : 'linear-gradient(135deg, #0158AE 0%, #1075DC 100%)',
+                color: 'white',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                fontSize: '15px',
+                fontWeight: '600',
+                border: 'none',
+                cursor: !canAnalyze ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: !canAnalyze ? 'none' : '0 4px 12px rgba(1, 88, 174, 0.3)',
+              }}
+            >
+              {loading ? (
+                <>
+                  <Loader2 style={{ width: '18px', height: '18px' }} className="animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Sparkles style={{ width: '18px', height: '18px' }} />
+                  Analyze
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* View Mode - Read-only display of analyzed text */
+        <div
+          style={{
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #DCF2FA 0%, #AADAF9 100%)',
+            border: '1px solid #48AFF0',
+            padding: '20px',
+            marginBottom: 'var(--space-6)',
+            position: 'relative'
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px'
+          }}>
+            <Quote style={{
+              width: '24px',
+              height: '24px',
+              color: '#0158AE',
+              flexShrink: 0,
+              marginTop: '2px'
+            }} />
+            <div style={{ flex: 1 }}>
+              <p style={{
+                fontSize: '15px',
+                lineHeight: '1.7',
+                color: '#162950',
+                margin: 0,
+                fontStyle: 'italic'
+              }}>
+                {text.length > 300 ? text.substring(0, 300) + '...' : text}
+              </p>
+              {text.length > 300 && (
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('full-analyzed-text')
+                    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'
+                  }}
+                  style={{
+                    marginTop: '8px',
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    color: '#1075DC',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Show full text
+                </button>
+              )}
+              <p
+                id="full-analyzed-text"
+                style={{
+                  display: 'none',
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  color: '#162950',
+                  margin: '12px 0 0 0',
+                  padding: '12px',
+                  backgroundColor: 'rgba(255,255,255,0.6)',
+                  borderRadius: '8px'
+                }}
+              >
+                {text}
+              </p>
+            </div>
+          </div>
+          <div style={{
+            marginTop: '12px',
+            paddingTop: '12px',
+            borderTop: '1px solid #48AFF0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <span style={{ fontSize: '12px', color: '#0158AE', fontWeight: 500 }}>
+              {text.length.toLocaleString()} characters analyzed
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Analyses - Show prominently when no results and not coming from home */}
+      {!result && !loading && !error && savedAnalyses.length > 0 && pendingFromHome === false && (
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 'var(--space-4)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <History style={{ width: '18px', height: '18px', color: '#1075DC' }} />
+              <h3 style={{
+                fontSize: 'var(--text-body)',
+                fontWeight: 'var(--weight-semibold)',
+                color: '#162950',
+                margin: 0
+              }}>
+                Recent Analyses
+              </h3>
+              <span style={{
+                fontSize: '12px',
+                color: '#64748b',
+                fontWeight: '500'
+              }}>
+                Click to view
+              </span>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: 'var(--space-3)'
+          }}>
+            {savedAnalyses.map((analysis) => (
+              <button
+                key={analysis.id}
+                onClick={() => loadSavedAnalysis(analysis)}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '16px',
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#48AFF0'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 117, 220, 0.15)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e7eb'
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
+              >
+                <div style={{
+                  fontSize: '14px',
+                  color: '#1f2937',
+                  fontWeight: '500',
+                  marginBottom: '8px',
+                  lineHeight: '1.5',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}>
+                  {analysis.preview || analysis.text?.substring(0, 80)}
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '12px',
+                  color: '#9ca3af'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Clock style={{ width: '12px', height: '12px' }} />
+                    {new Date(analysis.timestamp).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                  {analysis.cachedResult && (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '2px 8px',
+                      backgroundColor: '#d1fae5',
+                      color: '#059669',
+                      borderRadius: '10px',
+                      fontSize: '11px',
+                      fontWeight: '600'
+                    }}>
+                      <CheckCircle style={{ width: '10px', height: '10px' }} />
+                      View now
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Loading Progress Indicator */}
       {loading && (
         <div style={{
-          backgroundColor: 'var(--color-cloud)',
-          border: '1px solid var(--color-light-gray)',
-          borderRadius: 'var(--radius-base)',
+          backgroundColor: '#DCF2FA',
+          border: '1px solid #AADAF9',
+          borderRadius: '12px',
           padding: 'var(--space-4)',
           marginBottom: 'var(--space-6)'
         }}>
@@ -882,20 +1331,20 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                 }}
               >
                 {idx < loadingPhase ? (
-                  <CheckCircle style={{ width: '16px', height: '16px', color: 'var(--color-success)' }} />
+                  <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
                 ) : idx === loadingPhase ? (
-                  <Loader2 style={{ width: '16px', height: '16px', color: 'var(--color-accent)' }} className="animate-spin" />
+                  <Loader2 style={{ width: '16px', height: '16px', color: '#1075DC' }} className="animate-spin" />
                 ) : (
                   <div style={{
                     width: '16px',
                     height: '16px',
                     borderRadius: '50%',
-                    border: '2px solid var(--color-light-gray)'
+                    border: '2px solid #AADAF9'
                   }} />
                 )}
                 <span style={{
                   fontSize: 'var(--text-small)',
-                  color: idx <= loadingPhase ? 'var(--color-soft-black)' : 'var(--color-mid-gray)',
+                  color: idx <= loadingPhase ? '#162950' : '#64748b',
                   fontWeight: idx === loadingPhase ? 'var(--weight-medium)' : 'var(--weight-normal)'
                 }}>
                   {phase.message.replace('...', '')}
@@ -942,214 +1391,233 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
       {/* Results Display */}
       {result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-          {/* Quick Navigation */}
+          {/* Results Toolbar */}
           <div style={{
-            backgroundColor: 'var(--color-cloud)',
-            border: '1px solid var(--color-light-gray)',
-            borderRadius: 'var(--radius-base)',
-            padding: 'var(--space-5)',
-            boxShadow: 'var(--shadow-base)'
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
           }}>
-            <h3 style={{
-              fontSize: 'var(--text-small)',
-              fontWeight: 'var(--weight-semibold)',
-              color: 'var(--color-soft-black)',
-              marginBottom: 'var(--space-3)',
+            <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 'var(--space-2)'
+              justifyContent: 'space-between',
+              gap: '16px',
+              flexWrap: 'wrap'
             }}>
-              <ChevronDown style={{ width: '16px', height: '16px' }} />
-              Jump to Section
-            </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+              {/* Left: Back button */}
               <button
-                onClick={() => scrollToSection(summaryRef)}
+                onClick={startNewAnalysis}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: 'var(--space-2) var(--space-4)',
-                  backgroundColor: 'var(--color-bone)',
-                  border: '1px solid var(--color-light-gray)',
-                  color: 'var(--color-accent)',
-                  borderRadius: 'var(--radius-base)',
-                  fontSize: 'var(--text-small)',
-                  fontWeight: 'var(--weight-medium)',
+                  gap: '6px',
+                  padding: '8px 12px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#6b7280',
                   cursor: 'pointer',
-                  transition: 'all var(--duration-fast) var(--ease-out)'
+                  transition: 'all 0.15s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-accent-light)'
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                  e.currentTarget.style.color = '#374151'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bone)'
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                  e.currentTarget.style.color = '#6b7280'
                 }}
               >
-                <CheckCircle style={{ width: '16px', height: '16px' }} />
-                Summary
-              </button>
-              <button
-                onClick={() => scrollToSection(suggestionsRef)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: 'var(--space-2) var(--space-4)',
-                  backgroundColor: 'var(--color-bone)',
-                  border: '1px solid var(--color-light-gray)',
-                  color: 'var(--color-accent)',
-                  borderRadius: 'var(--radius-base)',
-                  fontSize: 'var(--text-small)',
-                  fontWeight: 'var(--weight-medium)',
-                  cursor: 'pointer',
-                  transition: 'all var(--duration-fast) var(--ease-out)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-accent-light)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bone)'
-                }}
-              >
-                <Lightbulb style={{ width: '16px', height: '16px' }} />
-                Editorial Suggestions
-              </button>
-              <button
-                onClick={() => scrollToSection(authorsRef)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: 'var(--space-2) var(--space-4)',
-                  backgroundColor: 'var(--color-bone)',
-                  border: '1px solid var(--color-light-gray)',
-                  color: 'var(--color-accent)',
-                  borderRadius: 'var(--radius-base)',
-                  fontSize: 'var(--text-small)',
-                  fontWeight: 'var(--weight-medium)',
-                  cursor: 'pointer',
-                  transition: 'all var(--duration-fast) var(--ease-out)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-accent-light)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bone)'
-                }}
-              >
-                <Users style={{ width: '16px', height: '16px' }} />
-                Thought Leaders ({result.matchedCamps.length})
+                <ArrowLeft style={{ width: '16px', height: '16px' }} />
+                New Analysis
               </button>
 
-              {/* Spacer to push action buttons to the right */}
-              <div style={{ flex: 1 }} />
+              {/* Center: Navigation pills */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px',
+                backgroundColor: '#DCF2FA',
+                borderRadius: '10px'
+              }}>
+                <button
+                  onClick={() => scrollToSection(summaryRef)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#0158AE',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Summary
+                </button>
+                <button
+                  onClick={() => scrollToSection(suggestionsRef)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#162950',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.7)'
+                    e.currentTarget.style.color = '#0158AE'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                    e.currentTarget.style.color = '#162950'
+                  }}
+                >
+                  Suggestions
+                </button>
+                <button
+                  onClick={() => scrollToSection(authorsRef)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#162950',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.7)'
+                    e.currentTarget.style.color = '#0158AE'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                    e.currentTarget.style.color = '#162950'
+                  }}
+                >
+                  Authors ({result.matchedCamps.length})
+                </button>
+              </div>
 
-              {/* Copy Button */}
-              <button
-                onClick={handleCopy}
-                disabled={copying}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: 'var(--space-2) var(--space-4)',
-                  backgroundColor: 'var(--color-bone)',
-                  border: '1px solid var(--color-light-gray)',
-                  color: 'var(--color-charcoal)',
-                  borderRadius: 'var(--radius-base)',
-                  fontSize: 'var(--text-small)',
-                  fontWeight: 'var(--weight-medium)',
-                  cursor: copying ? 'not-allowed' : 'pointer',
-                  transition: 'all var(--duration-fast) var(--ease-out)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!copying) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-pale-gray)'
-                    e.currentTarget.style.borderColor = 'var(--color-mid-gray)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!copying) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bone)'
-                    e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                  }
-                }}
-                title="Copy analysis as formatted text"
-              >
-                <Copy style={{ width: '16px', height: '16px' }} />
-                {copying ? 'Copying...' : 'Copy'}
-              </button>
-
-              {/* PDF Export Button */}
-              <button
-                onClick={handleExportPDF}
-                disabled={exporting}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: 'var(--space-2) var(--space-4)',
-                  backgroundColor: 'var(--color-bone)',
-                  border: '1px solid var(--color-light-gray)',
-                  color: 'var(--color-charcoal)',
-                  borderRadius: 'var(--radius-base)',
-                  fontSize: 'var(--text-small)',
-                  fontWeight: 'var(--weight-medium)',
-                  cursor: exporting ? 'not-allowed' : 'pointer',
-                  transition: 'all var(--duration-fast) var(--ease-out)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!exporting) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-pale-gray)'
-                    e.currentTarget.style.borderColor = 'var(--color-mid-gray)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!exporting) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bone)'
-                    e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                  }
-                }}
-                title="Download analysis as PDF"
-              >
-                <FileDown style={{ width: '16px', height: '16px' }} />
-                {exporting ? 'Exporting...' : 'PDF'}
-              </button>
-
-              {/* Save Analysis Button */}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: 'var(--space-2) var(--space-4)',
-                  backgroundColor: savedOnce ? 'var(--color-success)' : 'var(--color-bone)',
-                  border: savedOnce ? '1px solid var(--color-success)' : '1px solid var(--color-light-gray)',
-                  color: savedOnce ? 'white' : 'var(--color-accent)',
-                  borderRadius: 'var(--radius-base)',
-                  fontSize: 'var(--text-small)',
-                  fontWeight: 'var(--weight-medium)',
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  transition: 'all var(--duration-fast) var(--ease-out)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!saving && !savedOnce) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-accent-light)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!saving && !savedOnce) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bone)'
-                  }
-                }}
-                title={savedOnce ? 'Analysis saved - find it in your sidebar' : 'Save this analysis to revisit later'}
-              >
-                <Bookmark style={{ width: '16px', height: '16px' }} />
-                {savedOnce ? 'Saved' : saving ? 'Saving...' : 'Save'}
-              </button>
+              {/* Right: Action buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={handleCopy}
+                  disabled={copying}
+                  title="Copy analysis"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '36px',
+                    height: '36px',
+                    backgroundColor: 'transparent',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    color: '#6b7280',
+                    cursor: copying ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!copying) {
+                      e.currentTarget.style.backgroundColor = '#f9fafb'
+                      e.currentTarget.style.borderColor = '#d1d5db'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                    e.currentTarget.style.borderColor = '#e5e7eb'
+                  }}
+                >
+                  <Copy style={{ width: '16px', height: '16px' }} />
+                </button>
+                <button
+                  onClick={handleExportPDF}
+                  disabled={exporting}
+                  title="Export as PDF"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '36px',
+                    height: '36px',
+                    backgroundColor: 'transparent',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    color: '#6b7280',
+                    cursor: exporting ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!exporting) {
+                      e.currentTarget.style.backgroundColor = '#f9fafb'
+                      e.currentTarget.style.borderColor = '#d1d5db'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                    e.currentTarget.style.borderColor = '#e5e7eb'
+                  }}
+                >
+                  <FileDown style={{ width: '16px', height: '16px' }} />
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  title={savedOnce ? 'Saved' : 'Save analysis'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    backgroundColor: savedOnce ? '#0158AE' : 'transparent',
+                    border: savedOnce ? '1px solid #0158AE' : '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: savedOnce ? 'white' : '#0158AE',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!saving && !savedOnce) {
+                      e.currentTarget.style.backgroundColor = '#DCF2FA'
+                      e.currentTarget.style.borderColor = '#48AFF0'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!saving && !savedOnce) {
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                      e.currentTarget.style.borderColor = '#e5e7eb'
+                    }
+                  }}
+                >
+                  <Bookmark style={{ width: '14px', height: '14px', fill: savedOnce ? 'white' : 'none' }} />
+                  {savedOnce ? 'Saved' : 'Save'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1157,11 +1625,11 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
           <div ref={resultsRef}>
           {/* Summary */}
           <div ref={summaryRef} style={{
-            backgroundColor: 'var(--color-cloud)',
-            borderRadius: 'var(--radius-base)',
+            backgroundColor: '#FFFFFF',
+            borderRadius: '12px',
             padding: 'var(--card-padding-desktop)',
-            boxShadow: 'var(--shadow-sm)',
-            border: '1px solid var(--color-light-gray)',
+            boxShadow: '0 2px 12px rgba(22, 41, 80, 0.06)',
+            border: '1px solid #AADAF9',
             scrollMarginTop: '96px'
           }}>
             <div style={{
@@ -1174,9 +1642,10 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                 margin: 0,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 'var(--space-2)'
+                gap: 'var(--space-2)',
+                color: '#162950'
               }}>
-                <CheckCircle style={{ width: '20px', height: '20px', color: 'var(--color-success)' }} />
+                <CheckCircle style={{ width: '20px', height: '20px', color: '#10b981' }} />
                 Summary
               </h2>
               <button
@@ -1205,22 +1674,23 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
               </button>
             </div>
             <p style={{
-              color: 'var(--color-charcoal)',
-              lineHeight: 'var(--leading-relaxed)',
-              margin: 0
+              color: '#374151',
+              lineHeight: '1.75',
+              margin: 0,
+              fontSize: '15px'
             }}>
               {result.summary}
             </p>
           </div>
 
           {/* PROMINENT Editorial Suggestions */}
-          <div ref={suggestionsRef} style={{ scrollMarginTop: '96px' }}>
+          <div ref={suggestionsRef} style={{ scrollMarginTop: '96px', marginTop: 'var(--space-6)' }}>
             <div style={{
-              backgroundColor: 'var(--color-cloud)',
-              border: '2px solid var(--color-accent)',
-              borderRadius: 'var(--radius-base)',
+              backgroundColor: '#FFFFFF',
+              border: '2px solid #1075DC',
+              borderRadius: '12px',
               padding: 'var(--space-8)',
-              boxShadow: 'var(--shadow-md)'
+              boxShadow: '0 4px 24px rgba(22, 41, 80, 0.08)'
             }}>
               <div style={{
                 display: 'flex',
@@ -1230,17 +1700,17 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
               }}>
                 <div style={{
                   padding: 'var(--space-3)',
-                  backgroundColor: 'var(--color-accent)',
-                  borderRadius: 'var(--radius-md)',
-                  boxShadow: 'var(--shadow-sm)'
+                  background: 'linear-gradient(135deg, #0158AE 0%, #1075DC 100%)',
+                  borderRadius: '10px',
+                  boxShadow: '0 2px 8px rgba(1, 88, 174, 0.25)'
                 }}>
                   <Lightbulb style={{ width: '28px', height: '28px', color: 'white' }} />
                 </div>
                 <div>
-                  <h2 style={{ marginBottom: '4px' }}>Editorial Suggestions</h2>
+                  <h2 style={{ marginBottom: '4px', color: '#162950' }}>Editorial Suggestions</h2>
                   <p style={{
                     fontSize: 'var(--text-small)',
-                    color: 'var(--color-charcoal)',
+                    color: '#64748b',
                     margin: 0
                   }}>
                     Key insights to strengthen your content
@@ -1375,20 +1845,39 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
           {/* Thought Leaders */}
           {result.matchedCamps.length > 0 && (
             <div ref={authorsRef} style={{
-              backgroundColor: 'var(--color-cloud)',
-              borderRadius: 'var(--radius-base)',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '12px',
               padding: 'var(--card-padding-desktop)',
-              boxShadow: 'var(--shadow-sm)',
-              border: '1px solid var(--color-light-gray)',
-              scrollMarginTop: '96px'
+              boxShadow: '0 2px 12px rgba(22, 41, 80, 0.06)',
+              border: '1px solid #AADAF9',
+              scrollMarginTop: '96px',
+              marginTop: 'var(--space-6)'
             }}>
-              <h2 style={{ marginBottom: 'var(--space-2)' }}>
-                Relevant Thought Leaders ({result.matchedCamps.length} perspectives)
+              <h2 style={{
+                marginBottom: 'var(--space-2)',
+                color: '#162950',
+                fontSize: '1.25rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Users style={{ width: '22px', height: '22px', color: '#1075DC' }} />
+                Relevant Thought Leaders
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#64748b',
+                  marginLeft: '4px'
+                }}>
+                  ({result.matchedCamps.length} perspectives)
+                </span>
               </h2>
               <p style={{
-                fontSize: 'var(--text-small)',
-                color: 'var(--color-mid-gray)',
-                marginBottom: 'var(--space-6)'
+                fontSize: '14px',
+                color: '#64748b',
+                marginBottom: 'var(--space-6)',
+                lineHeight: '1.5'
               }}>
                 See what each thought leader believes and how their ideas specifically support or challenge your draft.
               </p>
@@ -1399,10 +1888,11 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                     <div
                       key={idx}
                       style={{
-                        border: '1px solid var(--color-light-gray)',
-                        borderRadius: 'var(--radius-base)',
+                        border: '1px solid #AADAF9',
+                        borderRadius: '12px',
                         padding: 'var(--space-5)',
-                        backgroundColor: 'var(--color-bone)',
+                        backgroundColor: '#FFFFFF',
+                        boxShadow: '0 2px 8px rgba(22, 41, 80, 0.04)',
                         transition: 'all var(--duration-fast) var(--ease-out)'
                       }}
                     >
@@ -1417,21 +1907,25 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                           <Link
                             href={`/results?q=${encodeURIComponent(camp.campLabel)}`}
                             style={{
-                              fontWeight: 'var(--weight-semibold)',
-                              fontSize: 'var(--text-h3)',
-                              color: 'var(--color-soft-black)',
+                              fontWeight: 600,
+                              fontSize: '17px',
+                              color: '#162950',
                               textDecoration: 'none',
                               transition: 'color var(--duration-fast) var(--ease-out)',
-                              cursor: 'pointer'
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.color = 'var(--color-accent)'
+                              e.currentTarget.style.color = '#1075DC'
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.color = 'var(--color-soft-black)'
+                              e.currentTarget.style.color = '#162950'
                             }}
                           >
                             {camp.campLabel}
+                            <span style={{ fontSize: '14px', opacity: 0.6 }}>→</span>
                           </Link>
                           <button
                             onClick={() => likedCamps.has(idx)
@@ -1461,7 +1955,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                         </div>
                         <p style={{
                           fontSize: 'var(--text-small)',
-                          color: 'var(--color-charcoal)',
+                          color: '#374151',
                           lineHeight: 'var(--leading-relaxed)',
                           margin: 0
                         }}>
@@ -1504,7 +1998,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                                           style={{
                                             fontWeight: 'var(--weight-semibold)',
                                             fontSize: 'var(--text-body)',
-                                            color: 'var(--color-accent)',
+                                            color: '#0158AE',
                                             textDecoration: 'none',
                                             margin: 0,
                                             background: 'none',
@@ -1513,10 +2007,10 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                                             cursor: 'pointer',
                                             transition: 'color var(--duration-fast) var(--ease-out)'
                                           }}
-                                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent-hover)'}
-                                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-accent)'}
+                                          onMouseEnter={(e) => e.currentTarget.style.color = '#1075DC'}
+                                          onMouseLeave={(e) => e.currentTarget.style.color = '#0158AE'}
                                         >
-                                          {author.name} →
+                                          {author.name}
                                         </button>
                                       ) : (
                                         <h4 style={{
@@ -1550,17 +2044,19 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                                 {/* Position */}
                                 <div style={{ marginBottom: 'var(--space-3)' }}>
                                   <p style={{
-                                    fontSize: 'var(--text-small)',
-                                    fontWeight: 'var(--weight-medium)',
-                                    color: 'var(--color-mid-gray)',
-                                    marginBottom: 'var(--space-1)'
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    color: '#64748b',
+                                    marginBottom: '6px',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
                                   }}>
-                                    What they believe:
+                                    What they believe
                                   </p>
                                   <p style={{
-                                    fontSize: 'var(--text-small)',
-                                    color: 'var(--color-soft-black)',
-                                    lineHeight: 'var(--leading-relaxed)',
+                                    fontSize: '14px',
+                                    color: '#1f2937',
+                                    lineHeight: '1.6',
                                     margin: 0
                                   }}>
                                     {author.position}
@@ -1571,41 +2067,43 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                                 {author.draftConnection && (
                                   <div style={{
                                     marginBottom: 'var(--space-3)',
-                                    padding: 'var(--space-3)',
+                                    padding: '12px 14px',
                                     backgroundColor: author.stance === 'agrees'
-                                      ? 'rgba(16, 185, 129, 0.08)'
+                                      ? 'rgba(16, 185, 129, 0.06)'
                                       : author.stance === 'disagrees'
-                                      ? 'rgba(239, 68, 68, 0.08)'
-                                      : 'rgba(245, 158, 11, 0.08)',
-                                    borderRadius: 'var(--radius-base)',
+                                      ? 'rgba(239, 68, 68, 0.06)'
+                                      : 'rgba(245, 158, 11, 0.06)',
+                                    borderRadius: '8px',
                                     borderLeft: `3px solid ${
                                       author.stance === 'agrees'
-                                        ? 'var(--color-success)'
+                                        ? '#10b981'
                                         : author.stance === 'disagrees'
-                                        ? 'var(--color-error)'
-                                        : 'var(--color-warning)'
+                                        ? '#ef4444'
+                                        : '#f59e0b'
                                     }`
                                   }}>
                                     <p style={{
-                                      fontSize: 'var(--text-small)',
-                                      fontWeight: 'var(--weight-semibold)',
+                                      fontSize: '12px',
+                                      fontWeight: 600,
                                       color: author.stance === 'agrees'
-                                        ? 'var(--color-success)'
+                                        ? '#059669'
                                         : author.stance === 'disagrees'
-                                        ? 'var(--color-error)'
-                                        : 'var(--color-warning)',
-                                      marginBottom: 'var(--space-1)'
+                                        ? '#dc2626'
+                                        : '#d97706',
+                                      marginBottom: '6px',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.3px'
                                     }}>
                                       {author.stance === 'agrees'
-                                        ? '✓ How this supports your draft:'
+                                        ? '✓ Supports your draft'
                                         : author.stance === 'disagrees'
-                                        ? '✗ How this challenges your draft:'
-                                        : '◐ How this relates to your draft:'}
+                                        ? '✗ Challenges your draft'
+                                        : '◐ Relates to your draft'}
                                     </p>
                                     <p style={{
-                                      fontSize: 'var(--text-small)',
-                                      color: 'var(--color-soft-black)',
-                                      lineHeight: 'var(--leading-relaxed)',
+                                      fontSize: '14px',
+                                      color: '#1f2937',
+                                      lineHeight: '1.6',
                                       margin: 0
                                     }}>
                                       {author.draftConnection}
@@ -1623,28 +2121,28 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                                       title={author.sourceUrl}
                                       style={{
                                         display: 'block',
-                                        backgroundColor: 'var(--color-bone)',
-                                        border: '1px solid var(--color-light-gray)',
-                                        borderRadius: 'var(--radius-base)',
+                                        backgroundColor: '#FFFFFF',
+                                        border: '1px solid #AADAF9',
+                                        borderRadius: '8px',
                                         padding: 'var(--space-3)',
                                         textDecoration: 'none',
                                         transition: 'all var(--duration-fast) var(--ease-out)',
                                         cursor: 'pointer'
                                       }}
                                       onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = 'var(--color-accent)'
-                                        e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.05)'
+                                        e.currentTarget.style.borderColor = '#1075DC'
+                                        e.currentTarget.style.backgroundColor = 'rgba(16, 117, 220, 0.05)'
                                       }}
                                       onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                                        e.currentTarget.style.backgroundColor = 'var(--color-bone)'
+                                        e.currentTarget.style.borderColor = '#AADAF9'
+                                        e.currentTarget.style.backgroundColor = '#FFFFFF'
                                       }}
                                     >
                                       <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
                                         <Quote style={{
                                           width: '16px',
                                           height: '16px',
-                                          color: 'var(--color-accent)',
+                                          color: '#1075DC',
                                           flexShrink: 0,
                                           marginTop: '2px'
                                         }} />
@@ -1652,7 +2150,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                                           <p style={{
                                             fontSize: 'var(--text-small)',
                                             fontStyle: 'italic',
-                                            color: 'var(--color-charcoal)',
+                                            color: '#162950',
                                             margin: 0,
                                             lineHeight: 'var(--leading-relaxed)'
                                           }}>
@@ -1663,7 +2161,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                                             alignItems: 'center',
                                             gap: 'var(--space-1)',
                                             fontSize: 'var(--text-caption)',
-                                            color: 'var(--color-accent)',
+                                            color: '#0158AE',
                                             marginTop: 'var(--space-2)'
                                           }}>
                                             <ExternalLink style={{ width: '12px', height: '12px' }} />
@@ -1722,23 +2220,23 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                                     </a>
                                   ) : (
                                     <div style={{
-                                      backgroundColor: 'var(--color-bone)',
-                                      border: '1px solid var(--color-light-gray)',
-                                      borderRadius: 'var(--radius-base)',
+                                      backgroundColor: '#DCF2FA',
+                                      border: '1px solid #AADAF9',
+                                      borderRadius: '8px',
                                       padding: 'var(--space-3)'
                                     }}>
                                       <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
                                         <Quote style={{
                                           width: '16px',
                                           height: '16px',
-                                          color: 'var(--color-mid-gray)',
+                                          color: '#48AFF0',
                                           flexShrink: 0,
                                           marginTop: '2px'
                                         }} />
                                         <p style={{
                                           fontSize: 'var(--text-small)',
                                           fontStyle: 'italic',
-                                          color: 'var(--color-charcoal)',
+                                          color: '#162950',
                                           margin: 0,
                                           lineHeight: 'var(--leading-relaxed)'
                                         }}>

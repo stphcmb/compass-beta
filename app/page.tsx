@@ -1,49 +1,46 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import dynamic from 'next/dynamic'
+import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
-import AIEditor from '@/components/AIEditor'
-import { Users, Compass, Lightbulb, Edit3, Search, Sparkles } from 'lucide-react'
-
-const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
+import { Users, Compass, Lightbulb, Edit3, Search, Sparkles, Loader2 } from 'lucide-react'
 
 export default function Home() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const router = useRouter()
+  const [text, setText] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Listen for sidebar toggle events
-  useEffect(() => {
-    const handleSidebarToggle = (e: Event) => {
-      const ev = e as CustomEvent<{ isCollapsed: boolean }>
-      setSidebarCollapsed(ev.detail.isCollapsed)
+  // Handle analyze - redirect to AI Editor with text
+  const handleAnalyze = () => {
+    if (!text.trim() || text.length > 4000) return
+    setIsSubmitting(true)
+
+    // Store in sessionStorage so AI Editor can pick it up immediately on mount
+    sessionStorage.setItem('pendingAnalysis', JSON.stringify({
+      text: text.trim(),
+      autoAnalyze: true,
+      timestamp: Date.now()
+    }))
+
+    // Navigate to AI Editor
+    router.push('/ai-editor')
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      handleAnalyze()
     }
+  }
 
-    // Check initial state - match Sidebar logic
-    const savedSearches = JSON.parse(localStorage.getItem('savedSearches') || '[]')
-    const savedAnalyses = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
-    const hasContent = savedSearches.length > 0 || savedAnalyses.length > 0
-    const userPreference = localStorage.getItem('sidebarCollapsed')
-
-    if (userPreference !== null) {
-      setSidebarCollapsed(userPreference === 'true')
-    } else {
-      setSidebarCollapsed(!hasContent)
-    }
-
-    window.addEventListener('sidebar-toggle', handleSidebarToggle as EventListener)
-    return () => window.removeEventListener('sidebar-toggle', handleSidebarToggle as EventListener)
-  }, [])
+  const canAnalyze = text.trim().length > 0 && text.length <= 4000 && !isSubmitting
 
   return (
     <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
-      <Sidebar />
-      <Header sidebarCollapsed={sidebarCollapsed} />
+      <Header sidebarCollapsed={true} />
       <main
-        className="flex-1 mt-16 flex flex-col items-center justify-start overflow-y-auto transition-all duration-300"
-        style={{
-          marginLeft: sidebarCollapsed ? '0' : '220px'
-        }}
+        className="flex-1 mt-16 flex flex-col items-center justify-start overflow-y-auto"
       >
         {/* Hero Section */}
         <div className="w-full relative" style={{
@@ -129,8 +126,99 @@ export default function Home() {
               Analyze your writing against 200+ thought leaders shaping AI discourse.
             </p>
 
-            {/* AI Editor */}
-            <AIEditor />
+            {/* Simple Input Box */}
+            <div
+              style={{
+                borderRadius: '16px',
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(20px)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                border: '2px solid rgba(139, 92, 246, 0.3)',
+                overflow: 'hidden',
+                textAlign: 'left'
+              }}
+            >
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Paste your draft, thesis, or argument here..."
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  height: '140px',
+                  padding: '20px',
+                  border: 'none',
+                  fontSize: '16px',
+                  lineHeight: '1.6',
+                  color: '#1e293b',
+                  backgroundColor: 'transparent',
+                  resize: 'none',
+                  outline: 'none',
+                  opacity: isSubmitting ? 0.5 : 1
+                }}
+              />
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 20px',
+                  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                  borderTop: '1px solid rgba(148, 163, 184, 0.2)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '12px', color: text.length > 4000 ? '#ef4444' : '#64748b' }}>
+                    {text.length > 0 ? `${text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
+                  </span>
+                  <span style={{ color: '#cbd5e1' }}>•</span>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    <kbd style={{
+                      padding: '2px 6px',
+                      backgroundColor: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontFamily: 'monospace'
+                    }}>⌘↵</kbd>
+                  </span>
+                </div>
+                <button
+                  onClick={handleAnalyze}
+                  disabled={!canAnalyze}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: !canAnalyze
+                      ? '#e2e8f0'
+                      : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+                    color: 'white',
+                    padding: '12px 24px',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    border: 'none',
+                    cursor: !canAnalyze ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: !canAnalyze ? 'none' : '0 4px 15px rgba(99, 102, 241, 0.4)',
+                  }}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 style={{ width: '18px', height: '18px' }} className="animate-spin" />
+                      Redirecting...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles style={{ width: '18px', height: '18px' }} />
+                      Analyze
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

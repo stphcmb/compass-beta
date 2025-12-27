@@ -1,17 +1,12 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import dynamic from 'next/dynamic'
 import { Search, X, HelpCircle, Users } from 'lucide-react'
 import Header from '@/components/Header'
 import AuthorDetailPanel from '@/components/AuthorDetailPanel'
 import { AboutThoughtLeadersModal, useAboutThoughtLeadersModal } from '@/components/AboutThoughtLeadersModal'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { getCampsWithAuthors } from '@/lib/api/thought-leaders'
-
-const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
-
-const SIDEBAR_WIDTH = 220
 
 // Domain colors
 const DOMAINS = [
@@ -36,33 +31,12 @@ export default function AuthorIndexPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [domainFilter, setDomainFilter] = useState<string | null>(null)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [panelOpen, setPanelOpen] = useState(true) // Open by default
   const [groupBy, setGroupBy] = useState<'alphabet' | 'domain'>('alphabet')
   const letterRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   // Modal for teaching users about thought leaders
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useAboutThoughtLeadersModal()
-
-
-  // Listen for sidebar toggle
-  useEffect(() => {
-    const handleSidebarToggle = (e: Event) => {
-      const ev = e as CustomEvent<{ isCollapsed: boolean }>
-      setSidebarCollapsed(ev.detail.isCollapsed)
-    }
-    const savedSearches = JSON.parse(localStorage.getItem('savedSearches') || '[]')
-    const savedAnalyses = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
-    const hasContent = savedSearches.length > 0 || savedAnalyses.length > 0
-    const userPreference = localStorage.getItem('sidebarCollapsed')
-    if (userPreference !== null) {
-      setSidebarCollapsed(userPreference === 'true')
-    } else {
-      setSidebarCollapsed(!hasContent)
-    }
-    window.addEventListener('sidebar-toggle', handleSidebarToggle as EventListener)
-    return () => window.removeEventListener('sidebar-toggle', handleSidebarToggle as EventListener)
-  }, [])
 
   // Fetch data
   useEffect(() => {
@@ -187,15 +161,11 @@ export default function AuthorIndexPage() {
     }
   }, [authors, searchQuery, domainFilter, camps])
 
-  const sidebarMargin = sidebarCollapsed ? 0 : SIDEBAR_WIDTH
-
   if (loading) {
     return (
       <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
-        <Sidebar />
-        <Header sidebarCollapsed={sidebarCollapsed} />
-        <main className="flex-1 mt-16 flex items-center justify-center transition-all duration-300"
-          style={{ marginLeft: `${sidebarMargin}px` }}>
+        <Header sidebarCollapsed={true} />
+        <main className="flex-1 mt-16 flex items-center justify-center">
           <div style={{ color: 'var(--color-mid-gray)', fontSize: '14px' }}>Loading authors...</div>
         </main>
       </div>
@@ -204,11 +174,10 @@ export default function AuthorIndexPage() {
 
   return (
     <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
-      <Sidebar />
-      <Header sidebarCollapsed={sidebarCollapsed} />
+      <Header sidebarCollapsed={true} />
       <main
-        className="flex-1 mt-16 overflow-hidden transition-all duration-300"
-        style={{ marginLeft: `${sidebarMargin}px`, display: 'flex', flexDirection: 'column' }}
+        className="flex-1 mt-16 overflow-hidden"
+        style={{ display: 'flex', flexDirection: 'column' }}
       >
         {/* Page Header */}
         <div style={{

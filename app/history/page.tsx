@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import {
   History,
   Search,
@@ -24,10 +23,6 @@ import {
 } from 'lucide-react'
 import Header from '@/components/Header'
 import { supabase } from '@/lib/supabase'
-
-const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
-
-const SIDEBAR_WIDTH = 220
 
 interface SearchItem {
   id: string
@@ -81,7 +76,6 @@ export default function HistoryPage() {
   const [activeTab, setActiveTab] = useState<TabType>('all')
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
   const [showAboutModal, setShowAboutModal] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   // Data states
   const [recentSearches, setRecentSearches] = useState<SearchItem[]>([])
@@ -91,23 +85,6 @@ export default function HistoryPage() {
   const [authorNotes, setAuthorNotes] = useState<AuthorNote[]>([])
   const [helpfulInsights, setHelpfulInsights] = useState<HelpfulInsight[]>([])
   const [authorDetails, setAuthorDetails] = useState<Record<string, any>>({})
-
-  // Listen for sidebar toggle
-  useEffect(() => {
-    const handleSidebarToggle = (e: Event) => {
-      const customEvent = e as CustomEvent<{ isCollapsed: boolean }>
-      setSidebarCollapsed(customEvent.detail.isCollapsed)
-    }
-    window.addEventListener('sidebar-toggle', handleSidebarToggle)
-
-    // Check initial state
-    const stored = localStorage.getItem('sidebarCollapsed')
-    if (stored !== null) {
-      setSidebarCollapsed(stored === 'true')
-    }
-
-    return () => window.removeEventListener('sidebar-toggle', handleSidebarToggle)
-  }, [])
 
   useEffect(() => {
     setMounted(true)
@@ -399,15 +376,11 @@ export default function HistoryPage() {
 
   if (!mounted) return null
 
-  const sidebarMargin = sidebarCollapsed ? 0 : SIDEBAR_WIDTH
-
   return (
     <div className="h-screen flex" style={{ backgroundColor: '#f8fafc' }}>
-      <Sidebar />
-      <Header sidebarCollapsed={sidebarCollapsed} />
+      <Header sidebarCollapsed={true} />
       <main
-        className="flex-1 mt-16 overflow-auto transition-all duration-300"
-        style={{ marginLeft: `${sidebarMargin}px` }}
+        className="flex-1 mt-16 overflow-auto"
       >
         <div style={{
           maxWidth: '1200px',

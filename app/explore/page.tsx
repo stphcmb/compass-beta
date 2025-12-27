@@ -2,7 +2,6 @@
 
 import { Suspense, useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import Header from '@/components/Header'
 import SearchBar from '@/components/SearchBar'
 import CampAccordion from '@/components/CampAccordion'
@@ -14,15 +13,11 @@ import DomainOverview from '@/components/DomainOverview'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
 import { HelpCircle, Layers, Compass } from 'lucide-react'
 
-const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false })
-
-// Layout constants - must match Sidebar.tsx width
-const SIDEBAR_WIDTH = 220
+// Layout constants
 const DOMAIN_PANEL_WIDTH = 220
 
 function ExplorePageContent() {
   const searchParams = useSearchParams()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [domainPanelCollapsed, setDomainPanelCollapsed] = useState(false)
   const [activeDomain, setActiveDomain] = useState<string | null>(null)
 
@@ -57,30 +52,6 @@ function ExplorePageContent() {
     setTimeout(() => setScrollToCampId(null), 100)
   }, [])
 
-  
-  // Listen for sidebar toggle events
-  useEffect(() => {
-    const handleSidebarToggle = (e: Event) => {
-      const ev = e as CustomEvent<{ isCollapsed: boolean }>
-      setSidebarCollapsed(ev.detail.isCollapsed)
-    }
-
-    // Check initial state - match Sidebar logic
-    const savedSearches = JSON.parse(localStorage.getItem('savedSearches') || '[]')
-    const savedAnalyses = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
-    const hasContent = savedSearches.length > 0 || savedAnalyses.length > 0
-    const userPreference = localStorage.getItem('sidebarCollapsed')
-
-    if (userPreference !== null) {
-      setSidebarCollapsed(userPreference === 'true')
-    } else {
-      setSidebarCollapsed(!hasContent)
-    }
-
-    window.addEventListener('sidebar-toggle', handleSidebarToggle as EventListener)
-    return () => window.removeEventListener('sidebar-toggle', handleSidebarToggle as EventListener)
-  }, [])
-
   // Fetch expanded queries when query changes
   useEffect(() => {
     const fetchExpandedQueries = async () => {
@@ -108,15 +79,13 @@ function ExplorePageContent() {
   }, [query])
 
   // Calculate margins for layout
-  const sidebarWidth = sidebarCollapsed ? 0 : SIDEBAR_WIDTH
-  const domainPanelLeft = sidebarWidth
+  const domainPanelLeft = 0
   const actualDomainPanelWidth = domainPanelCollapsed ? 0 : DOMAIN_PANEL_WIDTH
-  const mainContentLeft = sidebarWidth + actualDomainPanelWidth
+  const mainContentLeft = actualDomainPanelWidth
 
   return (
     <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
-      <Sidebar />
-      <Header sidebarCollapsed={sidebarCollapsed} />
+      <Header sidebarCollapsed={true} />
 
       {/* Domain Panel Expand Button - animated appearance */}
       <button
@@ -127,7 +96,7 @@ function ExplorePageContent() {
             : 'opacity-0 -translate-x-2 pointer-events-none'
         }`}
         style={{
-          left: `${sidebarWidth + 16}px`,
+          left: '16px',
           transitionDelay: domainPanelCollapsed ? '150ms' : '0ms'
         }}
         title="Expand domain panel"
