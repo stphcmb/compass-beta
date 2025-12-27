@@ -442,7 +442,7 @@ export default function HistoryPage() {
           title="Your History"
           subtitle="Track your searches, analyses, and saved authors"
           helpButton={{
-            label: 'About',
+            label: 'How it works',
             onClick: () => setShowAboutModal(true)
           }}
         />
