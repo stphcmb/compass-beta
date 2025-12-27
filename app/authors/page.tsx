@@ -202,9 +202,10 @@ function AuthorIndexPageContent() {
         className="flex-1 mt-16 overflow-hidden"
         style={{ display: 'flex', flexDirection: 'column' }}
       >
-        {/* Centered Header Section - matches Explore layout */}
+        {/* Header Section - aligned with right panel content */}
         <div style={{ borderBottom: '1px solid var(--color-light-gray)', backgroundColor: 'var(--color-air-white)' }}>
-          <div className="max-w-4xl mx-auto" style={{ padding: '20px 24px' }}>
+          <div style={{ marginLeft: '320px', padding: '20px 16px' }}>
+            <div style={{ maxWidth: '896px', margin: '0 auto' }}>
             <PageHeader
               icon={<Users size={24} />}
               iconVariant="green"
@@ -260,6 +261,7 @@ function AuthorIndexPageContent() {
                   </button>
                 )}
               </div>
+            </div>
             </div>
           </div>
         </div>
