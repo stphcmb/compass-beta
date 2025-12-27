@@ -8,35 +8,86 @@
 
 :root {
   /* ===========================
-     COLOR SYSTEM
+     ANDUIN COLOR PALETTE
      =========================== */
 
-  /* Primary Neutrals (90% of interface) */
-  --color-bone: #F9F7F2;        /* Page background - warm neutral */
-  --color-cloud: #F2F0EB;       /* Card background - soft neutral */
-  --color-soft-black: #111111;  /* Primary text - deep black */
-  --color-charcoal: #222222;    /* Secondary text - charcoal */
-  --color-mid-gray: #666666;    /* Tertiary text - labels */
-  --color-light-gray: #CCCCCC;  /* Borders, dividers */
-  --color-pale-gray: #E8E6E1;   /* Subtle backgrounds */
+  /* Primary Colors (60% of interface) */
+  --color-quantum-navy: #162950;    /* Authority - headings, emphasis */
+  --color-eclipse-black: #141414;   /* Power - primary text */
+  --color-air-white: #FFFFFF;       /* Clarity - cards, backgrounds */
 
-  /* Accent Color (10% of interface) */
-  --color-accent: #0033FF;      /* International Blue - editorial credibility */
-  --color-accent-hover: #0029CC; /* Darker blue for hover states */
-  --color-accent-light: rgba(0, 51, 255, 0.1); /* 10% opacity for subtle use */
+  /* Secondary Colors (30% of interface) */
+  --color-cobalt-blue: #0158AE;     /* Approachable - primary accent */
+  --color-velocity-blue: #1075DC;   /* Tech-forward - links, buttons */
+  --color-pulse-blue: #48AFF0;      /* Optimism - highlights */
+  --color-digital-sky: #AADAF9;     /* Openness - subtle accents */
+  --color-cloud-blue: #DCF2FA;      /* Simplicity - backgrounds */
 
-  /* Domain Colors (at 10-15% opacity) */
-  --color-philosophy: rgba(147, 51, 234, 0.12);    /* Purple */
-  --color-technology: rgba(59, 130, 246, 0.12);    /* Blue */
-  --color-society: rgba(34, 197, 94, 0.12);        /* Green */
-  --color-economics: rgba(251, 146, 60, 0.12);     /* Orange */
-  --color-governance: rgba(239, 68, 68, 0.12);     /* Red */
+  /* Tertiary Colors (<10% - use sparingly) */
+  --color-solar-orange: #E67635;    /* Energy */
+  --color-ionised-aqua: #7ECFC0;    /* Futuristic */
+  --color-space-beige: #E8DED1;     /* Calm - warm backgrounds */
+  --color-electric-red: #C44545;    /* Energy - errors, alerts */
+  --color-cosmic-violet: #8B7EC7;   /* Futuristic */
+  --color-deep-lagoon: #3D8A96;     /* Calm */
+
+  /* ===========================
+     SEMANTIC COLOR MAPPINGS
+     =========================== */
+
+  /* Page & Surface Colors */
+  --color-page-bg: #F8FAFC;         /* Light slate - calm, clean */
+  --color-card-bg: var(--color-air-white);
+  --color-card-bg-glass: rgba(255, 255, 255, 0.92);
+  --color-panel-bg: var(--color-air-white);
+  --color-header-bg: var(--color-quantum-navy);
+
+  /* Legacy mappings (for backward compatibility) */
+  --color-bone: #F8FAFC;            /* Updated to slate */
+  --color-cloud: var(--color-air-white);
+  --color-soft-black: var(--color-eclipse-black);
+  --color-charcoal: #374151;        /* Softer for readability */
+  --color-mid-gray: #6B7280;        /* Gray-500 */
+  --color-light-gray: #E5E7EB;      /* Gray-200 */
+  --color-pale-gray: #F3F4F6;       /* Gray-100 */
+
+  /* Accent Color */
+  --color-accent: var(--color-cobalt-blue);
+  --color-accent-hover: var(--color-velocity-blue);
+  --color-accent-light: rgba(1, 88, 174, 0.1);
+
+  /* Domain Colors (keep existing for consistency) */
+  --color-domain-tech: #1d4ed8;       /* Blue */
+  --color-domain-society: #7c3aed;    /* Purple */
+  --color-domain-enterprise: #059669; /* Green */
+  --color-domain-governance: #dc2626; /* Red */
+  --color-domain-work: #d97706;       /* Amber */
+
+  /* Legacy domain color mappings */
+  --color-philosophy: rgba(147, 51, 234, 0.12);
+  --color-technology: rgba(59, 130, 246, 0.12);
+  --color-society: rgba(34, 197, 94, 0.12);
+  --color-economics: rgba(251, 146, 60, 0.12);
+  --color-governance: rgba(239, 68, 68, 0.12);
+
+  /* Stance Colors (keep existing) */
+  --color-stance-agrees: #10B981;
+  --color-stance-partial: #F59E0B;
+  --color-stance-disagrees: #EF4444;
 
   /* Status Colors */
-  --color-success: #10B981;     /* Green */
-  --color-warning: #F59E0B;     /* Amber */
-  --color-error: #EF4444;       /* Red */
-  --color-info: #3B82F6;        /* Blue */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: var(--color-electric-red);
+  --color-info: var(--color-velocity-blue);
+
+  /* ===========================
+     GLASSMORPHISM EFFECTS
+     =========================== */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(170, 218, 249, 0.4);
+  --glass-shadow: 0 4px 24px rgba(22, 41, 80, 0.08);
+  --glass-blur: blur(12px);
 
   /* ===========================
      TYPOGRAPHY SYSTEM
@@ -101,11 +152,20 @@
      LAYOUT SYSTEM
      =========================== */
 
+  /* Sidebar/Panel Widths - STANDARDIZED */
+  --sidebar-width: 280px;        /* Standard sidebar/panel width for all pages */
+  --sidebar-collapsed: 0px;      /* Collapsed state */
+
   /* Content Widths */
-  --width-narrow: 640px;       /* Single column, reading */
-  --width-standard: 840px;     /* Standard content */
-  --width-wide: 1100px;        /* Wide content */
+  --width-narrow: 640px;         /* Single column, reading */
+  --width-standard: 896px;       /* Standard content (max-w-4xl) */
+  --width-focused: 768px;        /* Focused content like AI Editor (max-w-3xl) */
+  --width-wide: 1200px;          /* Wide content like History */
   --width-full: 100%;
+
+  /* Page Padding */
+  --page-padding-x: 24px;        /* Horizontal page padding */
+  --page-padding-y: 20px;        /* Vertical page padding */
 
   /* Grid */
   --grid-columns: 12;

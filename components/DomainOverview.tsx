@@ -202,7 +202,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-indigo-600" />
-            <h2 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+            <h2 className="text-[13px] font-semibold text-gray-900 uppercase tracking-wider">
               The Core Debates
             </h2>
           </div>
@@ -216,7 +216,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
             </button>
           )}
         </div>
-        <p className="text-[10px] text-gray-500 mt-1">
+        <p className="text-[12px] text-gray-500 mt-1">
           Five domains shaping AI discourse
         </p>
       </div>
@@ -230,14 +230,14 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
             backgroundColor: '#eef2ff'
           }}
         >
-          <span className="text-[10px] text-indigo-700 font-medium">
+          <span className="text-[12px] text-indigo-700 font-medium">
             Filtering: {DOMAIN_INFO.find(d => d.name === activeDomain)?.shortName}
           </span>
           <button
             onClick={clearFilter}
             className="hover:bg-indigo-100 rounded transition-colors p-1"
           >
-            <X className="w-3 h-3 text-indigo-600" />
+            <X className="w-3.5 h-3.5 text-indigo-600" />
           </button>
         </div>
       )}
@@ -273,11 +273,11 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
               >
                 {/* Domain Header */}
                 <div className="flex items-center gap-1.5">
-                  <span style={{ fontSize: '14px' }}>{domain.icon}</span>
+                  <span style={{ fontSize: '15px' }}>{domain.icon}</span>
                   <span
                     className="font-semibold flex-1"
                     style={{
-                      fontSize: '12px',
+                      fontSize: '14px',
                       color: isActive || isHovered ? colors.textDark : '#1f2937'
                     }}
                   >
@@ -286,8 +286,8 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                   <ChevronRight
                     className="transition-transform"
                     style={{
-                      width: '12px',
-                      height: '12px',
+                      width: '14px',
+                      height: '14px',
                       color: isActive || isHovered ? colors.bgSolid : '#9ca3af',
                       transform: isHovered ? 'translateX(2px)' : 'none'
                     }}
@@ -298,7 +298,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                 <p
                   className="leading-snug"
                   style={{
-                    fontSize: '10px',
+                    fontSize: '12px',
                     color: isActive || isHovered ? colors.textDark : '#6b7280',
                     marginTop: '4px',
                     marginBottom: isHovered ? '8px' : '0'
@@ -316,23 +316,23 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                   }}>
                     {/* Description */}
                     <p style={{
-                      fontSize: '11px',
+                      fontSize: '13px',
                       lineHeight: '1.5',
                       color: '#374151',
-                      marginBottom: '8px'
+                      marginBottom: '10px'
                     }}>
                       {domain.description}
                     </p>
 
                     {/* You'll find */}
                     <div style={{
-                      padding: '8px',
+                      padding: '10px',
                       borderRadius: '6px',
                       backgroundColor: 'rgba(255,255,255,0.7)',
-                      marginBottom: '8px'
+                      marginBottom: '10px'
                     }}>
                       <div style={{
-                        fontSize: '9px',
+                        fontSize: '11px',
                         fontWeight: 600,
                         color: colors.textDark,
                         textTransform: 'uppercase',
@@ -342,8 +342,8 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                         You'll find
                       </div>
                       <p style={{
-                        fontSize: '10px',
-                        lineHeight: '1.4',
+                        fontSize: '12px',
+                        lineHeight: '1.5',
                         color: '#4b5563',
                         margin: 0
                       }}>
@@ -359,7 +359,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                       flexWrap: 'wrap'
                     }}>
                       <span style={{
-                        fontSize: '9px',
+                        fontSize: '11px',
                         fontWeight: 600,
                         color: '#6b7280',
                         textTransform: 'uppercase'
@@ -368,9 +368,9 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                       </span>
                       <span
                         style={{
-                          fontSize: '10px',
+                          fontSize: '12px',
                           fontWeight: 600,
-                          padding: '3px 8px',
+                          padding: '4px 10px',
                           borderRadius: '10px',
                           backgroundColor: colors.bgSolid,
                           color: 'white'

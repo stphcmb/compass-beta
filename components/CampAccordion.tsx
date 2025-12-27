@@ -348,27 +348,27 @@ export default function CampAccordion({
               }}
             >
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-sm font-bold" style={{ color: colors.textDark || '#1e3a5f' }}>
+                <h2 className="text-[15px] font-semibold" style={{ color: colors.textDark || '#1e3a5f' }}>
                   {domainName}
                 </h2>
                 {/* Stats chips */}
                 <span
-                  className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-medium"
+                  className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded font-medium"
                   style={{ backgroundColor: colors.bgSolid, color: 'white' }}
                 >
-                  <Layers className="w-2.5 h-2.5" />
+                  <Layers className="w-3 h-3" />
                   {domainCamps.length}
                 </span>
                 <span
-                  className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-medium"
+                  className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded font-medium"
                   style={{ backgroundColor: colors.bgSolid, color: 'white' }}
                 >
-                  <Users className="w-2.5 h-2.5" />
+                  <Users className="w-3 h-3" />
                   {domainAuthorCount}
                 </span>
               </div>
               {/* Domain framing question */}
-              <p className="text-[11px] mt-1 font-medium" style={{ color: colors.textDark || '#1e3a5f', opacity: 0.8 }}>
+              <p className="text-[13px] mt-1" style={{ color: colors.textDark || '#1e3a5f', opacity: 0.85, lineHeight: '1.5' }}>
                 {domainDescription}
               </p>
             </div>
@@ -410,7 +410,7 @@ export default function CampAccordion({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             {/* Perspective name */}
-                            <h3 className="text-[14px] font-semibold text-gray-900">
+                            <h3 className="text-[15px] font-semibold text-gray-900">
                               {camp.name}
                             </h3>
                             {/* Theme chips */}
@@ -419,7 +419,7 @@ export default function CampAccordion({
                                 {themes.map((theme, idx) => (
                                   <span
                                     key={idx}
-                                    className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${campColors.bg} ${campColors.text}`}
+                                    className={`text-[11px] px-2 py-0.5 rounded font-medium ${campColors.bg} ${campColors.text}`}
                                   >
                                     {theme}
                                   </span>
@@ -428,14 +428,14 @@ export default function CampAccordion({
                             )}
                             {/* Author count chip */}
                             <span
-                              className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500"
+                              className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-gray-100 text-gray-600"
                             >
-                              <Users className="w-2.5 h-2.5" />
+                              <Users className="w-3 h-3" />
                               {camp.authorCount}
                             </span>
                           </div>
                           {/* Stance blurb - thought-provoking question with em-dash */}
-                          <p className="text-[11px] text-gray-500 mt-0.5">
+                          <p className="text-[13px] text-gray-500 mt-1" style={{ lineHeight: '1.5' }}>
                             — {stanceBlurb}
                           </p>
                         </div>
@@ -482,8 +482,8 @@ export default function CampAccordion({
 
                         {/* Cross-Perspective Authors: Top 3 Supports & Challenges - Anchored */}
                         {(camp.challengingAuthors?.length > 0 || camp.supportingAuthors?.length > 0) && (
-                          <div className="border-t border-gray-100 px-4 py-2.5 bg-gray-50/30">
-                            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+                          <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/30">
+                            <div className="flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
                               {camp.supportingAuthors?.length > 0 && (
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <ThumbsUp size={11} className="text-green-600 flex-shrink-0" />

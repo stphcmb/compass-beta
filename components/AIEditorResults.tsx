@@ -31,10 +31,22 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
   const [likedSummary, setLikedSummary] = useState(false)
   const [likedCamps, setLikedCamps] = useState<Set<number>>(new Set())
   const [urlCopied, setUrlCopied] = useState(false)
+  const [analysisSaved, setAnalysisSaved] = useState(false)
   // Track expanded state for each camp - all open by default
   const [expandedCamps, setExpandedCamps] = useState<Set<number>>(() =>
     new Set(result.matchedCamps.map((_, idx) => idx))
   )
+
+  // Check if this analysis is already saved on mount
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+      const exists = saved.some((s: any) => s.id === analysisId)
+      setAnalysisSaved(exists)
+    } catch (e) {
+      console.error('Error checking saved analyses:', e)
+    }
+  }, [analysisId])
 
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const authorsRef = useRef<HTMLDivElement>(null)
@@ -98,6 +110,41 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
       } catch (e) {
         showToast('Failed to copy link', 'error')
       }
+    }
+  }
+
+  const handleSaveAnalysis = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+
+      if (analysisSaved) {
+        // Remove from saved
+        const updated = saved.filter((s: any) => s.id !== analysisId)
+        localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(updated))
+        setAnalysisSaved(false)
+        showToast('Analysis removed from saved')
+      } else {
+        // Add to saved
+        const newSaved = {
+          id: analysisId,
+          text: text,
+          result: result,
+          timestamp: timestamp || new Date().toISOString()
+        }
+
+        // Add to beginning, limit to 50 analyses
+        saved.unshift(newSaved)
+        const limited = saved.slice(0, 50)
+        localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(limited))
+        setAnalysisSaved(true)
+        showToast('Analysis saved!')
+
+        // Dispatch event for other components
+        window.dispatchEvent(new CustomEvent('analysis-saved', { detail: newSaved }))
+      }
+    } catch (e) {
+      console.error('Error saving analysis:', e)
+      showToast('Failed to save analysis', 'error')
     }
   }
 
@@ -555,13 +602,15 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
               id="full-analyzed-text-results"
               style={{
                 display: 'none',
-                fontSize: '14px',
-                lineHeight: '1.6',
+                fontSize: '15px',
+                lineHeight: '1.7',
                 color: '#162950',
                 margin: '12px 0 0 0',
-                padding: '12px',
-                backgroundColor: 'rgba(255,255,255,0.6)',
-                borderRadius: '8px'
+                padding: '16px',
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                borderRadius: '8px',
+                fontStyle: 'italic',
+                whiteSpace: 'pre-wrap'
               }}
             >
               {text}
@@ -589,54 +638,53 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
           backgroundColor: 'white',
           border: '1px solid #e5e7eb',
           borderRadius: '12px',
-          padding: '12px 16px',
+          padding: '10px 16px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '16px',
-            flexWrap: 'wrap'
+            gap: '12px'
           }}>
-            {/* Left: New analysis button */}
-            <Link
-              href="/ai-editor"
-              style={{
-                display: 'inline-flex',
+            {/* Left: New Analysis + Navigation pills */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Link
+                href="/ai-editor"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '7px 12px',
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: '#374151',
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <Plus style={{ width: '14px', height: '14px' }} />
+                New
+              </Link>
+              <div style={{ width: '1px', height: '20px', backgroundColor: '#e5e7eb' }} />
+              <div style={{
+                display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '8px 12px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#6b7280',
-                cursor: 'pointer',
-                textDecoration: 'none',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Plus style={{ width: '16px', height: '16px' }} />
-              New Analysis
-            </Link>
-
-            {/* Center: Navigation pills */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '4px',
-              backgroundColor: '#DCF2FA',
-              borderRadius: '10px'
-            }}>
+                gap: '2px',
+                padding: '3px',
+                backgroundColor: '#f1f5f9',
+                borderRadius: '8px'
+              }}>
               <button
                 onClick={() => scrollToSection(summaryRef)}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
                   padding: '6px 12px',
                   backgroundColor: 'white',
                   border: 'none',
@@ -656,14 +704,13 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
                   padding: '6px 12px',
                   backgroundColor: 'transparent',
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: 500,
-                  color: '#162950',
+                  color: '#64748b',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
@@ -675,44 +722,64 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
                   padding: '6px 12px',
                   backgroundColor: 'transparent',
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: 500,
-                  color: '#162950',
+                  color: '#64748b',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
               >
-                Authors ({result.matchedCamps.length})
+                Authors
               </button>
+              </div>
             </div>
 
             {/* Right: Action buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <button
-                onClick={handleShare}
-                title="Share this analysis"
+                onClick={handleSaveAnalysis}
+                title={analysisSaved ? 'Remove from saved' : 'Save this analysis'}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '8px 12px',
-                  backgroundColor: urlCopied ? '#d1fae5' : 'transparent',
-                  border: urlCopied ? '1px solid #10b981' : '1px solid #e5e7eb',
-                  borderRadius: '8px',
+                  padding: '7px 12px',
+                  backgroundColor: analysisSaved ? '#0158AE' : 'white',
+                  border: analysisSaved ? '1px solid #0158AE' : '1px solid #e5e7eb',
+                  borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: 500,
+                  color: analysisSaved ? 'white' : '#374151',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Bookmark style={{ width: '14px', height: '14px', fill: analysisSaved ? 'white' : 'none' }} />
+                {analysisSaved ? 'Saved' : 'Save'}
+              </button>
+              <div style={{ width: '1px', height: '20px', backgroundColor: '#e5e7eb' }} />
+              <button
+                onClick={handleShare}
+                title={urlCopied ? 'Link copied!' : 'Share this analysis'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '34px',
+                  height: '34px',
+                  backgroundColor: urlCopied ? '#d1fae5' : 'transparent',
+                  border: urlCopied ? '1px solid #10b981' : '1px solid #e5e7eb',
+                  borderRadius: '6px',
                   color: urlCopied ? '#059669' : '#6b7280',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
               >
-                <Share2 style={{ width: '14px', height: '14px' }} />
-                {urlCopied ? 'Copied!' : 'Share'}
+                <Share2 style={{ width: '15px', height: '15px' }} />
               </button>
               <button
                 onClick={handleCopy}
@@ -722,17 +789,17 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '36px',
-                  height: '36px',
+                  width: '34px',
+                  height: '34px',
                   backgroundColor: 'transparent',
                   border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   color: '#6b7280',
                   cursor: copying ? 'not-allowed' : 'pointer',
                   transition: 'all 0.15s ease'
                 }}
               >
-                <Copy style={{ width: '16px', height: '16px' }} />
+                <Copy style={{ width: '15px', height: '15px' }} />
               </button>
               <button
                 onClick={handleExportPDF}
@@ -742,17 +809,17 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '36px',
-                  height: '36px',
+                  width: '34px',
+                  height: '34px',
                   backgroundColor: 'transparent',
                   border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   color: '#6b7280',
                   cursor: exporting ? 'not-allowed' : 'pointer',
                   transition: 'all 0.15s ease'
                 }}
               >
-                <FileDown style={{ width: '16px', height: '16px' }} />
+                <FileDown style={{ width: '15px', height: '15px' }} />
               </button>
             </div>
           </div>

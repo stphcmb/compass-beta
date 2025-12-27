@@ -93,7 +93,7 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
             {searchTerms.length > 0 ? highlightText(name, searchTerms) : name}
           </button>
           {affiliation && (
-            <p className="text-xs text-gray-500 leading-tight">
+            <p className="text-[13px] text-gray-500 leading-snug">
               {searchTerms.length > 0 ? highlightText(affiliation, searchTerms) : affiliation}
             </p>
           )}
@@ -132,7 +132,7 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
                   "{searchTerms.length > 0 ? highlightText(author.key_quote, searchTerms) : author.key_quote}"
                 </p>
                 {/* Source Link */}
-                <span className="inline-flex items-center gap-1 mt-1.5 text-[11px] text-gray-400 group-hover:text-indigo-600 transition-colors">
+                <span className="inline-flex items-center gap-1 mt-1.5 text-[12px] text-gray-400 group-hover:text-indigo-600 transition-colors">
                   <ExternalLink className="w-3 h-3" />
                   <span className="truncate max-w-[220px] group-hover:underline">
                     {getSourceTitle(quoteSourceUrl, author?.sources || [])}

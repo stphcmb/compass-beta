@@ -50,10 +50,10 @@ function ResultsPageContent() {
   }, [query])
 
   return (
-    <div className="h-screen bg-gray-50 flex">
+    <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
       <Header sidebarCollapsed={true} />
       <main ref={mainRef} className="flex-1 mt-16 overflow-y-auto">
-        <div className="max-w-5xl mx-auto p-6">
+        <div className="max-w-5xl mx-auto" style={{ padding: '24px' }}>
           <div className="mb-6">
             <SearchBar initialQuery={query} showEdit={true} />
           </div>
@@ -90,8 +90,8 @@ function ResultsPageContent() {
 export default function ResultsPage() {
   return (
     <Suspense fallback={
-      <div className="h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-page-bg)' }}>
+        <div style={{ color: 'var(--color-mid-gray)' }}>Loading...</div>
       </div>
     }>
       <ResultsPageContent />

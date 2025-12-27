@@ -2,39 +2,32 @@
 
 import { useRef } from 'react'
 import Header from '@/components/Header'
+import PageHeader from '@/components/PageHeader'
 import AIEditor from '@/components/AIEditor'
 import BackToTop from '@/components/BackToTop'
+import { Sparkles } from 'lucide-react'
 
 export default function AIEditorPage() {
   const mainRef = useRef<HTMLElement>(null)
 
   return (
-    <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
+    <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
       <Header sidebarCollapsed={true} />
       <main
         ref={mainRef}
         className="flex-1 mt-16 overflow-y-auto"
       >
-        {/* Hero-style background for consistency */}
-        <div className="w-full relative" style={{
-          background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)',
-          minHeight: '100%'
-        }}>
-          {/* Gradient orbs */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div
-              className="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-30"
-              style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)' }}
-            />
-            <div
-              className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-25"
-              style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }}
-            />
-          </div>
+        <div className="max-w-3xl mx-auto" style={{ padding: '24px' }}>
+          {/* Page Header */}
+          <PageHeader
+            icon={<Sparkles size={24} />}
+            iconVariant="navy"
+            title="AI Editor"
+            subtitle="Analyze your content to discover aligned perspectives and thought leaders"
+          />
 
-          <div className="max-w-3xl mx-auto relative z-10" style={{ padding: '48px 24px' }}>
-            <AIEditor showTitle={true} />
-          </div>
+          {/* AI Editor Component */}
+          <AIEditor showTitle={false} />
         </div>
         <BackToTop containerRef={mainRef} />
       </main>

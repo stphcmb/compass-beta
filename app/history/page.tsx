@@ -13,7 +13,6 @@ import {
   Calendar,
   Filter,
   X,
-  HelpCircle,
   MessageSquare,
   Edit3,
   Check,
@@ -22,6 +21,8 @@ import {
   ThumbsUp
 } from 'lucide-react'
 import Header from '@/components/Header'
+import PageHeader from '@/components/PageHeader'
+import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 import { supabase } from '@/lib/supabase'
 
 interface SearchItem {
@@ -67,11 +68,12 @@ interface HelpfulInsight {
   timestamp: string
 }
 
-type TabType = 'all' | 'searches' | 'analyses' | 'insights' | 'notes' | 'favorites'
+type TabType = 'all' | 'searches' | 'analyses' | 'insights' | 'authors'
 type TimeFilter = 'all' | 'today' | 'week' | 'month'
 
 export default function HistoryPage() {
   const router = useRouter()
+  const { openPanel } = useAuthorPanel()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('all')
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
@@ -265,8 +267,29 @@ export default function HistoryPage() {
     }, 100)
   }
 
-  const handleAuthorClick = (name: string) => {
-    router.push(`/authors?author=${encodeURIComponent(name)}`)
+  const handleAuthorClick = async (name: string) => {
+    // Find author ID by name and open the author panel
+    if (!supabase) {
+      router.push(`/authors?author=${encodeURIComponent(name)}`)
+      return
+    }
+
+    try {
+      const { data } = await supabase
+        .from('authors')
+        .select('id')
+        .eq('name', name)
+        .single()
+
+      if (data?.id) {
+        openPanel(data.id)
+      } else {
+        // Fallback to authors page if ID not found
+        router.push(`/authors?author=${encodeURIComponent(name)}`)
+      }
+    } catch {
+      router.push(`/authors?author=${encodeURIComponent(name)}`)
+    }
   }
 
   const deleteRecentSearch = (id: string) => {
@@ -320,9 +343,25 @@ export default function HistoryPage() {
 
   const updateAuthorNote = (name: string, note: string) => {
     const now = new Date().toISOString()
-    const updated = authorNotes.map(n =>
-      n.name === name ? { ...n, note, updatedAt: now } : n
-    )
+    const existingNote = authorNotes.find(n => n.name === name)
+
+    let updated: AuthorNote[]
+    if (existingNote) {
+      // Update existing note
+      updated = authorNotes.map(n =>
+        n.name === name ? { ...n, note, updatedAt: now } : n
+      )
+    } else {
+      // Create new note
+      const newNote: AuthorNote = {
+        id: `note-${Date.now()}`,
+        name,
+        note,
+        updatedAt: now
+      }
+      updated = [newNote, ...authorNotes]
+    }
+
     localStorage.setItem('authorNotes', JSON.stringify(updated))
     setAuthorNotes(updated)
     // Dispatch event to sync with author panel
@@ -358,13 +397,21 @@ export default function HistoryPage() {
     }
   }
 
+  // Combine favorites and notes into a unified authors list
+  const getUniqueAuthorsCount = () => {
+    const authorNames = new Set([
+      ...favoriteAuthors.map(f => f.name),
+      ...authorNotes.map(n => n.name)
+    ])
+    return authorNames.size
+  }
+
   const tabs = [
-    { id: 'all' as TabType, label: 'All Activity', count: recentSearches.length + savedSearches.length + savedAnalyses.length + authorNotes.length + helpfulInsights.length },
+    { id: 'all' as TabType, label: 'All Activity', count: recentSearches.length + savedSearches.length + savedAnalyses.length + getUniqueAuthorsCount() + helpfulInsights.length },
     { id: 'searches' as TabType, label: 'Searches', count: savedSearches.length },
     { id: 'analyses' as TabType, label: 'Analyses', count: savedAnalyses.length },
     { id: 'insights' as TabType, label: 'Helpful Insights', count: helpfulInsights.length },
-    { id: 'notes' as TabType, label: 'Author Notes', count: authorNotes.length },
-    { id: 'favorites' as TabType, label: 'Favorites', count: favoriteAuthors.length },
+    { id: 'authors' as TabType, label: 'Authors', count: getUniqueAuthorsCount() },
   ]
 
   const filteredRecentSearches = filterByTime(recentSearches)
@@ -377,7 +424,7 @@ export default function HistoryPage() {
   if (!mounted) return null
 
   return (
-    <div className="h-screen flex" style={{ backgroundColor: '#f8fafc' }}>
+    <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
       <Header sidebarCollapsed={true} />
       <main
         className="flex-1 mt-16 overflow-auto"
@@ -387,54 +434,159 @@ export default function HistoryPage() {
           margin: '0 auto',
           padding: '24px',
         }}>
-        {/* Page Title */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '24px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)'
-            }}>
-              <History size={24} style={{ color: 'white' }} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
-                Your History
-              </h1>
-              <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0' }}>
-                Track your research journey across searches, analyses, and favorites
-              </p>
-            </div>
+        {/* Page Header */}
+        <PageHeader
+          icon={<History size={24} />}
+          iconVariant="purple"
+          title="Your History"
+          subtitle="Track your searches, analyses, and saved authors"
+          helpButton={{
+            label: 'About',
+            onClick: () => setShowAboutModal(true)
+          }}
+        />
+
+        {/* Quick Preview Grid - Shows compact overview of each category */}
+        {activeTab === 'all' && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '16px',
+            marginBottom: '24px'
+          }}>
+            {/* Searches Preview */}
+            <button
+              onClick={() => setActiveTab('searches')}
+              style={{
+                padding: '16px',
+                background: 'var(--color-air-white)',
+                border: '1px solid var(--color-light-gray)',
+                borderRadius: '12px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-digital-sky)'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 41, 80, 0.08)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <Search size={16} style={{ color: 'var(--color-velocity-blue)' }} />
+                <span style={{ fontWeight: 600, color: 'var(--color-quantum-navy)', fontSize: '14px' }}>Searches</span>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>
+                {savedSearches.length}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
+                {savedSearches.length > 0 ? `Latest: ${savedSearches[0]?.query?.substring(0, 20)}...` : 'No saved searches'}
+              </div>
+            </button>
+
+            {/* Analyses Preview */}
+            <button
+              onClick={() => setActiveTab('analyses')}
+              style={{
+                padding: '16px',
+                background: 'var(--color-air-white)',
+                border: '1px solid var(--color-light-gray)',
+                borderRadius: '12px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-digital-sky)'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 41, 80, 0.08)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <Sparkles size={16} style={{ color: 'var(--color-cobalt-blue)' }} />
+                <span style={{ fontWeight: 600, color: 'var(--color-quantum-navy)', fontSize: '14px' }}>Analyses</span>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>
+                {savedAnalyses.length}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
+                {savedAnalyses.length > 0 ? `Latest: ${savedAnalyses[0]?.preview?.substring(0, 20)}...` : 'No saved analyses'}
+              </div>
+            </button>
+
+            {/* Insights Preview */}
+            <button
+              onClick={() => setActiveTab('insights')}
+              style={{
+                padding: '16px',
+                background: 'var(--color-air-white)',
+                border: '1px solid var(--color-light-gray)',
+                borderRadius: '12px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-digital-sky)'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 41, 80, 0.08)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <ThumbsUp size={16} style={{ color: '#10b981' }} />
+                <span style={{ fontWeight: 600, color: 'var(--color-quantum-navy)', fontSize: '14px' }}>Insights</span>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>
+                {helpfulInsights.length}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
+                {helpfulInsights.length > 0 ? `Latest: ${helpfulInsights[0]?.content?.substring(0, 20)}...` : 'No saved insights'}
+              </div>
+            </button>
+
+            {/* Authors Preview */}
+            <button
+              onClick={() => setActiveTab('authors')}
+              style={{
+                padding: '16px',
+                background: 'var(--color-air-white)',
+                border: '1px solid var(--color-light-gray)',
+                borderRadius: '12px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-digital-sky)'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 41, 80, 0.08)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <Users size={16} style={{ color: '#059669' }} />
+                <span style={{ fontWeight: 600, color: 'var(--color-quantum-navy)', fontSize: '14px' }}>Authors</span>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>
+                {getUniqueAuthorsCount()}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
+                {favoriteAuthors.length} favorites, {authorNotes.length} with notes
+              </div>
+            </button>
           </div>
-          <button
-            onClick={() => setShowAboutModal(true)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: '1px solid #e5e7eb',
-              background: 'white',
-              color: '#6b7280',
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <HelpCircle size={16} />
-            How it works
-          </button>
-        </div>
+        )}
 
         {/* Tabs */}
         <div style={{
@@ -701,71 +853,106 @@ export default function HistoryPage() {
             </Section>
           )}
 
-          {/* Author Notes Section */}
-          {(activeTab === 'all' || activeTab === 'notes') && filteredAuthorNotes.length > 0 && (
-            <Section
-              title="Author Notes"
-              icon={<MessageSquare size={16} style={{ color: '#6366f1' }} />}
-              count={filteredAuthorNotes.length}
-              onClear={() => clearAllByType('notes')}
-            >
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: '12px'
-              }}>
-                {filteredAuthorNotes.map((noteItem: any) => {
-                  const details = authorDetails[noteItem.name]
-                  return (
-                    <AuthorNoteCard
-                      key={noteItem.id}
-                      name={noteItem.name}
-                      affiliation={details?.affiliation || details?.primary_domain}
-                      note={noteItem.note}
-                      updatedAt={noteItem.updatedAt}
-                      onClick={() => handleAuthorClick(noteItem.name)}
-                      onDelete={() => deleteAuthorNote(noteItem.name)}
-                      onUpdateNote={(note) => updateAuthorNote(noteItem.name, note)}
-                      timeAgo={timeAgo}
-                    />
-                  )
-                })}
-              </div>
-            </Section>
-          )}
+          {/* Combined Authors Section (Favorites + Notes) */}
+          {(activeTab === 'all' || activeTab === 'authors') && (() => {
+            // Build unified author list from favorites and notes
+            const authorMap = new Map<string, {
+              name: string
+              isFavorite: boolean
+              note?: string
+              addedAt?: string
+              noteUpdatedAt?: string
+            }>()
 
-          {/* Favorite Authors Section */}
-          {(activeTab === 'all' || activeTab === 'favorites') && filteredFavorites.length > 0 && (
-            <Section
-              title="Favorite Authors"
-              icon={<Star size={16} style={{ color: '#f59e0b' }} />}
-              count={filteredFavorites.length}
-              onClear={() => clearAllByType('favorites')}
-            >
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '12px'
-              }}>
-                {filteredFavorites.map(fav => {
-                  const details = authorDetails[fav.name]
-                  const associatedNote = authorNotes.find(n => n.name === fav.name)
-                  return (
-                    <FavoriteAuthorCard
-                      key={fav.id}
-                      name={fav.name}
-                      affiliation={details?.affiliation || details?.primary_domain}
-                      addedAt={fav.addedAt}
-                      note={associatedNote?.note}
-                      onClick={() => handleAuthorClick(fav.name)}
-                      onDelete={() => removeFavoriteAuthor(fav.name)}
-                      timeAgo={timeAgo}
-                    />
-                  )
-                })}
-              </div>
-            </Section>
-          )}
+            // Add favorites
+            favoriteAuthors.forEach(fav => {
+              authorMap.set(fav.name, {
+                name: fav.name,
+                isFavorite: true,
+                addedAt: fav.addedAt
+              })
+            })
+
+            // Add/merge notes
+            authorNotes.forEach(noteItem => {
+              const existing = authorMap.get(noteItem.name)
+              if (existing) {
+                existing.note = noteItem.note
+                existing.noteUpdatedAt = noteItem.updatedAt
+              } else {
+                authorMap.set(noteItem.name, {
+                  name: noteItem.name,
+                  isFavorite: false,
+                  note: noteItem.note,
+                  noteUpdatedAt: noteItem.updatedAt
+                })
+              }
+            })
+
+            // Convert to array and sort by most recent activity
+            const unifiedAuthors = Array.from(authorMap.values())
+              .map(author => ({
+                ...author,
+                timestamp: author.noteUpdatedAt || author.addedAt || ''
+              }))
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+            // Apply time filter
+            const filteredAuthors = filterByTime(unifiedAuthors)
+
+            if (filteredAuthors.length === 0) return null
+
+            return (
+              <Section
+                title="Saved Authors"
+                icon={<Users size={16} style={{ color: '#6366f1' }} />}
+                count={filteredAuthors.length}
+                onClear={() => {
+                  clearAllByType('favorites')
+                  clearAllByType('notes')
+                }}
+              >
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                  gap: '12px'
+                }}>
+                  {filteredAuthors.slice(0, activeTab === 'all' ? 6 : undefined).map(author => {
+                    const details = authorDetails[author.name]
+                    return (
+                      <UnifiedAuthorCard
+                        key={author.name}
+                        name={author.name}
+                        affiliation={details?.affiliation || details?.primary_domain}
+                        isFavorite={author.isFavorite}
+                        note={author.note}
+                        timestamp={author.timestamp}
+                        onClick={() => handleAuthorClick(author.name)}
+                        onToggleFavorite={() => {
+                          if (author.isFavorite) {
+                            removeFavoriteAuthor(author.name)
+                          } else {
+                            // Add to favorites
+                            const newFavorite = {
+                              id: `fav-${Date.now()}`,
+                              name: author.name,
+                              addedAt: new Date().toISOString()
+                            }
+                            const updated = [newFavorite, ...favoriteAuthors]
+                            localStorage.setItem('favoriteAuthors', JSON.stringify(updated))
+                            setFavoriteAuthors(updated)
+                          }
+                        }}
+                        onDeleteNote={() => deleteAuthorNote(author.name)}
+                        onUpdateNote={(note) => updateAuthorNote(author.name, note)}
+                        timeAgo={timeAgo}
+                      />
+                    )
+                  })}
+                </div>
+              </Section>
+            )
+          })()}
 
           {/* Tab-specific Empty States */}
           {activeTab === 'searches' && filteredRecentSearches.length === 0 && filteredSavedSearches.length === 0 && (
@@ -801,25 +988,14 @@ export default function HistoryPage() {
             />
           )}
 
-          {activeTab === 'notes' && filteredAuthorNotes.length === 0 && (
+          {activeTab === 'authors' && getUniqueAuthorsCount() === 0 && (
             <EmptyState
-              icon={<MessageSquare size={40} style={{ color: '#6366f1' }} />}
-              title="No author notes yet"
-              description="Add personal notes to any author's profile to keep track of your thoughts and research insights."
-              actionLabel="Browse Authors"
-              actionHref="/authors"
-              gradient="linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)"
-            />
-          )}
-
-          {activeTab === 'favorites' && filteredFavorites.length === 0 && (
-            <EmptyState
-              icon={<Star size={40} style={{ color: '#f59e0b' }} />}
-              title="No favorite authors yet"
-              description="Star authors you want to follow closely. Their profiles will be easily accessible here."
+              icon={<Users size={40} style={{ color: '#6366f1' }} />}
+              title="No saved authors yet"
+              description="Star your favorite authors or add notes to any author's profile. They'll appear here for quick access."
               actionLabel="Discover Authors"
               actionHref="/authors"
-              gradient="linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)"
+              gradient="linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)"
             />
           )}
 
@@ -829,8 +1005,7 @@ export default function HistoryPage() {
            filteredSavedSearches.length === 0 &&
            filteredAnalyses.length === 0 &&
            filteredInsights.length === 0 &&
-           filteredAuthorNotes.length === 0 &&
-           filteredFavorites.length === 0 && (
+           getUniqueAuthorsCount() === 0 && (
             <div style={{
               textAlign: 'center',
               padding: '48px 24px',
@@ -1621,6 +1796,306 @@ function AuthorNoteCard({
             </button>
             <button
               onClick={handleSave}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                background: '#6366f1',
+                color: 'white',
+                fontSize: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <Check size={12} />
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Unified Author Card (combines favorite + notes)
+function UnifiedAuthorCard({
+  name,
+  affiliation,
+  isFavorite,
+  note,
+  timestamp,
+  onClick,
+  onToggleFavorite,
+  onDeleteNote,
+  onUpdateNote,
+  timeAgo
+}: {
+  name: string
+  affiliation?: string
+  isFavorite: boolean
+  note?: string
+  timestamp: string
+  onClick: () => void
+  onToggleFavorite: () => void
+  onDeleteNote: () => void
+  onUpdateNote: (note: string) => void
+  timeAgo: (ts: string) => string
+}) {
+  const [isEditingNote, setIsEditingNote] = useState(false)
+  const [noteText, setNoteText] = useState(note || '')
+
+  const handleSaveNote = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (noteText.trim()) {
+      onUpdateNote(noteText)
+    }
+    setIsEditingNote(false)
+  }
+
+  const handleCancelNote = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setNoteText(note || '')
+    setIsEditingNote(false)
+  }
+
+  return (
+    <div
+      style={{
+        borderRadius: '10px',
+        border: '1px solid #e5e7eb',
+        background: 'white',
+        overflow: 'hidden',
+        transition: 'all 0.2s'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = '#6366f1'
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.15)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = '#e5e7eb'
+        e.currentTarget.style.boxShadow = 'none'
+      }}
+    >
+      {/* Header */}
+      <div
+        onClick={onClick}
+        style={{
+          padding: '14px 16px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          borderBottom: note || isEditingNote ? '1px solid #f3f4f6' : 'none'
+        }}
+      >
+        <div style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: isFavorite
+            ? 'linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%)'
+            : 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }}>
+          {isFavorite ? (
+            <Star size={18} style={{ color: '#f59e0b' }} />
+          ) : (
+            <Users size={18} style={{ color: '#6366f1' }} />
+          )}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: '600', color: '#1f2937', fontSize: '14px' }}>
+            {name}
+          </div>
+          {affiliation && (
+            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+              {affiliation}
+            </div>
+          )}
+          <div style={{
+            fontSize: '11px',
+            color: '#9ca3af',
+            marginTop: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexWrap: 'wrap'
+          }}>
+            <span>{timeAgo(timestamp)}</span>
+            {isFavorite && (
+              <span style={{
+                fontSize: '10px',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                background: '#fef3c7',
+                color: '#d97706',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <Star size={10} />
+                Favorite
+              </span>
+            )}
+            {note && !isEditingNote && (
+              <span style={{
+                fontSize: '10px',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                background: '#e0e7ff',
+                color: '#4f46e5',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <MessageSquare size={10} />
+                Note
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleFavorite()
+          }}
+          style={{
+            padding: '6px',
+            borderRadius: '6px',
+            border: 'none',
+            background: isFavorite ? '#fef3c7' : 'transparent',
+            cursor: 'pointer',
+            color: isFavorite ? '#f59e0b' : '#9ca3af',
+            transition: 'all 0.2s'
+          }}
+          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <Star size={16} style={{ fill: isFavorite ? '#f59e0b' : 'none' }} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsEditingNote(true)
+          }}
+          style={{
+            padding: '6px',
+            borderRadius: '6px',
+            border: 'none',
+            background: note ? '#e0e7ff' : 'transparent',
+            cursor: 'pointer',
+            color: note ? '#6366f1' : '#9ca3af',
+            transition: 'all 0.2s'
+          }}
+          title={note ? 'Edit note' : 'Add note'}
+        >
+          {note ? <Edit3 size={14} /> : <MessageSquare size={14} />}
+        </button>
+        {note && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onDeleteNote()
+            }}
+            style={{
+              padding: '6px',
+              borderRadius: '6px',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              color: '#9ca3af'
+            }}
+            title="Delete note"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+        <ChevronRight size={16} style={{ color: '#d1d5db', flexShrink: 0 }} />
+      </div>
+
+      {/* Note display (when not editing) */}
+      {note && !isEditingNote && (
+        <div
+          onClick={onClick}
+          style={{
+            padding: '10px 16px 12px 68px',
+            background: '#fafafa',
+            cursor: 'pointer'
+          }}
+        >
+          <p style={{
+            fontSize: '12px',
+            color: '#6b7280',
+            margin: 0,
+            fontStyle: 'italic',
+            lineHeight: '1.4'
+          }}>
+            "{note}"
+          </p>
+        </div>
+      )}
+
+      {/* Note editor */}
+      {isEditingNote && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            padding: '12px 16px',
+            background: '#f5f3ff'
+          }}
+        >
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Add your note about this author..."
+            autoFocus
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '6px',
+              border: '1px solid #c7d2fe',
+              fontSize: '13px',
+              lineHeight: '1.5',
+              resize: 'none',
+              minHeight: '80px',
+              outline: 'none',
+              fontFamily: 'inherit'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = '#6366f1'
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = '#c7d2fe'
+            }}
+          />
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '8px',
+            marginTop: '8px'
+          }}>
+            <button
+              onClick={handleCancelNote}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: '1px solid #e5e7eb',
+                background: 'white',
+                color: '#6b7280',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveNote}
               style={{
                 padding: '6px 12px',
                 borderRadius: '6px',

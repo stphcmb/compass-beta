@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { X, Quote, ExternalLink, BookOpen, FileText, Video, Mic, Newspaper, GraduationCap, Star, MessageSquare, Edit3, Check } from 'lucide-react'
 import { getAuthorWithDetails } from '@/lib/api/thought-leaders'
@@ -43,6 +44,7 @@ function getSourceIcon(type: string) {
 }
 
 export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded = false }: AuthorDetailPanelProps) {
+  const router = useRouter()
   const [author, setAuthor] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
@@ -253,7 +255,30 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
 
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 2px 0', color: '#111827' }}>
+                <h2
+                  onClick={() => {
+                    // In embedded mode (already on authors page), don't navigate away
+                    if (!embedded) {
+                      router.push(`/authors?author=${encodeURIComponent(author.name)}`)
+                      onClose()
+                    }
+                  }}
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    margin: '0 0 2px 0',
+                    color: 'var(--color-quantum-navy)',
+                    cursor: embedded ? 'default' : 'pointer',
+                    transition: 'color 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!embedded) e.currentTarget.style.color = 'var(--color-velocity-blue)'
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!embedded) e.currentTarget.style.color = 'var(--color-quantum-navy)'
+                  }}
+                  title={embedded ? undefined : "View full author profile"}
+                >
                   {author.name}
                 </h2>
                 <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
@@ -709,7 +734,30 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                 </span>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 2px 0', color: '#111827' }}>
+                <h2
+                  onClick={() => {
+                    // In embedded mode (already on authors page), don't navigate away
+                    if (!embedded) {
+                      router.push(`/authors?author=${encodeURIComponent(author.name)}`)
+                      onClose()
+                    }
+                  }}
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    margin: '0 0 2px 0',
+                    color: 'var(--color-quantum-navy)',
+                    cursor: embedded ? 'default' : 'pointer',
+                    transition: 'color 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!embedded) e.currentTarget.style.color = 'var(--color-velocity-blue)'
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!embedded) e.currentTarget.style.color = 'var(--color-quantum-navy)'
+                  }}
+                  title={embedded ? undefined : "View full author profile"}
+                >
                   {author.name}
                 </h2>
                 <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>

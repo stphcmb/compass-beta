@@ -3,6 +3,7 @@
 import { Suspense, useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Header from '@/components/Header'
+import PageHeader from '@/components/PageHeader'
 import SearchBar from '@/components/SearchBar'
 import CampAccordion from '@/components/CampAccordion'
 import BackToTop from '@/components/BackToTop'
@@ -11,10 +12,10 @@ import { FeatureHint } from '@/components/FeatureHint'
 import { HowPerspectivesWorkModal, useHowPerspectivesWorkModal } from '@/components/HowPerspectivesWorkModal'
 import DomainOverview from '@/components/DomainOverview'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
-import { HelpCircle, Layers, Compass } from 'lucide-react'
+import { Layers, Compass } from 'lucide-react'
 
-// Layout constants
-const DOMAIN_PANEL_WIDTH = 220
+// Layout constants - use CSS variable value
+const SIDEBAR_WIDTH = 280
 
 function ExplorePageContent() {
   const searchParams = useSearchParams()
@@ -79,12 +80,12 @@ function ExplorePageContent() {
   }, [query])
 
   // Calculate margins for layout
-  const domainPanelLeft = 0
-  const actualDomainPanelWidth = domainPanelCollapsed ? 0 : DOMAIN_PANEL_WIDTH
-  const mainContentLeft = actualDomainPanelWidth
+  const sidebarLeft = 0
+  const actualSidebarWidth = domainPanelCollapsed ? 0 : SIDEBAR_WIDTH
+  const mainContentLeft = actualSidebarWidth
 
   return (
-    <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
+    <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
       <Header sidebarCollapsed={true} />
 
       {/* Domain Panel Expand Button - animated appearance */}
@@ -104,14 +105,14 @@ function ExplorePageContent() {
         <Layers className="w-5 h-5 text-indigo-600" />
       </button>
 
-      {/* Domain Overview Panel - Fixed position between sidebar and main */}
+      {/* Domain Overview Panel - Fixed position sidebar */}
       <aside
         className="fixed top-16 h-[calc(100vh-64px)] border-r border-gray-200 z-10 overflow-hidden"
         style={{
-          left: `${domainPanelLeft}px`,
-          width: domainPanelCollapsed ? '0px' : `${DOMAIN_PANEL_WIDTH}px`,
+          left: `${sidebarLeft}px`,
+          width: domainPanelCollapsed ? '0px' : `${SIDEBAR_WIDTH}px`,
           opacity: domainPanelCollapsed ? 0 : 1,
-          backgroundColor: 'white',
+          backgroundColor: 'var(--color-air-white)',
           transition: 'width 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease-out',
           transitionDelay: domainPanelCollapsed ? '0ms' : '50ms'
         }}
@@ -119,7 +120,7 @@ function ExplorePageContent() {
         <div
           className="h-full"
           style={{
-            width: `${DOMAIN_PANEL_WIDTH}px`,
+            width: `${SIDEBAR_WIDTH}px`,
             transform: domainPanelCollapsed ? 'translateX(-20px)' : 'translateX(0)',
             opacity: domainPanelCollapsed ? 0 : 1,
             transition: 'transform 250ms ease-out, opacity 200ms ease-out',
@@ -141,54 +142,17 @@ function ExplorePageContent() {
         style={{ marginLeft: `${mainContentLeft}px` }}
       >
         <div className="max-w-4xl mx-auto" style={{ padding: '20px 24px' }}>
-          {/* Page Title */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '20px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
-              }}>
-                <Compass size={24} style={{ color: 'white' }} />
-              </div>
-              <div>
-                <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
-                  {TERMINOLOGY.searchFull}
-                </h1>
-                <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0' }}>
-                  Browse the definitive collection of {TERMINOLOGY.camps.toLowerCase()} shaping AI discourse
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={openModal}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-                background: 'white',
-                color: '#6b7280',
-                fontSize: '13px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              <HelpCircle size={16} />
-              How it works
-            </button>
-          </div>
+          {/* Page Header */}
+          <PageHeader
+            icon={<Compass size={24} />}
+            iconVariant="blue"
+            title={TERMINOLOGY.searchFull}
+            subtitle={`Browse the definitive collection of ${TERMINOLOGY.camps.toLowerCase()} shaping AI discourse`}
+            helpButton={{
+              label: 'How it works',
+              onClick: openModal
+            }}
+          />
 
           {/* Feature Hint */}
           <FeatureHint featureKey="explore" className="mb-4" />
@@ -264,16 +228,24 @@ function ExplorePageContent() {
               </div>
             )}
 
-            <CampAccordion
-              query={query}
-              domain={domain}
-              domains={domains}
-              camp={camp}
-              camps={camps}
-              authors={authors}
-              onCampsLoaded={handleCampsLoaded}
-              scrollToCampId={scrollToCampId}
-            />
+            <div style={{
+              backgroundColor: 'var(--color-air-white)',
+              border: '1px solid var(--color-light-gray)',
+              borderRadius: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              overflow: 'hidden'
+            }}>
+              <CampAccordion
+                query={query}
+                domain={domain}
+                domains={domains}
+                camp={camp}
+                camps={camps}
+                authors={authors}
+                onCampsLoaded={handleCampsLoaded}
+                scrollToCampId={scrollToCampId}
+              />
+            </div>
           </div>
         </div>
         <BackToTop containerRef={mainRef} />
