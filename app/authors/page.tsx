@@ -203,76 +203,69 @@ function AuthorIndexPageContent() {
         style={{ display: 'flex', flexDirection: 'column' }}
       >
         {/* Centered Header Section - matches Explore layout */}
-        <div className="max-w-4xl mx-auto" style={{ padding: '20px 24px 0 24px' }}>
-          <PageHeader
-            icon={<Users size={24} />}
-            iconVariant="green"
-            title="Thought Leaders"
-            subtitle={`${totalFiltered} experts shaping AI discourse`}
-            helpButton={{
-              label: 'How it works',
-              onClick: openModal
-            }}
-          />
+        <div style={{ borderBottom: '1px solid var(--color-light-gray)', backgroundColor: 'var(--color-air-white)' }}>
+          <div className="max-w-4xl mx-auto" style={{ padding: '20px 24px' }}>
+            <PageHeader
+              icon={<Users size={24} />}
+              iconVariant="green"
+              title="Thought Leaders"
+              subtitle={`${totalFiltered} experts shaping AI discourse`}
+              helpButton={{
+                label: 'How it works',
+                onClick: openModal
+              }}
+            />
 
-          {/* Search Bar - same style as Explore */}
-          <div style={{ marginTop: '16px', marginBottom: '16px' }}>
-            <div style={{ position: 'relative' }}>
-              <Search style={{
-                position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
-                width: '18px', height: '18px', color: 'var(--color-mid-gray)'
-              }} />
-              <input
-                type="text"
-                placeholder="Search by name or affiliation..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '14px 48px 14px 48px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--color-light-gray)',
-                  fontSize: '15px',
-                  outline: 'none',
-                  transition: 'border-color 150ms ease, box-shadow 150ms ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-velocity-blue)'
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'
-                }}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
+            {/* Search Bar - same style as Explore */}
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ position: 'relative' }}>
+                <Search style={{
+                  position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
+                  width: '18px', height: '18px', color: 'var(--color-mid-gray)'
+                }} />
+                <input
+                  type="text"
+                  placeholder="Search by name or affiliation..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
-                    position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
-                    background: 'var(--color-pale-gray)', border: 'none', cursor: 'pointer',
-                    padding: '6px', borderRadius: '50%', display: 'flex'
+                    width: '100%',
+                    padding: '14px 48px 14px 48px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--color-light-gray)',
+                    fontSize: '15px',
+                    outline: 'none',
+                    transition: 'border-color 150ms ease, box-shadow 150ms ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                   }}
-                >
-                  <X style={{ width: '14px', height: '14px', color: 'var(--color-mid-gray)' }} />
-                </button>
-              )}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-velocity-blue)'
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    style={{
+                      position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'var(--color-pale-gray)', border: 'none', cursor: 'pointer',
+                      padding: '6px', borderRadius: '50%', display: 'flex'
+                    }}
+                  >
+                    <X style={{ width: '14px', height: '14px', color: 'var(--color-mid-gray)' }} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Split panel area - with card border like Explore */}
-        <div className="max-w-4xl mx-auto" style={{ flex: 1, display: 'flex', overflow: 'hidden', padding: '0 24px 24px 24px', width: '100%' }}>
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            backgroundColor: 'var(--color-air-white)',
-            border: '1px solid var(--color-light-gray)',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            overflow: 'hidden'
-          }}>
+        {/* Split panel area */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           {/* Left panel - Author directory */}
           <div style={{
             width: '320px',
@@ -750,7 +743,6 @@ function AuthorIndexPageContent() {
               </div>
             )}
             </div>
-          </div>
           </div>
         </div>
 
