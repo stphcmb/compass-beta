@@ -117,10 +117,10 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
   if (loading) {
     return (
       <div className="h-full flex flex-col bg-white">
-        <div className="p-3 border-b border-gray-200">
+        <div className="border-b border-gray-200" style={{ padding: '24px 16px 16px 22px' }}>
           <div className="h-4 w-20 rounded animate-pulse bg-gray-200" />
         </div>
-        <div className="flex-1 p-2 space-y-1.5">
+        <div className="flex-1 space-y-1.5" style={{ padding: '16px 16px 16px 22px' }}>
           {[...Array(5)].map((_, i) => (
             <div key={i} className="h-14 rounded animate-pulse bg-gray-100" />
           ))}
@@ -134,7 +134,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
       {/* Header with collapse toggle */}
       <div
         className="flex-shrink-0 border-b border-indigo-100 relative"
-        style={{ padding: '12px' }}
+        style={{ padding: '24px 16px 16px 22px' }}
       >
         <div
           className="absolute top-0 left-0 right-0 h-0.5"
@@ -167,7 +167,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
         <div
           className="flex items-center justify-between border-b border-indigo-200"
           style={{
-            padding: '8px 12px',
+            padding: '10px 16px 10px 22px',
             backgroundColor: '#eef2ff'
           }}
         >
@@ -184,7 +184,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
       )}
 
       {/* Domain List - Scrollable */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: '8px' }}>
+      <div className="flex-1 overflow-y-auto" style={{ padding: '16px 16px 16px 22px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {DOMAINS.map((domain) => {
           const data = domainData[domain.name] || { perspectives: [], authorCount: 0 }

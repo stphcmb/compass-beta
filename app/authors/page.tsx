@@ -202,83 +202,16 @@ function AuthorIndexPageContent() {
         className="flex-1 mt-16 overflow-hidden"
         style={{ display: 'flex', flexDirection: 'column' }}
       >
-        {/* Header Section - aligned with right panel content */}
+        {/* Header Section - left panel filters + right panel header */}
         <div style={{ borderBottom: '1px solid var(--color-light-gray)', backgroundColor: 'var(--color-air-white)' }}>
-          <div style={{ marginLeft: '320px', padding: '20px 16px' }}>
-            <div style={{ maxWidth: '896px', margin: '0 auto' }}>
-            <PageHeader
-              icon={<Users size={24} />}
-              iconVariant="green"
-              title="Thought Leaders"
-              subtitle={`${totalFiltered} experts shaping AI discourse`}
-              helpButton={{
-                label: 'How it works',
-                onClick: openModal
-              }}
-            />
-
-            {/* Search Bar - same style as Explore */}
-            <div style={{ marginTop: '16px' }}>
-              <div style={{ position: 'relative' }}>
-                <Search style={{
-                  position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
-                  width: '18px', height: '18px', color: 'var(--color-mid-gray)'
-                }} />
-                <input
-                  type="text"
-                  placeholder="Search by name or affiliation..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '14px 48px 14px 48px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--color-light-gray)',
-                    fontSize: '15px',
-                    outline: 'none',
-                    transition: 'border-color 150ms ease, box-shadow 150ms ease',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-velocity-blue)'
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'
-                  }}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    style={{
-                      position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
-                      background: 'var(--color-pale-gray)', border: 'none', cursor: 'pointer',
-                      padding: '6px', borderRadius: '50%', display: 'flex'
-                    }}
-                  >
-                    <X style={{ width: '14px', height: '14px', color: 'var(--color-mid-gray)' }} />
-                  </button>
-                )}
-              </div>
-            </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Split panel area */}
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          {/* Left panel - Author directory */}
-          <div style={{
-            width: '320px',
-            minWidth: '320px',
-            display: 'flex',
-            flexDirection: 'column',
-            borderRight: '1px solid var(--color-light-gray)',
-            backgroundColor: 'var(--color-air-white)'
-          }}>
-            {/* Filters section */}
-            <div style={{ padding: '12px', borderBottom: '1px solid var(--color-light-gray)' }}>
+          <div style={{ display: 'flex' }}>
+            {/* Left side - Filters in header area */}
+            <div style={{
+              width: '320px',
+              minWidth: '320px',
+              padding: '24px 16px 16px 22px',
+              borderRight: '1px solid var(--color-light-gray)'
+            }}>
               {/* Group toggle + count */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -394,18 +327,92 @@ function AuthorIndexPageContent() {
               </div>
             </div>
 
+            {/* Right side - PageHeader and search */}
+            <div style={{ flex: 1, padding: '20px 16px' }}>
+              <div style={{ maxWidth: '896px', margin: '0 auto' }}>
+                <PageHeader
+                  icon={<Users size={24} />}
+                  iconVariant="green"
+                  title="Thought Leaders"
+                  subtitle={`${totalFiltered} experts shaping AI discourse`}
+                  helpButton={{
+                    label: 'How it works',
+                    onClick: openModal
+                  }}
+                />
+
+                {/* Search Bar - same style as Explore */}
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search style={{
+                      position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
+                      width: '18px', height: '18px', color: 'var(--color-mid-gray)'
+                    }} />
+                    <input
+                      type="text"
+                      placeholder="Search by name or affiliation..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '14px 48px 14px 48px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--color-light-gray)',
+                        fontSize: '15px',
+                        outline: 'none',
+                        transition: 'border-color 150ms ease, box-shadow 150ms ease',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-velocity-blue)'
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'
+                      }}
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        style={{
+                          position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
+                          background: 'var(--color-pale-gray)', border: 'none', cursor: 'pointer',
+                          padding: '6px', borderRadius: '50%', display: 'flex'
+                        }}
+                      >
+                        <X style={{ width: '14px', height: '14px', color: 'var(--color-mid-gray)' }} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Split panel area */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          {/* Left panel - Author directory */}
+          <div style={{
+            width: '320px',
+            minWidth: '320px',
+            display: 'flex',
+            flexDirection: 'column',
+            borderRight: '1px solid var(--color-light-gray)',
+            backgroundColor: 'var(--color-air-white)'
+          }}>
           {/* Scrollable list with optional alphabet sidebar */}
-          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', overflow: 'hidden', paddingLeft: '16px' }}>
             {/* Alphabet quick-jump - only in A-Z mode */}
             {groupBy === 'alphabet' && (
               <div style={{
-                width: '26px',
+                width: '32px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'flex-start',
-                padding: '8px 3px',
-                backgroundColor: '#f8fafc',
-                borderRight: '1px solid var(--color-light-gray)',
+                padding: '8px 6px',
+                backgroundColor: 'transparent',
                 overflowY: 'auto'
               }}>
                 {ALPHABET.map(letter => {
@@ -446,7 +453,7 @@ function AuthorIndexPageContent() {
             )}
 
             {/* Author list */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 8px 8px 16px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px 8px 8px' }}>
               {/* Empty state when no authors match */}
               {totalFiltered === 0 && (
                 <div style={{
