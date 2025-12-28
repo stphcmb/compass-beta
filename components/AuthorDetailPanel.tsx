@@ -330,6 +330,35 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                   }}
                 />
               </button>
+
+              {/* Close Button */}
+              <button
+                onClick={onClose}
+                title="Close"
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  backgroundColor: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.15s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6'
+                  e.currentTarget.style.borderColor = '#d1d5db'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white'
+                  e.currentTarget.style.borderColor = '#e5e7eb'
+                }}
+              >
+                <X size={18} style={{ color: '#6b7280' }} />
+              </button>
             </div>
 
             {/* Personal Note Section - Always visible */}

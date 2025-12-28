@@ -37,12 +37,39 @@ function AuthorIndexPageContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [domainFilter, setDomainFilter] = useState<string | null>(null)
   const [panelOpen, setPanelOpen] = useState(true) // Open by default
-  const [groupBy, setGroupBy] = useState<'alphabet' | 'domain'>('alphabet')
+  const [groupBy, setGroupBy] = useState<'alphabet' | 'domain' | 'recent'>('alphabet')
   const letterRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const domainRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [urlAuthorHandled, setUrlAuthorHandled] = useState(false)
 
   // Modal for teaching users about thought leaders
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useAboutThoughtLeadersModal()
+
+  // Load favorite authors from localStorage
+  const [favoriteAuthorNames, setFavoriteAuthorNames] = useState<string[]>([])
+  useEffect(() => {
+    const loadFavorites = () => {
+      try {
+        const stored = localStorage.getItem('favoriteAuthors')
+        if (stored) {
+          const favorites = JSON.parse(stored)
+          setFavoriteAuthorNames(favorites.map((f: any) => f.name))
+        }
+      } catch (e) {
+        console.error('Error loading favorites:', e)
+      }
+    }
+    loadFavorites()
+
+    // Listen for favorite changes
+    const handleFavoriteChange = () => loadFavorites()
+    window.addEventListener('favorite-author-added', handleFavoriteChange)
+    window.addEventListener('favorite-author-removed', handleFavoriteChange)
+    return () => {
+      window.removeEventListener('favorite-author-added', handleFavoriteChange)
+      window.removeEventListener('favorite-author-removed', handleFavoriteChange)
+    }
+  }, [])
 
   // Fetch data
   useEffect(() => {
@@ -103,8 +130,16 @@ function AuthorIndexPageContent() {
     }
   }
 
+  // Scroll to domain
+  const scrollToDomain = (domain: string) => {
+    const ref = domainRefs.current[domain]
+    if (ref) {
+      ref.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   // Filter and group authors
-  const { authorsByLetter, authorsByDomain, domainCounts, availableLetters, totalFiltered } = useMemo(() => {
+  const { authorsByLetter, authorsByDomain, recentAuthors, domainCounts, availableLetters, availableDomains, totalFiltered } = useMemo(() => {
     let filtered = authors
 
     // Apply search filter
@@ -163,6 +198,13 @@ function AuthorIndexPageContent() {
       }
     })
 
+    // Sort by recently added (created_at descending)
+    const recent = [...filtered].sort((a, b) => {
+      const aDate = a.created_at ? new Date(a.created_at).getTime() : 0
+      const bDate = b.created_at ? new Date(b.created_at).getTime() : 0
+      return bDate - aDate
+    })
+
     // Count all authors per domain
     authors.forEach(author => {
       const domain = getAuthorDomain(author.id) || 'Other'
@@ -175,14 +217,42 @@ function AuthorIndexPageContent() {
     const available = ALPHABET.filter(letter => byLetter[letter].length > 0)
     if (byLetter['#'].length > 0) available.push('#')
 
+    // Get available domains (those with authors)
+    const availableDoms = DOMAINS.filter(d => byDomain[d.name]?.length > 0)
+    if (byDomain['Other']?.length > 0) {
+      availableDoms.push({ name: 'Other', shortName: 'Other', text: '#6b7280', bgLight: '#f3f4f6', border: '#d1d5db' } as any)
+    }
+
     return {
       authorsByLetter: byLetter,
       authorsByDomain: byDomain,
+      recentAuthors: recent,
       domainCounts: counts,
       availableLetters: available,
+      availableDomains: availableDoms,
       totalFiltered: filtered.length
     }
   }, [authors, searchQuery, domainFilter, camps])
+
+  // Favorite and recent authors for welcome state
+  const { favoriteAuthors, recentAddedAuthors } = useMemo(() => {
+    if (authors.length === 0) return { favoriteAuthors: [], recentAddedAuthors: [] }
+
+    // Get favorite authors (match by name)
+    const favorites = authors.filter(a => favoriteAuthorNames.includes(a.name)).slice(0, 3)
+
+    // Get recent authors (excluding favorites)
+    const recent = [...authors]
+      .filter(a => !favoriteAuthorNames.includes(a.name))
+      .sort((a, b) => {
+        const aDate = a.created_at ? new Date(a.created_at).getTime() : 0
+        const bDate = b.created_at ? new Date(b.created_at).getTime() : 0
+        return bDate - aDate
+      })
+      .slice(0, 3)
+
+    return { favoriteAuthors: favorites, recentAddedAuthors: recent }
+  }, [authors, favoriteAuthorNames])
 
   if (loading) {
     return (
@@ -212,55 +282,76 @@ function AuthorIndexPageContent() {
               padding: '24px 16px 16px 22px',
               borderRight: '1px solid var(--color-light-gray)'
             }}>
-              {/* Group toggle + count */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--color-mid-gray)', fontWeight: 500 }}>Group:</span>
-                  <div style={{
-                    display: 'flex',
-                    backgroundColor: 'var(--color-pale-gray)',
-                    borderRadius: '6px',
-                    padding: '2px'
-                  }}>
-                    <button
-                      onClick={() => setGroupBy('alphabet')}
-                      style={{
-                        padding: '5px 10px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        borderRadius: '5px',
-                        border: 'none',
-                        backgroundColor: groupBy === 'alphabet' ? 'var(--color-air-white)' : 'transparent',
-                        color: groupBy === 'alphabet' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
-                        cursor: 'pointer',
-                        boxShadow: groupBy === 'alphabet' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-                        transition: 'all 150ms ease'
-                      }}
-                    >
-                      A–Z
-                    </button>
-                    <button
-                      onClick={() => setGroupBy('domain')}
-                      style={{
-                        padding: '5px 10px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        borderRadius: '5px',
-                        border: 'none',
-                        backgroundColor: groupBy === 'domain' ? 'var(--color-air-white)' : 'transparent',
-                        color: groupBy === 'domain' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
-                        cursor: 'pointer',
-                        boxShadow: groupBy === 'domain' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-                        transition: 'all 150ms ease'
-                      }}
-                    >
-                      Domain
-                    </button>
-                  </div>
-                </div>
-                <span style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
+              {/* Author count */}
+              <div style={{ marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-soft-black)' }}>
                   {totalFiltered} authors
                 </span>
+              </div>
+
+              {/* Group toggle */}
+              <div style={{
+                display: 'flex',
+                backgroundColor: 'var(--color-pale-gray)',
+                borderRadius: '8px',
+                padding: '3px',
+                gap: '2px',
+                marginBottom: '12px'
+              }}>
+                <button
+                  onClick={() => setGroupBy('alphabet')}
+                  style={{
+                    flex: 1,
+                    padding: '7px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: groupBy === 'alphabet' ? 'var(--color-air-white)' : 'transparent',
+                    color: groupBy === 'alphabet' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
+                    cursor: 'pointer',
+                    boxShadow: groupBy === 'alphabet' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 150ms ease'
+                  }}
+                >
+                  A–Z
+                </button>
+                <button
+                  onClick={() => setGroupBy('domain')}
+                  style={{
+                    flex: 1,
+                    padding: '7px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: groupBy === 'domain' ? 'var(--color-air-white)' : 'transparent',
+                    color: groupBy === 'domain' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
+                    cursor: 'pointer',
+                    boxShadow: groupBy === 'domain' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 150ms ease'
+                  }}
+                >
+                  Domain
+                </button>
+                <button
+                  onClick={() => setGroupBy('recent')}
+                  style={{
+                    flex: 1,
+                    padding: '7px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: groupBy === 'recent' ? 'var(--color-air-white)' : 'transparent',
+                    color: groupBy === 'recent' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
+                    cursor: 'pointer',
+                    boxShadow: groupBy === 'recent' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 150ms ease'
+                  }}
+                >
+                  Recent
+                </button>
               </div>
 
               {/* Domain filter chips */}
@@ -402,20 +493,21 @@ function AuthorIndexPageContent() {
             borderRight: '1px solid var(--color-light-gray)',
             backgroundColor: 'var(--color-air-white)'
           }}>
-          {/* Scrollable list with optional alphabet sidebar */}
+          {/* Scrollable list with quick-jump sidebar */}
           <div style={{ flex: 1, display: 'flex', overflow: 'hidden', paddingLeft: '16px' }}>
-            {/* Alphabet quick-jump - only in A-Z mode */}
-            {groupBy === 'alphabet' && (
-              <div style={{
-                width: '32px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'flex-start',
-                padding: '8px 6px',
-                backgroundColor: 'transparent',
-                overflowY: 'auto'
-              }}>
-                {ALPHABET.map(letter => {
+            {/* Quick-jump sidebar */}
+            <div style={{
+              width: '32px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-start',
+              padding: '8px 6px',
+              backgroundColor: 'transparent',
+              overflowY: 'auto'
+            }}>
+              {groupBy === 'alphabet' ? (
+                // A-Z quick-jump
+                ALPHABET.map(letter => {
                   const hasAuthors = availableLetters.includes(letter)
                   return (
                     <button
@@ -448,9 +540,87 @@ function AuthorIndexPageContent() {
                       {letter}
                     </button>
                   )
-                })}
-              </div>
-            )}
+                })
+              ) : groupBy === 'domain' ? (
+                // Domain quick-jump with colored dots
+                availableDomains.map((domain: any) => (
+                  <div
+                    key={domain.name}
+                    style={{ position: 'relative' }}
+                  >
+                    <button
+                      onClick={() => scrollToDomain(domain.name)}
+                      className="domain-dot-btn"
+                      style={{
+                        padding: '4px 0',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        lineHeight: 1.2,
+                        border: 'none',
+                        background: 'none',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        color: domain.text,
+                        transition: 'all 100ms ease-out',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = domain.bgLight
+                        const tooltip = e.currentTarget.nextElementSibling as HTMLElement
+                        if (tooltip) tooltip.style.opacity = '1'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        const tooltip = e.currentTarget.nextElementSibling as HTMLElement
+                        if (tooltip) tooltip.style.opacity = '0'
+                      }}
+                    >
+                      <span style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: domain.text
+                      }} />
+                    </button>
+                    <div style={{
+                      position: 'absolute',
+                      left: '100%',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      marginLeft: '8px',
+                      padding: '4px 8px',
+                      backgroundColor: domain.text,
+                      color: 'white',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      borderRadius: '4px',
+                      whiteSpace: 'nowrap',
+                      opacity: 0,
+                      transition: 'opacity 150ms ease',
+                      pointerEvents: 'none',
+                      zIndex: 10,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                    }}>
+                      {domain.shortName || domain.name}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                // Recent view - single indicator
+                <div style={{
+                  padding: '4px 0',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  color: 'var(--color-mid-gray)',
+                  textAlign: 'center'
+                }}>
+                  ↓
+                </div>
+              )}
+            </div>
 
             {/* Author list */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px 8px 8px' }}>
@@ -510,7 +680,73 @@ function AuthorIndexPageContent() {
                 </div>
               )}
 
-              {totalFiltered > 0 && (groupBy === 'alphabet' ? (
+              {totalFiltered > 0 && (groupBy === 'recent' ? (
+                // Recent View - sorted by created_at
+                <div>
+                  <div style={{
+                    padding: '4px 12px', fontSize: '11px', fontWeight: 700, color: 'var(--color-mid-gray)',
+                    backgroundColor: 'var(--color-pale-gray)', borderRadius: '4px',
+                    marginBottom: '4px', position: 'sticky', top: 0, zIndex: 1
+                  }}>
+                    Recently Added
+                  </div>
+                  <div style={{ marginBottom: '8px' }}>
+                    {recentAuthors.map((author: any) => {
+                      const domain = getAuthorDomain(author.id)
+                      const domainStyle = getDomainStyle(domain)
+                      const isSelected = selectedAuthorId === author.id
+                      const addedDate = author.created_at ? new Date(author.created_at) : null
+                      const isNew = addedDate && (Date.now() - addedDate.getTime()) < 7 * 24 * 60 * 60 * 1000 // 7 days
+                      return (
+                        <button
+                          key={author.id}
+                          onClick={() => handleAuthorClick(author.id)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                            padding: '6px 8px 6px 12px', borderRadius: '4px', border: 'none',
+                            backgroundColor: isSelected ? domainStyle.bg : 'transparent',
+                            cursor: 'pointer', transition: 'all 60ms ease-out', textAlign: 'left'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = '#f5f5f5'
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'
+                          }}
+                        >
+                          <span style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            backgroundColor: domainStyle.text, flexShrink: 0
+                          }} />
+                          <span style={{
+                            fontSize: '13px', fontWeight: isSelected ? 600 : 400,
+                            color: isSelected ? domainStyle.text : 'var(--color-soft-black)',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            flex: 1
+                          }}>
+                            {author.name}
+                          </span>
+                          {isNew && (
+                            <span style={{
+                              fontSize: '10px', fontWeight: 600, color: '#059669',
+                              backgroundColor: '#d1fae5', padding: '2px 6px', borderRadius: '10px'
+                            }}>
+                              NEW
+                            </span>
+                          )}
+                          {addedDate && (
+                            <span style={{
+                              fontSize: '11px', color: 'var(--color-mid-gray)', flexShrink: 0
+                            }}>
+                              {addedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : groupBy === 'alphabet' ? (
                 // A-Z View
                 ALPHABET.map(letter => {
                   const letterAuthors = authorsByLetter[letter] || []
@@ -571,7 +807,7 @@ function AuthorIndexPageContent() {
                     const domainAuthors = authorsByDomain[domain.name] || []
                     if (domainAuthors.length === 0) return null
                     return (
-                      <div key={domain.name} style={{ marginBottom: '12px' }}>
+                      <div key={domain.name} ref={el => { domainRefs.current[domain.name] = el }} style={{ marginBottom: '12px' }}>
                         <div style={{
                           display: 'flex', alignItems: 'center', gap: '8px',
                           padding: '8px 12px', borderRadius: '6px',
@@ -603,12 +839,16 @@ function AuthorIndexPageContent() {
                                   cursor: 'pointer', transition: 'all 60ms ease-out', textAlign: 'left'
                                 }}
                                 onMouseEnter={(e) => {
-                                  if (!isSelected) e.currentTarget.style.backgroundColor = domain.bgLight
+                                  if (!isSelected) e.currentTarget.style.backgroundColor = '#f5f5f5'
                                 }}
                                 onMouseLeave={(e) => {
                                   if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'
                                 }}
                               >
+                                <span style={{
+                                  width: '6px', height: '6px', borderRadius: '50%',
+                                  backgroundColor: domain.text, flexShrink: 0
+                                }} />
                                 <span style={{
                                   fontSize: '13px', fontWeight: isSelected ? 600 : 400,
                                   color: isSelected ? domain.text : 'var(--color-soft-black)',
@@ -625,13 +865,17 @@ function AuthorIndexPageContent() {
                   })}
                   {/* Other/uncategorized */}
                   {(authorsByDomain['Other']?.length > 0) && (
-                    <div style={{ marginBottom: '12px' }}>
+                    <div ref={el => { domainRefs.current['Other'] = el }} style={{ marginBottom: '12px' }}>
                       <div style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
                         padding: '8px 12px', borderRadius: '6px',
                         backgroundColor: '#f3f4f6', marginBottom: '6px',
                         position: 'sticky', top: 0, zIndex: 1
                       }}>
+                        <span style={{
+                          width: '8px', height: '8px', borderRadius: '2px',
+                          backgroundColor: '#6b7280'
+                        }} />
                         <span style={{ fontSize: '13px', fontWeight: 600, color: '#6b7280' }}>Other</span>
                         <span style={{ fontSize: '12px', color: '#9ca3af' }}>
                           ({authorsByDomain['Other'].length})
@@ -650,10 +894,20 @@ function AuthorIndexPageContent() {
                                 backgroundColor: isSelected ? '#f3f4f6' : 'transparent',
                                 cursor: 'pointer', transition: 'all 60ms ease-out', textAlign: 'left'
                               }}
+                              onMouseEnter={(e) => {
+                                if (!isSelected) e.currentTarget.style.backgroundColor = '#f5f5f5'
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'
+                              }}
                             >
                               <span style={{
+                                width: '6px', height: '6px', borderRadius: '50%',
+                                backgroundColor: '#6b7280', flexShrink: 0
+                              }} />
+                              <span style={{
                                 fontSize: '13px', fontWeight: isSelected ? 600 : 400,
-                                color: 'var(--color-soft-black)',
+                                color: isSelected ? '#6b7280' : 'var(--color-soft-black)',
                                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                               }}>
                                 {author.name}
@@ -702,52 +956,191 @@ function AuthorIndexPageContent() {
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '40px',
-                textAlign: 'center'
+                padding: '24px 32px',
+                overflow: 'hidden'
               }}>
+                {/* Compact header */}
                 <div style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '20px'
+                  gap: '12px',
+                  marginBottom: '20px',
+                  paddingBottom: '16px',
+                  borderBottom: '1px solid var(--color-light-gray)'
                 }}>
-                  <Users size={32} style={{ color: '#059669' }} />
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Users size={18} style={{ color: '#059669' }} />
+                  </div>
+                  <p style={{ fontSize: '14px', color: 'var(--color-mid-gray)', margin: 0 }}>
+                    Select an author from the list to view their positions, quotes, and evidence.
+                  </p>
                 </div>
-                <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-soft-black)', marginBottom: '10px' }}>
-                  Select an Author
-                </h2>
-                <p style={{ fontSize: '15px', color: 'var(--color-mid-gray)', maxWidth: '320px', lineHeight: 1.6, marginBottom: '24px' }}>
-                  Choose an author from the list to see their positions, quotes, and the evidence behind their views.
-                </p>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {DOMAINS.slice(0, 3).map(d => (
-                    <span
-                      key={d.name}
-                      style={{
+
+                {/* Author sections */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', minHeight: 0 }}>
+                  {/* Favorites section */}
+                  {favoriteAuthors.length > 0 && (
+                    <div>
+                      <div style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#f59e0b',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        marginBottom: '8px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '5px',
-                        padding: '5px 12px',
-                        borderRadius: 'var(--radius-full)',
-                        backgroundColor: d.bgLight,
-                        fontSize: '12px',
-                        color: d.text,
-                        fontWeight: 500
-                      }}
-                    >
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: d.text }} />
-                      {d.shortName}
-                    </span>
-                  ))}
-                  <span style={{ fontSize: '12px', color: 'var(--color-mid-gray)', padding: '5px 0' }}>
-                    + more domains
-                  </span>
+                        gap: '4px'
+                      }}>
+                        <span>★</span> Your Favorites
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                        {favoriteAuthors.map((author: any) => {
+                          const domain = getAuthorDomain(author.id)
+                          const domainStyle = getDomainStyle(domain)
+                          return (
+                            <button
+                              key={author.id}
+                              onClick={() => handleAuthorClick(author.id)}
+                              style={{
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--color-light-gray)',
+                                backgroundColor: 'var(--color-air-white)',
+                                cursor: 'pointer',
+                                transition: 'all 100ms ease-out',
+                                textAlign: 'left'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = domainStyle.text
+                                e.currentTarget.style.backgroundColor = domainStyle.bg
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                                e.currentTarget.style.backgroundColor = 'var(--color-air-white)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-soft-black)' }}>
+                                  {author.name}
+                                </span>
+                              </div>
+                              <div style={{
+                                fontSize: '10px',
+                                color: domainStyle.text,
+                                fontWeight: 500,
+                                marginBottom: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: domainStyle.text }} />
+                                {domainStyle.short}
+                              </div>
+                              {author.notes && (
+                                <div style={{
+                                  fontSize: '11px',
+                                  color: 'var(--color-mid-gray)',
+                                  lineHeight: 1.35,
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden'
+                                }}>
+                                  {author.notes}
+                                </div>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recently Added section */}
+                  {recentAddedAuthors.length > 0 && (
+                    <div>
+                      <div style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: 'var(--color-mid-gray)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        marginBottom: '8px'
+                      }}>
+                        Recently Added
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                        {recentAddedAuthors.map((author: any) => {
+                          const domain = getAuthorDomain(author.id)
+                          const domainStyle = getDomainStyle(domain)
+                          return (
+                            <button
+                              key={author.id}
+                              onClick={() => handleAuthorClick(author.id)}
+                              style={{
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--color-light-gray)',
+                                backgroundColor: 'var(--color-air-white)',
+                                cursor: 'pointer',
+                                transition: 'all 100ms ease-out',
+                                textAlign: 'left'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = domainStyle.text
+                                e.currentTarget.style.backgroundColor = domainStyle.bg
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                                e.currentTarget.style.backgroundColor = 'var(--color-air-white)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-soft-black)' }}>
+                                  {author.name}
+                                </span>
+                              </div>
+                              <div style={{
+                                fontSize: '10px',
+                                color: domainStyle.text,
+                                fontWeight: 500,
+                                marginBottom: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: domainStyle.text }} />
+                                {domainStyle.short}
+                              </div>
+                              {author.notes && (
+                                <div style={{
+                                  fontSize: '11px',
+                                  color: 'var(--color-mid-gray)',
+                                  lineHeight: 1.35,
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden'
+                                }}>
+                                  {author.notes}
+                                </div>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

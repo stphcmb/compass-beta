@@ -427,318 +427,417 @@ export default function HistoryPage() {
   return (
     <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
       <Header sidebarCollapsed={true} />
-      <main
-        className="flex-1 mt-16 overflow-auto"
+
+      {/* Left Sidebar - Stats & Navigation */}
+      <aside
+        className="fixed top-16 h-[calc(100vh-64px)] border-r overflow-y-auto"
+        style={{
+          width: '320px',
+          backgroundColor: 'var(--color-air-white)',
+          borderColor: 'var(--color-light-gray)',
+          padding: '24px 16px 16px 22px'
+        }}
       >
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '24px',
-        }}>
-        {/* Page Header */}
-        <PageHeader
-          icon={<History size={24} />}
-          iconVariant="purple"
-          title="Your History"
-          subtitle="Track your searches, analyses, and saved authors"
-          helpButton={{
-            label: 'How it works',
-            onClick: () => setShowAboutModal(true)
-          }}
-        />
-
-        {/* Quick Preview Grid - Shows compact overview of each category */}
-        {activeTab === 'all' && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '16px',
-            marginBottom: '24px'
-          }}>
-            {/* Searches Preview */}
-            <button
-              onClick={() => setActiveTab('searches')}
-              style={{
-                padding: '16px',
-                background: 'var(--color-air-white)',
-                border: '1px solid var(--color-light-gray)',
-                borderRadius: '12px',
-                textAlign: 'left',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-digital-sky)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 41, 80, 0.08)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <Search size={16} style={{ color: 'var(--color-velocity-blue)' }} />
-                <span style={{ fontWeight: 600, color: 'var(--color-quantum-navy)', fontSize: '14px' }}>Searches</span>
-              </div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>
-                {savedSearches.length}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
-                {savedSearches.length > 0 ? `Latest: ${savedSearches[0]?.query?.substring(0, 20)}...` : 'No saved searches'}
-              </div>
-            </button>
-
-            {/* Analyses Preview */}
-            <button
-              onClick={() => setActiveTab('analyses')}
-              style={{
-                padding: '16px',
-                background: 'var(--color-air-white)',
-                border: '1px solid var(--color-light-gray)',
-                borderRadius: '12px',
-                textAlign: 'left',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-digital-sky)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 41, 80, 0.08)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <Sparkles size={16} style={{ color: 'var(--color-cobalt-blue)' }} />
-                <span style={{ fontWeight: 600, color: 'var(--color-quantum-navy)', fontSize: '14px' }}>Analyses</span>
-              </div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>
-                {savedAnalyses.length}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
-                {savedAnalyses.length > 0 ? `Latest: ${savedAnalyses[0]?.preview?.substring(0, 20)}...` : 'No saved analyses'}
-              </div>
-            </button>
-
-            {/* Insights Preview */}
-            <button
-              onClick={() => setActiveTab('insights')}
-              style={{
-                padding: '16px',
-                background: 'var(--color-air-white)',
-                border: '1px solid var(--color-light-gray)',
-                borderRadius: '12px',
-                textAlign: 'left',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-digital-sky)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 41, 80, 0.08)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <ThumbsUp size={16} style={{ color: '#10b981' }} />
-                <span style={{ fontWeight: 600, color: 'var(--color-quantum-navy)', fontSize: '14px' }}>Insights</span>
-              </div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>
-                {helpfulInsights.length}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
-                {helpfulInsights.length > 0 ? `Latest: ${helpfulInsights[0]?.content?.substring(0, 20)}...` : 'No saved insights'}
-              </div>
-            </button>
-
-            {/* Authors Preview */}
-            <button
-              onClick={() => setActiveTab('authors')}
-              style={{
-                padding: '16px',
-                background: 'var(--color-air-white)',
-                border: '1px solid var(--color-light-gray)',
-                borderRadius: '12px',
-                textAlign: 'left',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-digital-sky)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 41, 80, 0.08)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <Users size={16} style={{ color: '#059669' }} />
-                <span style={{ fontWeight: 600, color: 'var(--color-quantum-navy)', fontSize: '14px' }}>Authors</span>
-              </div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>
-                {getUniqueAuthorsCount()}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
-                {favoriteAuthors.length} favorites, {authorNotes.length} with notes
-              </div>
-            </button>
+        {/* Header */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <History size={16} style={{ color: '#6366f1' }} />
+            </div>
+            <h1 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-soft-black)', margin: 0 }}>
+              Your History
+            </h1>
           </div>
-        )}
+          <p style={{ fontSize: '12px', color: 'var(--color-mid-gray)', margin: 0 }}>
+            Track searches, analyses & authors
+          </p>
+        </div>
 
-        {/* Tabs */}
-        <div style={{
-          display: 'flex',
-          gap: '8px',
-          marginBottom: '16px',
-          borderBottom: '1px solid #e5e7eb',
-          paddingBottom: '16px'
-        }}>
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                padding: '10px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === tab.id ? '#6366f1' : 'white',
-                color: activeTab === tab.id ? 'white' : '#4b5563',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: activeTab === tab.id ? '0 2px 8px rgba(99, 102, 241, 0.25)' : '0 1px 2px rgba(0,0,0,0.05)',
-                transition: 'all 0.2s'
-              }}
-            >
-              {tab.label}
-              {tab.count > 0 && (
+        {/* Time Filter */}
+        <div style={{ marginBottom: '16px' }}>
+          <select
+            value={timeFilter}
+            onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--color-light-gray)',
+              background: 'white',
+              fontSize: '13px',
+              color: 'var(--color-charcoal)',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="all">All time</option>
+            <option value="today">Today</option>
+            <option value="week">This week</option>
+            <option value="month">This month</option>
+          </select>
+        </div>
+
+        {/* Category Navigation */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {tabs.map(tab => {
+            const icons: Record<TabType, React.ReactNode> = {
+              all: <History size={16} />,
+              searches: <Search size={16} />,
+              analyses: <Sparkles size={16} />,
+              insights: <ThumbsUp size={16} />,
+              authors: <Users size={16} />
+            }
+            const colors: Record<TabType, string> = {
+              all: '#6366f1',
+              searches: '#3b82f6',
+              analyses: '#8b5cf6',
+              insights: '#10b981',
+              authors: '#059669'
+            }
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: activeTab === tab.id ? `${colors[tab.id]}15` : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== tab.id) e.currentTarget.style.background = '#f5f5f5'
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== tab.id) e.currentTarget.style.background = 'transparent'
+                }}
+              >
+                <span style={{ color: activeTab === tab.id ? colors[tab.id] : 'var(--color-mid-gray)' }}>
+                  {icons[tab.id]}
+                </span>
                 <span style={{
-                  padding: '2px 6px',
+                  flex: 1,
+                  fontSize: '13px',
+                  fontWeight: activeTab === tab.id ? 600 : 500,
+                  color: activeTab === tab.id ? colors[tab.id] : 'var(--color-charcoal)'
+                }}>
+                  {tab.label}
+                </span>
+                <span style={{
+                  padding: '2px 8px',
                   borderRadius: '10px',
-                  background: activeTab === tab.id ? 'rgba(255,255,255,0.2)' : '#f3f4f6',
+                  background: activeTab === tab.id ? `${colors[tab.id]}20` : '#f3f4f6',
                   fontSize: '11px',
-                  fontWeight: '600'
+                  fontWeight: 600,
+                  color: activeTab === tab.id ? colors[tab.id] : 'var(--color-mid-gray)'
                 }}>
                   {tab.count}
                 </span>
-              )}
-            </button>
-          ))}
+              </button>
+            )
+          })}
+        </div>
 
-          {/* Time Filter */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Filter size={14} style={{ color: '#9ca3af' }} />
-            <select
-              value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: '1px solid #e5e7eb',
-                background: 'white',
-                fontSize: '13px',
-                color: '#4b5563',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="all">All time</option>
-              <option value="today">Today</option>
-              <option value="week">This week</option>
-              <option value="month">This month</option>
-            </select>
+        {/* Quick Stats */}
+        <div style={{
+          marginTop: '20px',
+          padding: '14px',
+          borderRadius: '10px',
+          backgroundColor: '#f9fafb',
+          border: '1px solid #f3f4f6'
+        }}>
+          <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-mid-gray)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+            Quick Stats
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>{savedSearches.length}</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-mid-gray)' }}>Searches</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>{savedAnalyses.length}</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-mid-gray)' }}>Analyses</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>{helpfulInsights.length}</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-mid-gray)' }}>Insights</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>{getUniqueAuthorsCount()}</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-mid-gray)' }}>Authors</div>
+            </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '48px' }}>
-          {/* Recent Searches Section */}
-          {(activeTab === 'all' || activeTab === 'searches') && filteredRecentSearches.length > 0 && (
-            <Section
-              title="Recent Searches"
-              icon={<Clock size={16} style={{ color: '#6b7280' }} />}
-              count={filteredRecentSearches.length}
-              onClear={() => clearAllByType('recent')}
-            >
+        {/* Help Button */}
+        <button
+          onClick={() => setShowAboutModal(true)}
+          style={{
+            marginTop: '16px',
+            width: '100%',
+            padding: '10px',
+            borderRadius: '8px',
+            border: '1px solid var(--color-light-gray)',
+            background: 'white',
+            fontSize: '12px',
+            fontWeight: 500,
+            color: 'var(--color-mid-gray)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px'
+          }}
+        >
+          <Calendar size={14} />
+          How it works
+        </button>
+      </aside>
+
+      {/* Main Content */}
+      <main
+        className="flex-1 mt-16 overflow-auto"
+        style={{ marginLeft: '320px' }}
+      >
+        <div style={{ padding: '24px 32px' }}>
+        {/* Content - Multi-column grid for "All" view */}
+        {activeTab === 'all' ? (
+          filteredRecentSearches.length === 0 &&
+          filteredSavedSearches.length === 0 &&
+          filteredAnalyses.length === 0 &&
+          filteredInsights.length === 0 &&
+          getUniqueAuthorsCount() === 0 ? (
+            <EmptyStateComponent
+              icon={History}
+              iconColor="var(--color-indigo-500)"
+              iconBgFrom="var(--color-indigo-50)"
+              iconBgTo="var(--color-indigo-100)"
+              title={timeFilter !== 'all' ? 'No activity in this time period' : 'Your research journey starts here'}
+              description={timeFilter !== 'all'
+                ? 'Try selecting a different time range to see more activity.'
+                : 'As you explore perspectives, save searches, analyze content, and bookmark authors, your activity will be tracked here.'}
+              action={timeFilter === 'all' ? {
+                label: "Explore Perspectives",
+                onClick: () => router.push('/explore'),
+                icon: Compass
+              } : undefined}
+              size="lg"
+            />
+          ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '20px',
+            alignItems: 'start'
+          }}>
+            {/* Column 1: Searches */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Recent Searches */}
+              {filteredRecentSearches.length > 0 && (
+                <CompactSection
+                  title="Recent"
+                  icon={<Clock size={14} style={{ color: '#6b7280' }} />}
+                  count={filteredRecentSearches.length}
+                  onClear={() => clearAllByType('recent')}
+                  color="#6b7280"
+                >
+                  {filteredRecentSearches.slice(0, 4).map(search => (
+                    <CompactCard
+                      key={search.id}
+                      title={search.query}
+                      subtitle={timeAgo(search.timestamp)}
+                      onClick={() => handleSearchClick(search.query, search.cachedResult)}
+                      onDelete={() => deleteRecentSearch(search.id)}
+                      color="#3b82f6"
+                    />
+                  ))}
+                </CompactSection>
+              )}
+
+              {/* Saved Searches */}
+              {filteredSavedSearches.length > 0 && (
+                <CompactSection
+                  title="Saved Searches"
+                  icon={<Search size={14} style={{ color: '#3b82f6' }} />}
+                  count={filteredSavedSearches.length}
+                  onClear={() => clearAllByType('saved')}
+                  color="#3b82f6"
+                >
+                  {filteredSavedSearches.slice(0, 4).map(search => (
+                    <CompactCard
+                      key={search.id}
+                      title={search.query}
+                      subtitle={timeAgo(search.timestamp)}
+                      onClick={() => handleSearchClick(search.query, search.cachedResult)}
+                      onDelete={() => deleteSavedSearch(search.id)}
+                      color="#3b82f6"
+                    />
+                  ))}
+                </CompactSection>
+              )}
+            </div>
+
+            {/* Column 2: Analyses & Insights */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Analyses */}
+              {filteredAnalyses.length > 0 && (
+                <CompactSection
+                  title="AI Analyses"
+                  icon={<Sparkles size={14} style={{ color: '#8b5cf6' }} />}
+                  count={filteredAnalyses.length}
+                  onClear={() => clearAllByType('analyses')}
+                  color="#8b5cf6"
+                >
+                  {filteredAnalyses.slice(0, 4).map(analysis => (
+                    <CompactCard
+                      key={analysis.id}
+                      title={analysis.preview || analysis.text.slice(0, 60) + '...'}
+                      subtitle={timeAgo(analysis.timestamp)}
+                      onClick={() => handleAnalysisClick(analysis.text, analysis.cachedResult)}
+                      onDelete={() => deleteAnalysis(analysis.id)}
+                      color="#8b5cf6"
+                    />
+                  ))}
+                </CompactSection>
+              )}
+
+              {/* Insights */}
+              {filteredInsights.length > 0 && (
+                <CompactSection
+                  title="Helpful Insights"
+                  icon={<ThumbsUp size={14} style={{ color: '#10b981' }} />}
+                  count={filteredInsights.length}
+                  onClear={() => {
+                    localStorage.setItem('helpfulInsights', '[]')
+                    setHelpfulInsights([])
+                  }}
+                  color="#10b981"
+                >
+                  {filteredInsights.slice(0, 4).map((insight: HelpfulInsight) => (
+                    <CompactCard
+                      key={insight.id}
+                      title={insight.content.slice(0, 60) + '...'}
+                      subtitle={`${insight.type === 'summary' ? 'Summary' : insight.campLabel || 'Perspective'} · ${timeAgo(insight.timestamp)}`}
+                      onClick={() => {
+                        router.push('/ai-editor')
+                        setTimeout(() => {
+                          window.dispatchEvent(new CustomEvent('load-ai-editor-text', {
+                            detail: { text: insight.fullText || '', cachedResult: insight.cachedResult }
+                          }))
+                        }, 100)
+                      }}
+                      onDelete={() => {
+                        const filtered = helpfulInsights.filter(i => i.id !== insight.id)
+                        localStorage.setItem('helpfulInsights', JSON.stringify(filtered))
+                        setHelpfulInsights(filtered)
+                      }}
+                      color="#10b981"
+                    />
+                  ))}
+                </CompactSection>
+              )}
+            </div>
+
+            {/* Column 3: Authors */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {(() => {
+                const authorMap = new Map<string, any>()
+                favoriteAuthors.forEach(fav => {
+                  authorMap.set(fav.name, { name: fav.name, isFavorite: true, addedAt: fav.addedAt })
+                })
+                authorNotes.forEach(noteItem => {
+                  const existing = authorMap.get(noteItem.name)
+                  if (existing) {
+                    existing.note = noteItem.note
+                    existing.noteUpdatedAt = noteItem.updatedAt
+                  } else {
+                    authorMap.set(noteItem.name, { name: noteItem.name, isFavorite: false, note: noteItem.note, noteUpdatedAt: noteItem.updatedAt })
+                  }
+                })
+                const unifiedAuthors = Array.from(authorMap.values())
+                  .map(a => ({ ...a, timestamp: a.noteUpdatedAt || a.addedAt || '' }))
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                const filteredAuthors = filterByTime(unifiedAuthors)
+
+                if (filteredAuthors.length === 0) return null
+
+                return (
+                  <CompactSection
+                    title="Saved Authors"
+                    icon={<Users size={14} style={{ color: '#059669' }} />}
+                    count={filteredAuthors.length}
+                    onClear={() => { clearAllByType('favorites'); clearAllByType('notes') }}
+                    color="#059669"
+                  >
+                    {filteredAuthors.slice(0, 5).map(author => (
+                      <CompactAuthorCard
+                        key={author.name}
+                        name={author.name}
+                        isFavorite={author.isFavorite}
+                        hasNote={!!author.note}
+                        onClick={() => handleAuthorClick(author.name)}
+                        timeAgo={timeAgo(author.timestamp)}
+                      />
+                    ))}
+                  </CompactSection>
+                )
+              })()}
+            </div>
+          </div>
+          )
+        ) : (
+          // Single category view - full width
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Searches (single view) */}
+          {activeTab === 'searches' && (
+            <>
+              {filteredRecentSearches.length > 0 && (
+                <Section title="Recent Searches" icon={<Clock size={16} style={{ color: '#6b7280' }} />} count={filteredRecentSearches.length} onClear={() => clearAllByType('recent')}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {filteredRecentSearches.map(s => (
+                      <HistoryCard key={s.id} icon={<Search size={16} style={{ color: '#3b82f6' }} />} title={s.query} subtitle={timeAgo(s.timestamp)} onClick={() => handleSearchClick(s.query, s.cachedResult)} onDelete={() => deleteRecentSearch(s.id)} color="#3b82f6" />
+                    ))}
+                  </div>
+                </Section>
+              )}
+              {filteredSavedSearches.length > 0 && (
+                <Section title="Saved Searches" icon={<Search size={16} style={{ color: '#3b82f6' }} />} count={filteredSavedSearches.length} onClear={() => clearAllByType('saved')}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {filteredSavedSearches.map(s => (
+                      <HistoryCard key={s.id} icon={<Search size={16} style={{ color: '#3b82f6' }} />} title={s.query} subtitle={formatDate(s.timestamp)} meta={s.domain || s.camp} note={s.note} onClick={() => handleSearchClick(s.query, s.cachedResult)} onDelete={() => deleteSavedSearch(s.id)} onUpdateNote={(note) => updateSavedSearchNote(s.id, note)} color="#3b82f6" saved />
+                    ))}
+                  </div>
+                </Section>
+              )}
+            </>
+          )}
+
+          {/* Analyses (single view) */}
+          {activeTab === 'analyses' && filteredAnalyses.length > 0 && (
+            <Section title="AI Analyses" icon={<Sparkles size={16} style={{ color: '#8b5cf6' }} />} count={filteredAnalyses.length} onClear={() => clearAllByType('analyses')}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {filteredRecentSearches.slice(0, activeTab === 'all' ? 5 : undefined).map(search => (
-                  <HistoryCard
-                    key={search.id}
-                    icon={<Search size={16} style={{ color: '#3b82f6' }} />}
-                    title={search.query}
-                    subtitle={timeAgo(search.timestamp)}
-                    onClick={() => handleSearchClick(search.query, search.cachedResult)}
-                    onDelete={() => deleteRecentSearch(search.id)}
-                    color="#3b82f6"
-                  />
+                {filteredAnalyses.map(a => (
+                  <HistoryCard key={a.id} icon={<Sparkles size={16} style={{ color: '#8b5cf6' }} />} title={a.preview || a.text.slice(0, 100) + '...'} subtitle={formatDate(a.timestamp)} note={a.note} onClick={() => handleAnalysisClick(a.text, a.cachedResult)} onDelete={() => deleteAnalysis(a.id)} onUpdateNote={(note) => updateAnalysisNote(a.id, note)} color="#8b5cf6" saved />
                 ))}
               </div>
             </Section>
           )}
 
-          {/* Saved Searches Section */}
-          {(activeTab === 'all' || activeTab === 'searches') && filteredSavedSearches.length > 0 && (
-            <Section
-              title="Saved Searches"
-              icon={<Search size={16} style={{ color: '#3b82f6' }} />}
-              count={filteredSavedSearches.length}
-              onClear={() => clearAllByType('saved')}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {filteredSavedSearches.slice(0, activeTab === 'all' ? 5 : undefined).map(search => (
-                  <HistoryCard
-                    key={search.id}
-                    icon={<Search size={16} style={{ color: '#3b82f6' }} />}
-                    title={search.query}
-                    subtitle={formatDate(search.timestamp)}
-                    meta={search.domain || search.camp}
-                    note={search.note}
-                    onClick={() => handleSearchClick(search.query, search.cachedResult)}
-                    onDelete={() => deleteSavedSearch(search.id)}
-                    onUpdateNote={(note) => updateSavedSearchNote(search.id, note)}
-                    color="#3b82f6"
-                    saved
-                  />
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {/* Saved Analyses Section */}
-          {(activeTab === 'all' || activeTab === 'analyses') && filteredAnalyses.length > 0 && (
-            <Section
-              title="AI Analyses"
-              icon={<Sparkles size={16} style={{ color: '#8b5cf6' }} />}
-              count={filteredAnalyses.length}
-              onClear={() => clearAllByType('analyses')}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {filteredAnalyses.slice(0, activeTab === 'all' ? 5 : undefined).map(analysis => (
-                  <HistoryCard
-                    key={analysis.id}
-                    icon={<Sparkles size={16} style={{ color: '#8b5cf6' }} />}
-                    title={analysis.preview || analysis.text.slice(0, 100) + '...'}
-                    subtitle={formatDate(analysis.timestamp)}
-                    note={analysis.note}
-                    onClick={() => handleAnalysisClick(analysis.text, analysis.cachedResult)}
-                    onDelete={() => deleteAnalysis(analysis.id)}
-                    onUpdateNote={(note) => updateAnalysisNote(analysis.id, note)}
-                    color="#8b5cf6"
-                    saved
-                  />
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {/* Helpful Insights Section */}
-          {(activeTab === 'all' || activeTab === 'insights') && filteredInsights.length > 0 && (
+          {/* Helpful Insights Section (single view) */}
+          {activeTab === 'insights' && filteredInsights.length > 0 && (
             <Section
               title="Helpful Insights"
               icon={<ThumbsUp size={16} style={{ color: '#10b981' }} />}
@@ -749,7 +848,7 @@ export default function HistoryPage() {
               }}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {filteredInsights.slice(0, activeTab === 'all' ? 5 : undefined).map((insight: HelpfulInsight) => (
+                {filteredInsights.map((insight: HelpfulInsight) => (
                   <div
                     key={insight.id}
                     style={{
@@ -854,8 +953,8 @@ export default function HistoryPage() {
             </Section>
           )}
 
-          {/* Combined Authors Section (Favorites + Notes) */}
-          {(activeTab === 'all' || activeTab === 'authors') && (() => {
+          {/* Combined Authors Section (single view) */}
+          {activeTab === 'authors' && (() => {
             // Build unified author list from favorites and notes
             const authorMap = new Map<string, {
               name: string
@@ -918,7 +1017,7 @@ export default function HistoryPage() {
                   gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
                   gap: '12px'
                 }}>
-                  {filteredAuthors.slice(0, activeTab === 'all' ? 6 : undefined).map(author => {
+                  {filteredAuthors.map(author => {
                     const details = authorDetails[author.name]
                     return (
                       <UnifiedAuthorCard
@@ -1020,31 +1119,8 @@ export default function HistoryPage() {
             />
           )}
 
-          {/* Overall Empty State (All Activity tab with no data) */}
-          {activeTab === 'all' &&
-           filteredRecentSearches.length === 0 &&
-           filteredSavedSearches.length === 0 &&
-           filteredAnalyses.length === 0 &&
-           filteredInsights.length === 0 &&
-           getUniqueAuthorsCount() === 0 && (
-            <EmptyStateComponent
-              icon={History}
-              iconColor="var(--color-indigo-500)"
-              iconBgFrom="var(--color-indigo-50)"
-              iconBgTo="var(--color-indigo-100)"
-              title={timeFilter !== 'all' ? 'No activity in this time period' : 'Your research journey starts here'}
-              description={timeFilter !== 'all'
-                ? 'Try selecting a different time range to see more activity.'
-                : 'As you explore perspectives, save searches, analyze content, and bookmark authors, your activity will be tracked here.'}
-              action={timeFilter === 'all' ? {
-                label: "Explore Perspectives",
-                onClick: () => router.push('/explore'),
-                icon: Compass
-              } : undefined}
-              size="lg"
-            />
-          )}
         </div>
+        )}
         </div>
       </main>
 
@@ -1052,6 +1128,243 @@ export default function HistoryPage() {
       {showAboutModal && (
         <AboutHistoryModal onClose={() => setShowAboutModal(false)} />
       )}
+    </div>
+  )
+}
+
+// Compact Section Component for 3-column grid
+function CompactSection({
+  title,
+  icon,
+  count,
+  onClear,
+  color,
+  children
+}: {
+  title: string
+  icon: React.ReactNode
+  count: number
+  onClear: () => void
+  color: string
+  children: React.ReactNode
+}) {
+  return (
+    <div style={{
+      background: 'white',
+      borderRadius: '10px',
+      border: '1px solid #e5e7eb',
+      overflow: 'hidden'
+    }}>
+      <div style={{
+        padding: '12px 14px',
+        borderBottom: '1px solid #f3f4f6',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {icon}
+          <span style={{ fontWeight: '600', color: '#374151', fontSize: '13px' }}>{title}</span>
+          <span style={{
+            padding: '1px 6px',
+            borderRadius: '8px',
+            background: `${color}15`,
+            fontSize: '11px',
+            fontWeight: '600',
+            color: color
+          }}>
+            {count}
+          </span>
+        </div>
+        <button
+          onClick={onClear}
+          style={{
+            padding: '4px',
+            borderRadius: '4px',
+            border: 'none',
+            background: 'transparent',
+            color: '#d1d5db',
+            cursor: 'pointer'
+          }}
+          title="Clear all"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
+      <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// Compact Card Component for grid view
+function CompactCard({
+  title,
+  subtitle,
+  onClick,
+  onDelete,
+  color
+}: {
+  title: string
+  subtitle: string
+  onClick: () => void
+  onDelete: () => void
+  color: string
+}) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: '10px 12px',
+        borderRadius: '6px',
+        border: '1px solid #f3f4f6',
+        background: '#fafafa',
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '8px'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = color
+        e.currentTarget.style.background = 'white'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = '#f3f4f6'
+        e.currentTarget.style.background = '#fafafa'
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: '12px',
+          fontWeight: 500,
+          color: '#374151',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          marginBottom: '2px'
+        }}>
+          {title}
+        </div>
+        <div style={{ fontSize: '10px', color: '#9ca3af' }}>
+          {subtitle}
+        </div>
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete()
+        }}
+        style={{
+          padding: '2px',
+          borderRadius: '4px',
+          border: 'none',
+          background: 'transparent',
+          color: '#d1d5db',
+          cursor: 'pointer',
+          flexShrink: 0
+        }}
+      >
+        <X size={12} />
+      </button>
+    </div>
+  )
+}
+
+// Compact Author Card for grid view
+function CompactAuthorCard({
+  name,
+  isFavorite,
+  hasNote,
+  onClick,
+  timeAgo
+}: {
+  name: string
+  isFavorite: boolean
+  hasNote: boolean
+  onClick: () => void
+  timeAgo: string
+}) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: '10px 12px',
+        borderRadius: '6px',
+        border: '1px solid #f3f4f6',
+        background: '#fafafa',
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = '#059669'
+        e.currentTarget.style.background = 'white'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = '#f3f4f6'
+        e.currentTarget.style.background = '#fafafa'
+      }}
+    >
+      <div style={{
+        width: '28px',
+        height: '28px',
+        borderRadius: '50%',
+        background: isFavorite
+          ? 'linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%)'
+          : 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
+      }}>
+        {isFavorite ? (
+          <Star size={12} style={{ color: '#f59e0b' }} />
+        ) : (
+          <Users size={12} style={{ color: '#6366f1' }} />
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: '12px',
+          fontWeight: 500,
+          color: '#374151',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {name}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+          <span style={{ fontSize: '10px', color: '#9ca3af' }}>{timeAgo}</span>
+          {isFavorite && (
+            <span style={{
+              fontSize: '9px',
+              padding: '1px 4px',
+              borderRadius: '3px',
+              background: '#fef3c7',
+              color: '#d97706'
+            }}>
+              ★
+            </span>
+          )}
+          {hasNote && (
+            <span style={{
+              fontSize: '9px',
+              padding: '1px 4px',
+              borderRadius: '3px',
+              background: '#e0e7ff',
+              color: '#4f46e5'
+            }}>
+              📝
+            </span>
+          )}
+        </div>
+      </div>
+      <ChevronRight size={14} style={{ color: '#d1d5db', flexShrink: 0 }} />
     </div>
   )
 }
