@@ -1,18 +1,24 @@
 'use client'
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
-import { CheckCircle, AlertCircle, Info, X } from 'lucide-react'
+import { CheckCircle, AlertCircle, Info, X, Undo2 } from 'lucide-react'
 
 type ToastType = 'success' | 'error' | 'info'
+
+interface ToastAction {
+  label: string
+  onClick: () => void
+}
 
 interface Toast {
   id: string
   message: string
   type: ToastType
+  action?: ToastAction
 }
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType) => void
+  showToast: (message: string, type?: ToastType, action?: ToastAction) => void
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
@@ -28,14 +34,14 @@ export function useToast() {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
 
-  const showToast = useCallback((message: string, type: ToastType = 'success') => {
+  const showToast = useCallback((message: string, type: ToastType = 'success', action?: ToastAction) => {
     const id = `toast-${Date.now()}`
-    setToasts(prev => [...prev, { id, message, type }])
+    setToasts(prev => [...prev, { id, message, type, action }])
 
-    // Auto-dismiss after 3 seconds
+    // Auto-dismiss after 4 seconds (longer if there's an action)
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id))
-    }, 3000)
+    }, action ? 5000 : 3000)
   }, [])
 
   const dismissToast = useCallback((id: string) => {
@@ -117,6 +123,37 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             }}>
               {toast.message}
             </span>
+            {toast.action && (
+              <button
+                onClick={() => {
+                  toast.action?.onClick()
+                  dismissToast(toast.id)
+                }}
+                style={{
+                  background: 'var(--color-accent)',
+                  border: 'none',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  transition: 'opacity 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1'
+                }}
+              >
+                <Undo2 style={{ width: '14px', height: '14px' }} />
+                {toast.action.label}
+              </button>
+            )}
             <button
               onClick={() => dismissToast(toast.id)}
               style={{

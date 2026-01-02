@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import AIEditorResults from '@/components/AIEditorResults'
@@ -19,7 +19,10 @@ interface SavedAnalysis {
 export default function AIEditorResultsPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const id = params.id as string
+  const highlightSection = searchParams.get('section') as 'summary' | 'camp' | null
+  const highlightLabel = searchParams.get('label')
 
   const [analysis, setAnalysis] = useState<SavedAnalysis | null>(null)
   const [loading, setLoading] = useState(true)
@@ -176,6 +179,8 @@ export default function AIEditorResultsPage() {
                 result={analysis.cachedResult}
                 analysisId={analysis.id}
                 timestamp={analysis.timestamp}
+                highlightSection={highlightSection}
+                highlightLabel={highlightLabel}
               />
             ) : null}
           </div>

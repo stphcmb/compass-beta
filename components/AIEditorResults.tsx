@@ -18,9 +18,11 @@ interface AIEditorResultsProps {
   result: AIEditorAnalyzeResponse
   analysisId: string
   timestamp?: string
+  highlightSection?: 'summary' | 'camp' | null
+  highlightLabel?: string | null
 }
 
-export default function AIEditorResults({ text, result, analysisId, timestamp }: AIEditorResultsProps) {
+export default function AIEditorResults({ text, result, analysisId, timestamp, highlightSection, highlightLabel }: AIEditorResultsProps) {
   const router = useRouter()
   const { openPanel } = useAuthorPanel()
   const { showToast } = useToast()
@@ -36,6 +38,8 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
   const [expandedCamps, setExpandedCamps] = useState<Set<number>>(() =>
     new Set(result.matchedCamps.map((_, idx) => idx))
   )
+  // Track if full analyzed text is expanded
+  const [textExpanded, setTextExpanded] = useState(false)
 
   // Check if this analysis is already saved on mount
   useEffect(() => {
@@ -69,6 +73,46 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
+
+  // Scroll to and highlight the section when navigating from helpful insights
+  useEffect(() => {
+    if (!highlightSection) return
+
+    const timer = setTimeout(() => {
+      if (highlightSection === 'summary' && summaryRef.current) {
+        summaryRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        // Add a temporary highlight effect
+        summaryRef.current.style.boxShadow = '0 0 0 3px #10b981, 0 4px 24px rgba(16, 185, 129, 0.2)'
+        setTimeout(() => {
+          if (summaryRef.current) {
+            summaryRef.current.style.boxShadow = '0 4px 24px rgba(22, 41, 80, 0.08)'
+          }
+        }, 2000)
+      } else if (highlightSection === 'camp' && highlightLabel) {
+        // Find the camp index by label
+        const campIdx = result.matchedCamps.findIndex(c => c.campLabel === highlightLabel)
+        if (campIdx !== -1) {
+          // Ensure this camp is expanded
+          setExpandedCamps(prev => new Set([...prev, campIdx]))
+          // Find the camp element by data attribute
+          setTimeout(() => {
+            const campElement = document.querySelector(`[data-camp-label="${highlightLabel}"]`)
+            if (campElement) {
+              campElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              // Add highlight effect
+              const el = campElement as HTMLElement
+              el.style.boxShadow = '0 0 0 3px #10b981, 0 4px 24px rgba(16, 185, 129, 0.2)'
+              setTimeout(() => {
+                el.style.boxShadow = ''
+              }, 2000)
+            }
+          }, 100)
+        }
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [highlightSection, highlightLabel, result.matchedCamps])
 
   const toggleCampExpanded = (idx: number) => {
     setExpandedCamps(prev => {
@@ -161,6 +205,7 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
         originalText: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
         fullText: text,
         cachedResult: result,
+        analysisId: analysisId,
         timestamp: new Date().toISOString()
       }
 
@@ -574,16 +619,14 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
               lineHeight: '1.7',
               color: '#162950',
               margin: 0,
-              fontStyle: 'italic'
+              fontStyle: 'italic',
+              whiteSpace: 'pre-wrap'
             }}>
-              {text.length > 300 ? text.substring(0, 300) + '...' : text}
+              {textExpanded ? text : (text.length > 300 ? text.substring(0, 300) + '...' : text)}
             </p>
             {text.length > 300 && (
               <button
-                onClick={() => {
-                  const el = document.getElementById('full-analyzed-text-results')
-                  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'
-                }}
+                onClick={() => setTextExpanded(!textExpanded)}
                 style={{
                   marginTop: '8px',
                   padding: '4px 8px',
@@ -595,26 +638,9 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
                   textDecoration: 'underline'
                 }}
               >
-                Show full text
+                {textExpanded ? 'Show less' : 'Show full text'}
               </button>
             )}
-            <p
-              id="full-analyzed-text-results"
-              style={{
-                display: 'none',
-                fontSize: '15px',
-                lineHeight: '1.7',
-                color: '#162950',
-                margin: '12px 0 0 0',
-                padding: '16px',
-                backgroundColor: 'rgba(255,255,255,0.7)',
-                borderRadius: '8px',
-                fontStyle: 'italic',
-                whiteSpace: 'pre-wrap'
-              }}
-            >
-              {text}
-            </p>
           </div>
         </div>
         <div style={{
@@ -1044,12 +1070,14 @@ export default function AIEditorResults({ text, result, analysisId, timestamp }:
                   return (
                   <div
                     key={idx}
+                    data-camp-label={camp.campLabel}
                     style={{
                       border: '1px solid #AADAF9',
                       borderRadius: '12px',
                       backgroundColor: '#FFFFFF',
                       boxShadow: '0 2px 8px rgba(22, 41, 80, 0.04)',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      transition: 'box-shadow 0.3s ease'
                     }}
                   >
                     {/* Collapsible Header */}
