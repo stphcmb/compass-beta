@@ -126,6 +126,7 @@ export default function CampAccordion({
   const [expandedQueries, setExpandedQueries] = useState<any[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedCamps, setExpandedCamps] = useState<Record<string, boolean>>({})
+  const [collapsedDomains, setCollapsedDomains] = useState<Record<string, boolean>>({})
   const campRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   useEffect(() => {
@@ -325,7 +326,7 @@ export default function CampAccordion({
     .map(([domain]) => domain)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {sortedDomains.map((domainName) => {
         const domainCamps = campsByDomain[domainName]
         const colors = getDomainColor(domainName)
@@ -335,19 +336,21 @@ export default function CampAccordion({
         const sortedDomainCamps = [...domainCamps].sort((a, b) => b.authorCount - a.authorCount)
 
         const domainDescription = DOMAIN_DESCRIPTIONS[domainName] || `Perspectives on ${domainName.toLowerCase()} and its implications for AI.`
+        const isDomainCollapsed = collapsedDomains[domainName] === true
 
         return (
           <div key={domainName} className="scroll-mt-4">
             {/* Domain Header - Light pastel background with dark readable text */}
-            <div
-              className="sticky top-0 z-10 mb-2 py-2.5 px-3 -mx-3 rounded-lg"
+            <button
+              onClick={() => setCollapsedDomains(prev => ({ ...prev, [domainName]: !prev[domainName] }))}
+              className="sticky top-0 z-10 mb-1.5 py-2 px-3 -mx-3 rounded-lg w-[calc(100%+24px)] text-left cursor-pointer hover:opacity-95 transition-opacity"
               style={{
                 backgroundColor: colors.bgLight || '#f0f0ff',
                 borderLeft: `4px solid ${colors.bgSolid || '#6366f1'}`,
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
               }}
             >
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
                 <h2 className="text-[15px] font-semibold" style={{ color: colors.textDark || '#1e3a5f' }}>
                   {domainName}
                 </h2>
@@ -366,15 +369,24 @@ export default function CampAccordion({
                   <Users className="w-3 h-3" />
                   {domainAuthorCount}
                 </span>
+                {/* Chevron */}
+                <div className="ml-auto">
+                  {isDomainCollapsed ? (
+                    <ChevronDown className="w-4 h-4" style={{ color: colors.textDark || '#1e3a5f' }} />
+                  ) : (
+                    <ChevronUp className="w-4 h-4" style={{ color: colors.textDark || '#1e3a5f' }} />
+                  )}
+                </div>
               </div>
               {/* Domain framing question */}
               <p className="text-[13px] mt-1" style={{ color: colors.textDark || '#1e3a5f', opacity: 0.85, lineHeight: '1.5' }}>
                 {domainDescription}
               </p>
-            </div>
+            </button>
 
             {/* Perspectives within Domain */}
-            <div className="space-y-2 ml-1 pl-3 border-l-2 border-gray-200">
+            {!isDomainCollapsed && (
+            <div className="space-y-1.5 ml-1 pl-3 border-l-2 border-gray-200">
               {sortedDomainCamps.map((camp) => {
                 const isExpanded = expandedCamps[camp.id] === true
                 const needsScroll = camp.authors.length > MAX_AUTHORS_BEFORE_SCROLL
@@ -404,7 +416,7 @@ export default function CampAccordion({
                     {/* Perspective Header - Clean with question framing */}
                     <button
                       onClick={() => toggleCamp(camp.id)}
-                      className="w-full text-left px-3 py-2.5 hover:bg-gray-50/50 transition-colors"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50/50 transition-colors"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -458,7 +470,7 @@ export default function CampAccordion({
                       <div className="border-t border-gray-100">
                         {/* Authors List - Scrollable, shows ~1 author height initially */}
                         <div
-                          className="p-4 bg-gray-50/50 space-y-3 overflow-y-auto"
+                          className="p-3 bg-gray-50/50 space-y-2 overflow-y-auto"
                           style={{ maxHeight: '180px' }}
                         >
                           {sortedAuthors.map((author: any, index: number) => {
@@ -482,7 +494,7 @@ export default function CampAccordion({
 
                         {/* Cross-Perspective Authors: Top 3 Supports & Challenges - Anchored */}
                         {(camp.challengingAuthors?.length > 0 || camp.supportingAuthors?.length > 0) && (
-                          <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/30">
+                          <div className="border-t border-gray-100 px-3 py-2 bg-gray-50/30">
                             <div className="flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
                               {camp.supportingAuthors?.length > 0 && (
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -523,6 +535,7 @@ export default function CampAccordion({
                 )
               })}
             </div>
+            )}
           </div>
         )
       })}

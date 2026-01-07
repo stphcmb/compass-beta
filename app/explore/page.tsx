@@ -11,6 +11,7 @@ import { ExpandedQueries } from '@/components/search-expansion'
 import { FeatureHint } from '@/components/FeatureHint'
 import { HowPerspectivesWorkModal, useHowPerspectivesWorkModal } from '@/components/HowPerspectivesWorkModal'
 import DomainOverview from '@/components/DomainOverview'
+// import DomainSpectrum from '@/components/DomainSpectrum' // Temporarily hidden
 import { TERMINOLOGY } from '@/lib/constants/terminology'
 import { Layers, Compass } from 'lucide-react'
 
@@ -156,6 +157,9 @@ function ExplorePageContent() {
 
           {/* Feature Hint */}
           <FeatureHint featureKey="explore" className="mb-4" />
+
+          {/* Domain Spectrum - Temporarily hidden */}
+          {/* {!query && <DomainSpectrum />} */}
 
           {/* Search Bar - Prominent styling */}
           <SearchBar

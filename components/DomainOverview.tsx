@@ -241,23 +241,22 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                   style={{
                     fontSize: '12px',
                     color: isActive || isHovered ? colors.text : '#6b7280',
-                    marginTop: '4px',
-                    marginBottom: isHovered ? '8px' : '0'
+                    marginTop: '4px'
                   }}
                 >
                   {domain.coreQuestion}
                 </p>
 
-                {/* Expanded content on hover */}
-                {isHovered && (
+                {/* Expanded content - visible when active or hovered */}
+                {(isActive || isHovered) && (
                   <div style={{
                     marginTop: '8px',
                     paddingTop: '8px',
-                    borderTop: `1px solid ${colors.bgSolid}40`
+                    borderTop: `1px solid ${colors.bgSolid}30`
                   }}>
                     {/* Description */}
                     <p style={{
-                      fontSize: '13px',
+                      fontSize: '12px',
                       lineHeight: '1.5',
                       color: '#374151',
                       marginBottom: '10px'
@@ -267,13 +266,13 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
 
                     {/* You'll find */}
                     <div style={{
-                      padding: '10px',
+                      padding: '8px 10px',
                       borderRadius: '6px',
-                      backgroundColor: 'rgba(255,255,255,0.7)',
+                      backgroundColor: `${colors.bgLight}80`,
                       marginBottom: '10px'
                     }}>
                       <div style={{
-                        fontSize: '11px',
+                        fontSize: '10px',
                         fontWeight: 600,
                         color: colors.text,
                         textTransform: 'uppercase',
@@ -283,7 +282,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                         You'll find
                       </div>
                       <p style={{
-                        fontSize: '12px',
+                        fontSize: '11px',
                         lineHeight: '1.5',
                         color: '#4b5563',
                         margin: 0
@@ -292,34 +291,54 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                       </p>
                     </div>
 
-                    {/* Central debate badge */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      flexWrap: 'wrap'
-                    }}>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        color: '#6b7280',
-                        textTransform: 'uppercase'
-                      }}>
-                        Debate:
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          padding: '4px 10px',
-                          borderRadius: '10px',
-                          backgroundColor: colors.bgSolid,
-                          color: 'white'
-                        }}
-                      >
-                        {domain.keyTension}
-                      </span>
-                    </div>
+                    {/* Spectrum visualization */}
+                    {(() => {
+                      const tensionParts = domain.keyTension.split(' vs. ')
+                      const leftLabel = tensionParts[0] || ''
+                      const rightLabel = tensionParts[1] || ''
+                      return (
+                        <div>
+                          <div style={{
+                            fontSize: '10px',
+                            fontWeight: 600,
+                            color: '#6b7280',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: '6px'
+                          }}>
+                            The Debate
+                          </div>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              color: colors.text,
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {leftLabel}
+                            </span>
+                            <div style={{
+                              flex: 1,
+                              height: '5px',
+                              borderRadius: '3px',
+                              background: `linear-gradient(90deg, ${colors.bgSolid} 0%, #fbbf24 50%, #9ca3af 100%)`
+                            }} />
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              color: '#6b7280',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {rightLabel}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
               </button>
