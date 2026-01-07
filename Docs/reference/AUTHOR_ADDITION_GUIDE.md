@@ -13,11 +13,21 @@ This guide ensures every author is added with complete, high-quality data follow
 - ✅ **Primary Affiliation**: Current organization/role (full)
 - ✅ **Header Affiliation**: Short display version (e.g., "Google", "MIT")
 - ✅ **Notes**: 2-3 sentences on their significance (uses `notes` field, NOT `bio`)
-- ✅ **Credibility Tier**: `Major Voice` | `Seminal Thinker` | `Thought Leader`
-  - **Major Voice**: Highly influential, shapes discourse (e.g., Lex Fridman, Marc Andreessen)
-  - **Seminal Thinker**: Foundational contributions (e.g., Geoffrey Hinton, Stuart Russell)
-  - **Thought Leader**: Recognized expert, regular contributor
-- ✅ **Author Type**: `researcher` | `practitioner` | `entrepreneur` | `policy` | `critic` | `journalist`
+- ✅ **Credibility Tier**:
+  - **Seminal Thinker**: Foundational contributions, field-defining work (e.g., Geoffrey Hinton, Stuart Russell, Michael I. Jordan)
+  - **Major Voice**: Highly influential, shapes discourse (e.g., Lex Fridman, Marc Andreessen, Sam Altman)
+  - **Thought Leader**: Recognized expert, regular contributor to discourse
+  - **Emerging Voice**: Rising influence, newer to prominence
+- ✅ **Author Type** (use these exact values):
+  - `Academic` - University professors, researchers at academic institutions
+  - `Researcher` - Industry or independent researchers
+  - `Industry Leader` - CEOs, CTOs, founders of major companies
+  - `Executive` - Senior executives at tech companies
+  - `Policy Expert` - Policy analysts, think tank researchers
+  - `Policy Maker` - Government officials, regulators
+  - `Investor` - VCs, angel investors focused on AI
+  - `Public Intellectual` - Writers, podcast hosts, public commentators
+  - `Engineer` - Technical practitioners, open source maintainers
 
 ### 2. Sources (REQUIRED - Minimum 3)
 Each author MUST have at least 3 relevant sources in JSONB format:

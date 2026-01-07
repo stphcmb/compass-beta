@@ -82,20 +82,73 @@ cat Docs/data/seed/tier1_remaining/*.sql | psql $DATABASE_URL
 
 ---
 
+## 2026-01-07: Major Expansion - 20 New Authors
+
+### Authors Added
+Added 20 new high-credibility authors with diverse/emerging/contrarian viewpoints:
+
+**AI Technical Capabilities - Scaling Will Deliver:**
+1. **Noam Brown** (OpenAI) - Major Voice, Researcher
+2. **Jason Wei** (OpenAI) - Major Voice, Researcher
+3. **Jared Kaplan** (Anthropic) - Seminal Thinker, Researcher
+
+**AI Technical Capabilities - Needs New Approaches:**
+4. **Melanie Mitchell** (Santa Fe Institute) - Major Voice, Academic
+5. **Michael I. Jordan** (UC Berkeley) - Seminal Thinker, Academic
+
+**AI & Society - Democratize Fast:**
+6. **Arthur Mensch** (Mistral AI) - Major Voice, Industry Leader
+7. **Chris Lattner** (Modular AI) - Major Voice, Industry Leader
+8. **Sara Hooker** (Cohere) - Major Voice, Researcher
+9. **George Hotz** (comma.ai/tinygrad) - Major Voice, Industry Leader
+10. **Guillaume Lample** (Mistral AI) - Major Voice, Researcher
+
+**AI & Society - Safety First:**
+11. **Neel Nanda** (Google DeepMind) - Major Voice, Researcher
+12. **Evan Hubinger** (Anthropic) - Major Voice, Researcher
+
+**AI Governance - Adaptive Governance:**
+13. **Helen Toner** (Georgetown CSET) - Major Voice, Policy Expert
+14. **Matt Clifford** (Entrepreneur First/UK Gov) - Major Voice, Policy Expert
+
+**AI Governance - Innovation First:**
+15. **Alexandr Wang** (Scale AI) - Major Voice, Industry Leader
+
+**Future of Work - Displacement Realist:**
+16. **Martin Ford** (Author/Futurist) - Major Voice, Public Intellectual
+17. **Kai-Fu Lee** (Sinovation Ventures) - Seminal Thinker, Industry Leader
+18. **Mary L. Gray** (Microsoft Research) - Major Voice, Academic
+
+**Future of Work - Human-AI Collaboration:**
+19. **Jaime Teevan** (Microsoft) - Major Voice, Industry Leader
+20. **Dwarkesh Patel** (Dwarkesh Podcast) - Major Voice, Public Intellectual
+
+### Challenge Relationships Added
+- Melanie Mitchell → challenges "Scaling Will Deliver"
+- Michael I. Jordan → challenges "Scaling Will Deliver"
+- Evan Hubinger → challenges "Democratize Fast"
+- Martin Ford → challenges "Human-AI Collaboration"
+
+### SQL Script Location
+`/scripts/add_20_authors.sql`
+
+### Total Impact
+- **Before**: ~121 authors
+- **After**: 141 authors, 24 new camp relationships
+
+---
+
 ## Future Additions
 
-### Tier 2 Candidates (12 authors from original list)
-When ready to expand further:
+### Remaining Candidates
 - Andrew McAfee (MIT)
 - Joy Buolamwini (Algorithmic Justice League)
 - Arvind Narayanan (Princeton)
 - Daniel Dennett (Philosopher)
 - Paul Christiano (ARC)
-- Melanie Mitchell (Santa Fe Institute)
 - Nathan Labenz (Cognitive Revolution)
 - Emad Mostaque (Stability AI)
 - Jack Clark (Anthropic)
-- Helen Toner (Georgetown CSET)
 - Connor Leahy (Conjecture)
 - Rumman Chowdhury (Humane Intelligence)
 
