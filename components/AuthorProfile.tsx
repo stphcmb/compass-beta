@@ -44,6 +44,30 @@ const DOMAIN_COLORS: Record<string, { bg: string; text: string; gradient: string
   },
 }
 
+// Domain descriptions for intuitive display
+const DOMAIN_DESCRIPTIONS: Record<string, string> = {
+  'AI Technical Capabilities': 'AI capabilities',
+  'AI & Society': 'AI & society',
+  'Enterprise AI Adoption': 'AI in business',
+  'AI Governance & Oversight': 'AI governance',
+  'Future of Work': 'AI & work',
+}
+
+function getDomainFocusText(domains: string[]): string {
+  if (!domains || domains.length === 0) return ''
+
+  const descriptions = domains.map(d => DOMAIN_DESCRIPTIONS[d] || d)
+
+  if (descriptions.length === 1) {
+    return `Focused on ${descriptions[0]}`
+  } else if (descriptions.length === 2) {
+    return `Explores ${descriptions[0]} and ${descriptions[1]}`
+  } else {
+    const last = descriptions.pop()
+    return `Explores ${descriptions.join(', ')}, and ${last}`
+  }
+}
+
 // Get initials from name
 function getInitials(name: string): string {
   const parts = name.split(' ').filter(Boolean)
@@ -232,52 +256,26 @@ export default function AuthorProfile({ authorId }: AuthorProfileProps) {
             {/* Author details */}
             <div style={{ flex: 1 }}>
               <h1 style={{
-                marginBottom: 'var(--space-1)',
+                marginBottom: 'var(--space-2)',
                 fontSize: 'var(--text-h1)',
                 letterSpacing: 'var(--tracking-tight)'
               }}>
                 {author.name}
               </h1>
+              {/* Compact single-line metadata */}
               <div style={{
-                fontSize: 'var(--text-body)',
+                fontSize: 'var(--text-small)',
                 color: 'var(--color-mid-gray)',
-                marginBottom: 'var(--space-4)'
+                lineHeight: 'var(--leading-relaxed)'
               }}>
-                {author.header_affiliation || author.primary_affiliation || 'Independent'}
-              </div>
-
-              {/* Badges */}
-              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                {author.credibility_tier && (
-                  <span style={{
-                    padding: 'var(--space-1) var(--space-3)',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: 'var(--text-caption)',
-                    fontWeight: 'var(--weight-semibold)',
-                    background: domainTheme
-                      ? `linear-gradient(135deg, ${domainTheme.text}15 0%, ${domainTheme.text}25 100%)`
-                      : 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.25) 100%)',
-                    color: domainTheme ? domainTheme.text : 'var(--color-accent)',
-                    border: `1px solid ${domainTheme ? domainTheme.border : 'rgba(99, 102, 241, 0.3)'}`,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}>
-                    {author.credibility_tier}
-                  </span>
-                )}
-                {author.author_type && (
-                  <span style={{
-                    padding: 'var(--space-1) var(--space-3)',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: 'var(--text-caption)',
-                    fontWeight: 'var(--weight-medium)',
-                    backgroundColor: 'white',
-                    color: 'var(--color-charcoal)',
-                    border: '1px solid var(--color-light-gray)'
-                  }}>
-                    {author.author_type}
-                  </span>
-                )}
+                {[
+                  author.header_affiliation || author.primary_affiliation || 'Independent',
+                  author.author_type,
+                  (() => {
+                    const domains = author.camps ? Array.from(new Set(author.camps.map((c: any) => c.domain))) as string[] : []
+                    return getDomainFocusText(domains)
+                  })()
+                ].filter(Boolean).join(' · ')}
               </div>
             </div>
           </div>

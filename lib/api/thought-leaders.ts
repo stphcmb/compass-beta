@@ -97,6 +97,8 @@ export async function getAuthorWithDetails(id: string): Promise<any | null> {
         key_quote,
         quote_source_url,
         why_it_matters,
+        citation_status,
+        citation_last_checked,
         camps (
           id,
           label,
@@ -120,6 +122,8 @@ export async function getAuthorWithDetails(id: string): Promise<any | null> {
       quote: mapping.key_quote,
       quoteSourceUrl: mapping.quote_source_url,
       whyItMatters: mapping.why_it_matters,
+      citationStatus: mapping.citation_status,
+      citationLastChecked: mapping.citation_last_checked,
     })).filter((c: any) => c.id)
 
     return {
@@ -170,14 +174,9 @@ const DOMAIN_MAP: Record<number, string> = {
 
 /**
  * Calculate relevancy score for an author based on search query
+ * Returns both score and match type information
  */
-function calculateAuthorRelevancy(author: any, query: string, queryTerms: string[]): number {
-  if (!query || queryTerms.length === 0) {
-    // No query - use credibility tier (lower tier = higher score)
-    return 100 - (author.credibilityTier || 5) * 10
-  }
-
-  let score = 0
+function calculateAuthorRelevancy(author: any, query: string, queryTerms: string[]): { score: number, matchType: 'exact' | 'expanded' | 'credibility', matchedTerms: string[] } {
   const searchableText = [
     author.name || '',
     author.affiliation || '',
@@ -185,23 +184,68 @@ function calculateAuthorRelevancy(author: any, query: string, queryTerms: string
     author.key_quote || ''
   ].join(' ').toLowerCase()
 
+  if (!query || queryTerms.length === 0) {
+    // No query - use credibility tier (lower tier = higher score)
+    const tierMap: Record<string, number> = {
+      'Pioneer': 1,
+      'Established': 2,
+      'Emerging': 3,
+      'Critic': 4
+    }
+    const tier = tierMap[author.credibilityTier] || 5
+    return {
+      score: 100 - tier * 10,
+      matchType: 'credibility',
+      matchedTerms: []
+    }
+  }
+
+  let score = 0
+  const matchedTerms: string[] = []
+
+  // Check for exact phrase match first
+  if (searchableText.includes(query.toLowerCase())) {
+    score += 30
+    matchedTerms.push(query)
+  }
+
+  // Extract original query terms (not expanded)
+  const originalTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2)
+  const originalMatches = originalTerms.filter(term =>
+    searchableText.includes(term.toLowerCase())
+  )
+
   // Check for query term matches
   queryTerms.forEach(term => {
     if (searchableText.includes(term.toLowerCase())) {
       score += 20
+      if (!matchedTerms.includes(term)) {
+        matchedTerms.push(term)
+      }
     }
   })
 
-  // Exact phrase match bonus
-  if (searchableText.includes(query.toLowerCase())) {
-    score += 30
-  }
-
   // Credibility tier bonus (tier 1 = +15, tier 2 = +10, tier 3 = +5)
-  const tier = author.credibilityTier || 5
+  const tierMap: Record<string, number> = {
+    'Pioneer': 1,
+    'Established': 2,
+    'Emerging': 3,
+    'Critic': 4
+  }
+  const tier = tierMap[author.credibilityTier] || 5
   score += Math.max(0, (6 - tier) * 5)
 
-  return score
+  // Determine match type based on what matched
+  let matchType: 'exact' | 'expanded' | 'credibility'
+  if (originalMatches.length > 0 || searchableText.includes(query.toLowerCase())) {
+    matchType = 'exact'
+  } else if (matchedTerms.length > 0) {
+    matchType = 'expanded'
+  } else {
+    matchType = 'credibility'
+  }
+
+  return { score, matchType, matchedTerms }
 }
 
 /**
@@ -226,11 +270,15 @@ function enrichWithCrossPerspectiveAuthors(camps: any[], query?: string, queryTe
       const opposingCamp = campsByName[opposingName]
       if (opposingCamp?.authors) {
         // Get authors from opposing perspective with relevancy scores
-        const authorsWithScores = opposingCamp.authors.map((author: any) => ({
-          ...author,
-          _relevancyScore: calculateAuthorRelevancy(author, query || '', queryTerms),
-          perspective: opposingName
-        }))
+        const authorsWithScores = opposingCamp.authors.map((author: any) => {
+          const relevancy = calculateAuthorRelevancy(author, query || '', queryTerms)
+          return {
+            ...author,
+            _relevancyScore: relevancy.score,
+            _matchType: relevancy.matchType,
+            perspective: opposingName
+          }
+        })
 
         challengingAuthors.push(...authorsWithScores)
       }
@@ -250,11 +298,15 @@ function enrichWithCrossPerspectiveAuthors(camps: any[], query?: string, queryTe
       const alliedCamp = campsByName[alliedName]
       if (alliedCamp?.authors) {
         // Get authors from allied perspective with relevancy scores
-        const authorsWithScores = alliedCamp.authors.map((author: any) => ({
-          ...author,
-          _relevancyScore: calculateAuthorRelevancy(author, query || '', queryTerms),
-          perspective: alliedName
-        }))
+        const authorsWithScores = alliedCamp.authors.map((author: any) => {
+          const relevancy = calculateAuthorRelevancy(author, query || '', queryTerms)
+          return {
+            ...author,
+            _relevancyScore: relevancy.score,
+            _matchType: relevancy.matchType,
+            perspective: alliedName
+          }
+        })
 
         supportingAuthors.push(...authorsWithScores)
       }
@@ -399,8 +451,45 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
     const queryTerms = query ? query.toLowerCase().split(/\s+/).filter(t => t.length > 2) : []
     const enrichedCamps = enrichWithCrossPerspectiveAuthors(camps, query, queryTerms)
 
-    console.log('✅ Returning camps:', enrichedCamps.length)
-    return { camps: enrichedCamps, expandedQueries: expandedQueriesResult }
+    // Filter and rank authors within each camp by relevance to query
+    const MAX_AUTHORS_PER_CAMP = 8
+    const campsWithFilteredAuthors = enrichedCamps.map(camp => {
+      if (!query || !camp.authors || camp.authors.length === 0) {
+        return camp
+      }
+
+      // Calculate relevance score for each author
+      const authorsWithScores = camp.authors.map((author: any) => {
+        const relevancy = calculateAuthorRelevancy(author, query, queryTerms)
+        return {
+          ...author,
+          _relevancyScore: relevancy.score,
+          _matchType: relevancy.matchType,
+          _matchedTerms: relevancy.matchedTerms
+        }
+      })
+
+      // Sort by relevance (high to low) and take top authors
+      // Only include authors with score > 0 OR limit to MAX_AUTHORS_PER_CAMP
+      const sortedAuthors = authorsWithScores
+        .sort((a: any, b: any) => b._relevancyScore - a._relevancyScore)
+        .slice(0, MAX_AUTHORS_PER_CAMP)
+
+      // Filter to only authors with positive relevance or credibility-based ranking
+      const filteredAuthors = sortedAuthors.filter((a: any) => a._relevancyScore > 0)
+
+      // Log filtering for debugging
+      console.log(`    Camp "${camp.name}": ${camp.authors.length} authors -> ${filteredAuthors.length} relevant (top scores: ${sortedAuthors.slice(0, 3).map((a: any) => a._relevancyScore).join(', ')})`)
+
+      return {
+        ...camp,
+        authors: filteredAuthors.length > 0 ? filteredAuthors : sortedAuthors.slice(0, 3), // Always show at least 3
+        authorCount: filteredAuthors.length > 0 ? filteredAuthors.length : sortedAuthors.slice(0, 3).length
+      }
+    })
+
+    console.log('✅ Returning camps:', campsWithFilteredAuthors.length)
+    return { camps: campsWithFilteredAuthors, expandedQueries: expandedQueriesResult }
   } catch (error) {
     console.error('Error in getCampsWithAuthors:', error)
     return { camps: [], expandedQueries: null }

@@ -3,10 +3,14 @@
 /**
  * AnalysisPanel Component
  * Main panel that displays all analysis results
+ *
+ * Redesigned to show human-readable editorial feedback first,
+ * with technical details available in a collapsible section.
  */
 
 import React, { useState } from 'react';
 import type { AnalysisResult, EditorialProfile } from '../lib/types';
+import { EditorialSummary } from './EditorialSummary';
 import { AlignmentScore } from './AlignmentScore';
 import { BrakeCard } from './BrakeCard';
 import { MirrorChart } from './MirrorChart';
@@ -106,57 +110,79 @@ export function AnalysisPanel({
       </div>
 
       <div className={styles.panelContent}>
-        {/* Alignment Score - Always shown */}
+        {/* Alignment Score - Compact display at top */}
         <AlignmentScore score={result.alignmentScore} />
 
-        {/* Brake - Shown if triggered and not dismissed */}
-        {result.brake?.triggered && !brakeDismissed && (
-          <BrakeCard
-            severity={result.brake.severity}
-            reason={result.brake.reason}
-            dominantCamps={result.brake.dominant_camps.map(getCampName)}
-            missingThemes={result.brake.missing_themes}
-            onDismiss={() => setBrakeDismissed(true)}
-          />
-        )}
+        {/* Editorial Summary - Human-readable feedback (PRIMARY OUTPUT) */}
+        <EditorialSummary result={result} />
 
-        {/* Mirror - Stated vs Actual */}
-        <MirrorChart mirror={result.mirror} />
+        {/* Technical Details - Collapsible for power users */}
+        <details style={{ marginTop: '16px' }}>
+          <summary style={{
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontWeight: 500,
+            color: '#6b7280',
+            padding: '8px 0',
+            userSelect: 'none'
+          }}>
+            Show technical details
+          </summary>
+          <div style={{
+            marginTop: '12px',
+            paddingTop: '12px',
+            borderTop: '1px solid #e5e7eb'
+          }}>
+            {/* Brake - Shown if triggered and not dismissed */}
+            {result.brake?.triggered && !brakeDismissed && (
+              <BrakeCard
+                severity={result.brake.severity}
+                reason={result.brake.reason}
+                dominantCamps={result.brake.dominant_camps.map(getCampName)}
+                missingThemes={result.brake.missing_themes}
+                onDismiss={() => setBrakeDismissed(true)}
+              />
+            )}
 
-        {/* Skew - Camp balance */}
-        <SkewIndicator skew={result.skew} />
+            {/* Mirror - Stated vs Actual */}
+            <MirrorChart mirror={result.mirror} />
 
-        {/* Detected Camps - Collapsible detail */}
-        {result.detectedCamps.length > 0 && (
-          <details className={styles.detectedCamps}>
-            <summary className={styles.detectedCampsSummary}>
-              <span className={styles.sectionIcon}>🔍</span>
-              Detected Camps ({result.detectedCamps.length})
-            </summary>
-            <div className={styles.detectedCampsList}>
-              {result.detectedCamps.map((camp, i) => (
-                <div key={i} className={styles.detectedCamp}>
-                  <div className={styles.detectedCampHeader}>
-                    <span className={styles.detectedCampName}>{camp.camp_name}</span>
-                    <span className={styles.detectedCampConfidence}>
-                      {Math.round(camp.confidence * 100)}%
-                    </span>
-                  </div>
-                  <div className={styles.detectedCampKeywords}>
-                    {camp.matched_keywords.slice(0, 5).map((kw, j) => (
-                      <span key={j} className={styles.keyword}>{kw}</span>
-                    ))}
-                    {camp.matched_keywords.length > 5 && (
-                      <span className={styles.keywordMore}>
-                        +{camp.matched_keywords.length - 5} more
-                      </span>
-                    )}
-                  </div>
+            {/* Skew - Camp balance */}
+            <SkewIndicator skew={result.skew} />
+
+            {/* Detected Camps - Collapsible detail */}
+            {result.detectedCamps.length > 0 && (
+              <details className={styles.detectedCamps}>
+                <summary className={styles.detectedCampsSummary}>
+                  <span className={styles.sectionIcon}>🔍</span>
+                  Detected Camps ({result.detectedCamps.length})
+                </summary>
+                <div className={styles.detectedCampsList}>
+                  {result.detectedCamps.map((camp, i) => (
+                    <div key={i} className={styles.detectedCamp}>
+                      <div className={styles.detectedCampHeader}>
+                        <span className={styles.detectedCampName}>{camp.camp_name}</span>
+                        <span className={styles.detectedCampConfidence}>
+                          {Math.round(camp.confidence * 100)}%
+                        </span>
+                      </div>
+                      <div className={styles.detectedCampKeywords}>
+                        {camp.matched_keywords.slice(0, 5).map((kw, j) => (
+                          <span key={j} className={styles.keyword}>{kw}</span>
+                        ))}
+                        {camp.matched_keywords.length > 5 && (
+                          <span className={styles.keywordMore}>
+                            +{camp.matched_keywords.length - 5} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </details>
-        )}
+              </details>
+            )}
+          </div>
+        </details>
 
         {/* Timestamp */}
         <div className={styles.panelFooter}>

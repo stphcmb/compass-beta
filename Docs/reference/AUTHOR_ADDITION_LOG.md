@@ -138,22 +138,249 @@ Added 20 new high-credibility authors with diverse/emerging/contrarian viewpoint
 
 ---
 
+## 2026-01-08: Trending AI Technical Capabilities - 15 New Authors
+
+### Authors Added
+Added 15 new authors focused on trending/emerging AI technical topics:
+
+**AI Infrastructure & Systems:**
+1. **Matei Zaharia** (Databricks) - Pioneer, Industry Leader - Compound AI systems
+2. **Edo Liberty** (Pinecone) - Field Leader, Industry Leader - Vector databases & RAG
+3. **Tri Dao** (Together AI) - Field Leader, Researcher - FlashAttention
+
+**Scaling Research (Transformers/Architecture):**
+4. **Quoc Le** (Google DeepMind) - Pioneer, Researcher - Transformer co-inventor
+5. **Barret Zoph** (Google DeepMind) - Field Leader, Researcher - NAS, Gemini, PaLM
+6. **Sholto Douglas** (Google DeepMind) - Domain Expert, Researcher - Chinchilla/scaling laws
+7. **Yi Tay** (Reka AI) - Field Leader, Researcher - UL2, Flan, multimodal
+
+**Open Source AI:**
+8. **Thomas Wolf** (Hugging Face) - Field Leader, Industry Leader - Transformers library
+9. **Hugo Touvron** (Meta AI) - Field Leader, Researcher - Llama lead author
+10. **Jason Phang** (EleutherAI) - Domain Expert, Researcher - Pythia, GPT-NeoX
+
+**Data-Centric AI & Alternative Approaches:**
+11. **Chris Ré** (Stanford/Together AI) - Field Leader, Academic - Data-centric AI, Snorkel, Mamba
+
+**AI Safety (Technical):**
+12. **Jacob Steinhardt** (UC Berkeley) - Field Leader, Academic - ML Safety
+
+**AI Reasoning & Code:**
+13. **Kanjun Qiu** (Imbue) - Domain Expert, Industry Leader - Reasoning systems
+
+**Education & Investment:**
+14. **Sebastian Raschka** (Lightning AI) - Domain Expert, Researcher - LLM education
+15. **Sarah Catanzaro** (Amplify Partners) - Domain Expert, Investor - AI infrastructure investing
+
+### Camp Relationships Added
+- Matei Zaharia → Tech Builders (strong), Co-Evolution (partial)
+- Quoc Le → Scaling Will Deliver (strong)
+- Barret Zoph → Scaling Will Deliver (strong)
+- Tri Dao → Tech Builders (strong), Democratize Fast (partial)
+- Chris Ré → Needs New Approaches (strong)
+- Jacob Steinhardt → Safety First (strong)
+- Edo Liberty → Tech Builders (strong)
+- Thomas Wolf → Democratize Fast (strong)
+- Sholto Douglas → Scaling Will Deliver (strong)
+- Yi Tay → Tech Builders (strong)
+- Kanjun Qiu → Human-AI Collaboration (strong)
+- Sebastian Raschka → Tech Builders (partial)
+- Jason Phang → Democratize Fast (strong)
+- Sarah Catanzaro → Innovation First (strong)
+- Hugo Touvron → Democratize Fast (strong)
+
+### SQL Script Location
+`/scripts/add_trending_ai_authors.sql`
+
+### Total Impact
+- **Before**: ~200 authors
+- **After**: ~215 authors, 17 new camp relationships
+
+---
+
+## 2026-01-07: Emerging Topics Expansion - 17 New Authors
+
+### Focus Areas
+Added authors covering emerging AI topics not previously well-represented:
+- **Vibe Coding / AI Dev Tools** - The new paradigm of AI-assisted programming
+- **Multi-Agent Systems** - Framework creators shaping how AI agents collaborate
+- **AI Infrastructure** - Leaders building the compute and deployment layer
+- **Open Source AI** - Champions of democratized AI research
+- **AI Economics/Skepticism** - Voices providing critical analysis of AI claims
+
+### Authors Added
+
+**Vibe Coding / AI Dev Tools:**
+1. **Amjad Masad** (Replit) - Major Voice, Industry Leader - Coined "vibe coding"
+2. **Michael Truell** (Cursor) - Major Voice, Industry Leader - AI-native code editor
+3. **Swyx** (Latent Space) - Major Voice, Public Intellectual - Coined "AI Engineer"
+4. **Varun Mohan** (Codeium) - Thought Leader, Industry Leader - Enterprise AI coding
+
+**Multi-Agent Systems:**
+5. **Jerry Liu** (LlamaIndex) - Major Voice, Industry Leader - RAG pioneer
+6. **Joao Moura** (CrewAI) - Emerging Voice, Industry Leader - Multi-agent frameworks
+7. **Yohei Nakajima** (Untapped Capital) - Major Voice, Investor - Created BabyAGI
+
+**AI Infrastructure:**
+8. **Erik Bernhardsson** (Modal) - Major Voice, Industry Leader - Serverless ML
+9. **Ben Firshman** (Replicate) - Major Voice, Industry Leader - Model deployment
+10. **Vipul Ved Prakash** (Together AI) - Major Voice, Industry Leader - Open AI infra
+11. **Clem Delangue** (Hugging Face) - Major Voice, Industry Leader - TIME 100 AI
+
+**Open Source AI / Research:**
+12. **Stella Biderman** (EleutherAI) - Major Voice, Researcher - Open-source AI pioneer
+13. **Tri Dao** (Princeton/Together AI) - Major Voice, Researcher - FlashAttention creator
+14. **Nathan Lambert** (AI2) - Major Voice, Researcher - RLHF expert
+
+**AI Economics / Critical Analysis:**
+15. **Gary Sheng** (Civitas) - Emerging Voice, Public Intellectual - AI skeptic
+16. **Sayash Kapoor** (Princeton) - Emerging Voice, Academic - AI Snake Oil co-author
+17. **Nathan Labenz** (Cognitive Revolution) - Major Voice, Public Intellectual - Deep AI interviews
+
+### Camp Assignments Summary
+| Camp | New Authors |
+|------|-------------|
+| Democratize Fast | 7 (Amjad, Swyx, Ben, Vipul, Clem, Stella, Andrej*) |
+| Human-AI Collaboration | 6 (Amjad, Michael, Swyx, Joao, Varun, Nathan L.) |
+| Tech Builders | 5 (Michael, Yohei, Jerry, Erik, Varun) |
+| Scaling Will Deliver | 2 (Tri, Nathan L.) |
+| Safety First | 2 (Clem, Nathan Lambert) |
+| Needs New Approaches | 2 (Sayash, Gary) |
+
+*Note: Andrej Karpathy, Arvind Narayanan, Harrison Chase already existed in database
+
+### SQL Script Location
+`/scripts/add_emerging_topics_authors.sql`
+
+### Total Impact
+- **Before**: 141 authors, 244 camp relationships
+- **After**: 158 authors, 267 camp relationships
+- Net addition: 17 authors, 23 camp relationships
+
+---
+
+## 2026-01-08: Major Expansion to 200 Authors
+
+### Focus Areas
+Comprehensive expansion covering all major AI viewpoints:
+- **AI Safety Researchers** - Technical alignment experts
+- **Enterprise/Consulting** - Business AI practitioners
+- **Policy & Governance** - Legal and regulatory experts
+- **International Voices** - Global AI leaders
+- **Emerging Researchers** - Next-generation thinkers
+- **Creative AI** - Artists exploring AI ethics
+- **Robotics & Embodiment** - Physical AI systems
+
+### Authors Added (42 new)
+
+**Enterprise & Business:**
+- Thomas Davenport, Ethan Mollick, Azeem Azhar, Andrew McAfee
+- Ajay Agrawal, Avi Goldfarb, Chip Huyen, Cassie Kozyrkov
+
+**AI Safety & Alignment:**
+- Jan Leike, Paul Christiano, Connor Leahy, Chris Olah
+- Robert Miles, Max Tegmark
+
+**Policy & Governance:**
+- Alondra Nelson, Amba Kak, Woodrow Hartzog, Margot Kaminski
+- Bruce Schneier, Marietje Schaake
+
+**AI Ethics & Society:**
+- Joy Buolamwini, Meredith Broussard, Ruha Benjamin
+- Kate Crawford, Safiya Noble, Rumman Chowdhury
+
+**Startups & Industry:**
+- Aravind Srinivas, David Luan, Noam Shazeer, Emad Mostaque
+- Mira Murati, Kevin Scott, Lisa Su, Douwe Kiela
+
+**Research & Academia:**
+- Yejin Choi, Percy Liang, Oriol Vinyals, John Schulman
+- Pushmeet Kohli, Daphne Koller, Chelsea Finn, Sergey Levine
+- David Silver, Josh Tenenbaum, Daniela Rus, Pieter Abbeel
+- Been Kim, Rediet Abebe
+
+**International:**
+- Francesca Rossi, Ricardo Baeza-Yates, Ying Lu, Jianfeng Gao
+
+**Creative & Media:**
+- Holly Herndon, Mat Dryhurst, Yannic Kilcher
+
+### Schema Updates
+- Added `view_evolution_notes` column to `camp_authors` table
+- Documents when authors change their positions over time
+- Examples: Geoffrey Hinton (safety pivot), Ilya Sutskever (SSI founding)
+
+### Database Statistics
+| Metric | Before | After |
+|--------|--------|-------|
+| Authors | 158 | 200 |
+| Camp Relationships | 267 | 306 |
+| Avg camps/author | 1.69 | 1.53 |
+
+### Camp Distribution (Final)
+| Camp | Authors |
+|------|---------|
+| Safety First | 41 |
+| Democratize Fast | 29 |
+| Human-AI Collaboration | 25 |
+| Needs New Approaches | 25 |
+| Scaling Will Deliver | 25 |
+| Business Whisperers | 24 |
+| Tech Builders | 21 |
+| Regulatory Interventionist | 21 |
+| Technology Leads | 21 |
+| Co-Evolution | 20 |
+| Adaptive Governance | 19 |
+| Innovation First | 19 |
+| Displacement Realist | 16 |
+
+---
+
+## 2026-01-08: Author-Level Quote Fix
+
+### Issue Identified
+121 authors were missing `key_quote` and `quote_source_url` at the author level (on the `authors` table). While camp-level quotes were complete, author-level quotes were empty.
+
+### Fix Applied
+Created and ran `scripts/fix_missing_author_quotes.mjs` to add representative quotes for all 121 authors.
+
+### Authors Updated
+All 121 authors including:
+- Ajay Agrawal, Alexandr Wang, Alondra Nelson, Amjad Masad
+- François Chollet, Harrison Chase, Jan Leike, Mira Murati
+- Ted Chiang, Tri Dao, Yohei Nakajima, and 110 others
+
+### Database Statistics After Fix
+| Metric | Value |
+|--------|-------|
+| Total authors | 200 |
+| Authors with key_quote | 200 (100%) |
+| Authors with quote_source_url | 200 (100%) |
+| Camp relationships | 315 |
+| Camp relationships with key_quote | 315 (100%) |
+| Camp relationships with why_it_matters | 315 (100%) |
+
+### Documentation Updated
+- Updated `AUTHOR_DATABASE_GUIDE.md` to clarify two-level quote requirements
+- Added verification commands to pre-commit checklist
+- Added reference to fix script for future maintenance
+
+---
+
 ## Future Additions
 
 ### Remaining Candidates
 - Andrew McAfee (MIT)
 - Joy Buolamwini (Algorithmic Justice League)
-- Arvind Narayanan (Princeton)
 - Daniel Dennett (Philosopher)
 - Paul Christiano (ARC)
-- Nathan Labenz (Cognitive Revolution)
 - Emad Mostaque (Stability AI)
 - Jack Clark (Anthropic)
 - Connor Leahy (Conjecture)
 - Rumman Chowdhury (Humane Intelligence)
 
 ### Process for Future Additions
-1. Use `/Docs/AUTHOR_ADDITION_TEMPLATE.md` as guide
+1. Use `/Docs/reference/AUTHOR_DATABASE_GUIDE.md` as guide (consolidated)
 2. Create SQL file in appropriate directory
 3. Test locally first
 4. Add to this log

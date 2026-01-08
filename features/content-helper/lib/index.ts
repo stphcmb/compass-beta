@@ -7,6 +7,10 @@ export { detectCamps, getDominantCamp, isCampDetected, getCampConfidence } from 
 // Brake logic
 export { calculateBrake, getBrakeSeverityLevel, shouldHoldContent } from './brake-logic';
 
+// Editorial summary (human-readable output)
+export { generateEditorialSummary } from './editorial-summary';
+export type { EditorialSummary, EditorialInsight } from './editorial-summary';
+
 // Types
 export type {
   EditorialProfile,

@@ -5,11 +5,15 @@
  *
  * Standalone page for testing Content Helper in isolation
  * Access at: /content-helper-dev
+ *
+ * Layout inspired by AI Editor - single column, full-width results
  */
 
 import React, { useState } from 'react';
 import { AnalysisPanel, useContentAnalysis } from '@/features/content-helper';
-import styles from '@/features/content-helper/components/ContentHelper.module.css';
+import { EditorialSummary } from '@/features/content-helper/components/EditorialSummary';
+import { AlignmentScore } from '@/features/content-helper/components/AlignmentScore';
+import { Sparkles, Loader2, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react';
 
 // Sample drafts for testing
 const SAMPLE_DRAFTS = {
@@ -64,200 +68,494 @@ export default function ContentHelperDevPage() {
     reset();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleAnalyze();
+    }
+  };
+
   return (
-    <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#f8fafc'
+    }}>
       {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px', color: '#111827' }}>
-          Content Helper - Development
-        </h1>
-        <p style={{ color: '#6b7280', margin: 0 }}>
-          Isolated testing environment for editorial analysis
-        </p>
-        <div style={{
-          marginTop: '12px',
-          padding: '8px 12px',
-          background: '#fef3c7',
-          borderRadius: '6px',
-          fontSize: '13px',
-          color: '#92400e'
-        }}>
-          This page is for development only and not linked from the main app.
+      <div style={{
+        backgroundColor: 'white',
+        borderBottom: '1px solid #e5e7eb',
+        padding: '16px 24px'
+      }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              padding: '8px',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              borderRadius: '10px'
+            }}>
+              <Sparkles style={{ width: '20px', height: '20px', color: 'white' }} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: 0 }}>
+                Content Helper
+              </h1>
+              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+                Editorial analysis for balanced writing
+              </p>
+            </div>
+          </div>
+          <div style={{
+            marginTop: '12px',
+            padding: '8px 12px',
+            background: '#fef3c7',
+            borderRadius: '6px',
+            fontSize: '12px',
+            color: '#92400e'
+          }}>
+            Development page - not linked from main app
+          </div>
         </div>
       </div>
 
-      {/* Main content */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 480px', gap: '32px', alignItems: 'start' }}>
-        {/* Left: Draft input */}
-        <div>
-          {/* Profile selector */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
-              Profile
-            </label>
-            <select
-              value={selectedProfile}
-              onChange={(e) => {
-                setSelectedProfile(e.target.value);
-                reset();
-              }}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: '1px solid #d1d5db',
-                fontSize: '14px',
-                minWidth: '200px'
-              }}
-            >
-              <option value="alin">Alin</option>
-              <option value="dev">Development (Test)</option>
-            </select>
-          </div>
+      {/* Main Content */}
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 24px' }}>
 
-          {/* Sample drafts */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
-              Load Sample
-            </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => loadSample('balanced')}
+        {/* Input Section */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          overflow: 'hidden',
+          marginBottom: result ? '32px' : '24px'
+        }}>
+          {/* Profile & Sample Selector */}
+          <div style={{
+            padding: '16px 20px',
+            borderBottom: '1px solid #f3f4f6',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                Profile:
+              </label>
+              <select
+                value={selectedProfile}
+                onChange={(e) => {
+                  setSelectedProfile(e.target.value);
+                  reset();
+                }}
                 style={{
-                  padding: '6px 12px',
+                  padding: '6px 10px',
                   borderRadius: '6px',
                   border: '1px solid #d1d5db',
-                  background: 'white',
                   fontSize: '13px',
-                  cursor: 'pointer'
+                  backgroundColor: 'white'
                 }}
               >
-                Balanced
-              </button>
-              <button
-                onClick={() => loadSample('scalingHeavy')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  background: 'white',
-                  fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                Scaling Heavy
-              </button>
-              <button
-                onClick={() => loadSample('safetyFocused')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  background: 'white',
-                  fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                Safety Focused
-              </button>
+                <option value="alin">Alin</option>
+                <option value="dev">Development (Test)</option>
+              </select>
             </div>
-          </div>
 
-          {/* Draft textarea */}
-          <div className={styles.draftInput}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', color: '#374151' }}>
-              Draft Content
-            </label>
-            <textarea
-              className={styles.draftTextarea}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="Paste or type your draft content here..."
-              style={{ minHeight: '300px' }}
-            />
-            <div className={styles.draftActions}>
-              <span className={styles.draftCharCount}>
-                {draft.length} characters
-                {draft.length < 50 && draft.length > 0 && (
-                  <span style={{ color: '#dc2626' }}> (min 50)</span>
-                )}
-              </span>
-              <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#6b7280' }}>Load sample:</span>
+              {(['balanced', 'scalingHeavy', 'safetyFocused'] as const).map((key) => (
                 <button
-                  onClick={reset}
-                  disabled={!result && !error}
+                  key={key}
+                  onClick={() => loadSample(key)}
                   style={{
-                    padding: '10px 20px',
+                    padding: '4px 10px',
                     borderRadius: '6px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid #e5e7eb',
                     background: 'white',
-                    fontSize: '14px',
-                    cursor: result || error ? 'pointer' : 'not-allowed',
-                    opacity: result || error ? 1 : 0.5
+                    fontSize: '12px',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#6366f1';
+                    e.currentTarget.style.color = '#6366f1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.color = '#374151';
                   }}
                 >
+                  {key === 'scalingHeavy' ? 'Scaling' : key === 'safetyFocused' ? 'Safety' : 'Balanced'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Textarea */}
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Paste your draft content here to analyze its editorial balance..."
+            disabled={loading}
+            style={{
+              width: '100%',
+              minHeight: '180px',
+              padding: '20px',
+              border: 'none',
+              fontSize: '15px',
+              lineHeight: '1.7',
+              color: '#111827',
+              backgroundColor: 'transparent',
+              resize: 'vertical',
+              outline: 'none',
+              opacity: loading ? 0.6 : 1
+            }}
+          />
+
+          {/* Footer */}
+          <div style={{
+            padding: '12px 20px',
+            borderTop: '1px solid #f3f4f6',
+            backgroundColor: '#fafafa',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{
+                fontSize: '12px',
+                color: draft.length < 50 && draft.length > 0 ? '#dc2626' : '#6b7280'
+              }}>
+                {draft.length} characters
+                {draft.length > 0 && draft.length < 50 && ' (min 50)'}
+              </span>
+              <span style={{ color: '#d1d5db' }}>•</span>
+              <kbd style={{
+                padding: '2px 6px',
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                color: '#6b7280'
+              }}>⌘↵</kbd>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {result && (
+                <button
+                  onClick={reset}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    background: 'white',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#6b7280',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <RotateCcw style={{ width: '16px', height: '16px' }} />
                   Reset
                 </button>
-                <button
-                  className={styles.analyzeButton}
-                  onClick={handleAnalyze}
-                  disabled={!canAnalyze(draft) || loading}
-                >
-                  {loading ? 'Analyzing...' : 'Analyze'}
-                </button>
-              </div>
+              )}
+              <button
+                onClick={handleAnalyze}
+                disabled={!canAnalyze(draft) || loading}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: !canAnalyze(draft) || loading
+                    ? '#e5e7eb'
+                    : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: !canAnalyze(draft) || loading ? 'not-allowed' : 'pointer',
+                  boxShadow: !canAnalyze(draft) || loading ? 'none' : '0 2px 8px rgba(99, 102, 241, 0.3)'
+                }}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 style={{ width: '16px', height: '16px' }} className="animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles style={{ width: '16px', height: '16px' }} />
+                    Analyze
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Right: Analysis panel */}
-        <div style={{ position: 'sticky', top: '32px' }}>
-          <AnalysisPanel
-            result={result}
-            profile={profile}
-            loading={loading}
-            error={error}
-          />
-        </div>
+        {/* Loading State */}
+        {loading && (
+          <div style={{
+            backgroundColor: '#eef2ff',
+            border: '1px solid #c7d2fe',
+            borderRadius: '12px',
+            padding: '24px',
+            marginBottom: '24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Loader2 style={{ width: '20px', height: '20px', color: '#6366f1' }} className="animate-spin" />
+              <span style={{ fontSize: '14px', color: '#4338ca', fontWeight: '500' }}>
+                Analyzing your content for editorial balance...
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div style={{
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '12px',
+            padding: '20px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px'
+          }}>
+            <AlertCircle style={{ width: '20px', height: '20px', color: '#dc2626', flexShrink: 0 }} />
+            <div>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#dc2626', margin: '0 0 4px 0' }}>
+                Analysis Error
+              </h3>
+              <p style={{ fontSize: '13px', color: '#b91c1c', margin: 0 }}>
+                {error.message}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Results */}
+        {result && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+            {/* Alignment Score Card */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              padding: '24px'
+            }}>
+              <AlignmentScore score={result.alignmentScore} />
+            </div>
+
+            {/* Editorial Summary - PRIMARY OUTPUT */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              border: '2px solid #6366f1',
+              boxShadow: '0 4px 16px rgba(99, 102, 241, 0.12)',
+              padding: '28px'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '20px'
+              }}>
+                <div style={{
+                  padding: '10px',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  borderRadius: '10px'
+                }}>
+                  <CheckCircle style={{ width: '22px', height: '22px', color: 'white' }} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: 0 }}>
+                    Editorial Feedback
+                  </h2>
+                  <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+                    Clear, actionable insights for your draft
+                  </p>
+                </div>
+              </div>
+
+              <EditorialSummary result={result} />
+            </div>
+
+            {/* Technical Details - Collapsible */}
+            <details style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            }}>
+              <summary style={{
+                padding: '16px 20px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#6b7280',
+                userSelect: 'none',
+                listStyle: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ transition: 'transform 0.2s' }}>▶</span>
+                Technical Details (for developers)
+              </summary>
+              <div style={{
+                padding: '0 20px 20px',
+                borderTop: '1px solid #f3f4f6'
+              }}>
+                {/* Mirror Chart */}
+                {result.mirror && (
+                  <div style={{ marginTop: '16px' }}>
+                    <h4 style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>
+                      Mirror: Stated vs Actual Themes
+                    </h4>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '16px'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>
+                          You Say
+                        </div>
+                        {result.mirror.stated_themes.map((theme, i) => (
+                          <div key={i} style={{ fontSize: '13px', color: '#374151', marginBottom: '4px' }}>
+                            {theme.name}
+                          </div>
+                        ))}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>
+                          You Write
+                        </div>
+                        {result.mirror.actual_themes.map((theme, i) => (
+                          <div key={i} style={{ fontSize: '13px', color: '#374151', marginBottom: '4px' }}>
+                            {theme.name} ({theme.mentions}×)
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {result.mirror.gaps.length > 0 && (
+                      <div style={{ marginTop: '12px', fontSize: '12px', color: '#d97706' }}>
+                        Gaps: {result.mirror.gaps.join(', ')}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Detected Camps */}
+                {result.detectedCamps.length > 0 && (
+                  <div style={{ marginTop: '20px' }}>
+                    <h4 style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>
+                      Detected Camps ({result.detectedCamps.length})
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {result.detectedCamps.map((camp, i) => (
+                        <div key={i} style={{
+                          padding: '10px 12px',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '6px',
+                          fontSize: '13px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: '500', color: '#111827' }}>{camp.camp_name}</span>
+                            <span style={{ color: '#6b7280' }}>{Math.round(camp.confidence * 100)}%</span>
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                            {camp.matched_keywords.slice(0, 5).join(', ')}
+                            {camp.matched_keywords.length > 5 && ` +${camp.matched_keywords.length - 5} more`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Skew Report */}
+                {(result.skew.overrepresented.length > 0 || result.skew.underrepresented.length > 0 || result.skew.missing.length > 0) && (
+                  <div style={{ marginTop: '20px' }}>
+                    <h4 style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>
+                      Skew Analysis
+                    </h4>
+                    {result.skew.overrepresented.length > 0 && (
+                      <div style={{ fontSize: '12px', marginBottom: '8px' }}>
+                        <span style={{ color: '#dc2626', fontWeight: '500' }}>Over-represented:</span>{' '}
+                        <span style={{ color: '#6b7280' }}>{result.skew.overrepresented.map(c => c.camp_name).join(', ')}</span>
+                      </div>
+                    )}
+                    {result.skew.underrepresented.length > 0 && (
+                      <div style={{ fontSize: '12px', marginBottom: '8px' }}>
+                        <span style={{ color: '#d97706', fontWeight: '500' }}>Under-represented:</span>{' '}
+                        <span style={{ color: '#6b7280' }}>{result.skew.underrepresented.map(c => c.camp_name).join(', ')}</span>
+                      </div>
+                    )}
+                    {result.skew.missing.length > 0 && (
+                      <div style={{ fontSize: '12px' }}>
+                        <span style={{ color: '#6b7280', fontWeight: '500' }}>Missing:</span>{' '}
+                        <span style={{ color: '#9ca3af' }}>{result.skew.missing.join(', ')}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </details>
+
+            {/* Debug Data */}
+            {profile && (
+              <details style={{
+                backgroundColor: '#1f2937',
+                borderRadius: '12px',
+                overflow: 'hidden'
+              }}>
+                <summary style={{
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#9ca3af',
+                  userSelect: 'none'
+                }}>
+                  Debug: Raw Data
+                </summary>
+                <div style={{ padding: '0 16px 16px' }}>
+                  <pre style={{
+                    fontSize: '11px',
+                    color: '#e5e7eb',
+                    overflow: 'auto',
+                    margin: 0
+                  }}>
+                    {JSON.stringify({ profile, result }, null, 2)}
+                  </pre>
+                </div>
+              </details>
+            )}
+
+            {/* Timestamp */}
+            <div style={{
+              textAlign: 'center',
+              fontSize: '12px',
+              color: '#9ca3af'
+            }}>
+              Analyzed at {new Date(result.analyzedAt).toLocaleTimeString()}
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Debug info */}
-      {profile && (
-        <details style={{ marginTop: '32px' }}>
-          <summary style={{ cursor: 'pointer', color: '#6b7280', fontSize: '14px' }}>
-            Debug: Profile Data
-          </summary>
-          <pre style={{
-            marginTop: '8px',
-            padding: '16px',
-            background: '#1f2937',
-            color: '#e5e7eb',
-            borderRadius: '8px',
-            fontSize: '12px',
-            overflow: 'auto'
-          }}>
-            {JSON.stringify(profile, null, 2)}
-          </pre>
-        </details>
-      )}
-
-      {result && (
-        <details style={{ marginTop: '16px' }}>
-          <summary style={{ cursor: 'pointer', color: '#6b7280', fontSize: '14px' }}>
-            Debug: Analysis Result
-          </summary>
-          <pre style={{
-            marginTop: '8px',
-            padding: '16px',
-            background: '#1f2937',
-            color: '#e5e7eb',
-            borderRadius: '8px',
-            fontSize: '12px',
-            overflow: 'auto'
-          }}>
-            {JSON.stringify(result, null, 2)}
-          </pre>
-        </details>
-      )}
     </div>
   );
 }

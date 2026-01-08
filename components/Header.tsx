@@ -25,10 +25,10 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
     <header
       className="fixed top-0 left-0 right-0 h-16 z-30"
       style={{
-        background: 'linear-gradient(135deg, rgba(15, 15, 26, 0.95) 0%, rgba(26, 26, 46, 0.92) 50%, rgba(22, 33, 62, 0.95) 100%)',
+        background: 'linear-gradient(135deg, rgba(10, 15, 26, 0.95) 0%, rgba(17, 24, 38, 0.92) 50%, rgba(15, 23, 41, 0.95) 100%)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(99, 102, 241, 0.2)',
+        borderBottom: '1px solid rgba(0, 51, 255, 0.2)',
         boxShadow: '0 4px 30px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
       }}
     >
@@ -36,7 +36,7 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
       <div
         className="absolute top-0 left-0 right-0 h-[2px]"
         style={{
-          background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)'
+          background: 'linear-gradient(90deg, #0033FF 0%, #3D5FFF 50%, #0028CC 100%)'
         }}
       />
 
@@ -46,7 +46,7 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
           href="/"
           className="text-xl font-bold transition-all duration-200 hover:scale-105"
           style={{
-            background: 'linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%)',
+            background: 'linear-gradient(135deg, #3D5FFF 0%, #0033FF 50%, #0028CC 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -70,15 +70,15 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 style={{
                   background: isActive
-                    ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.2) 100%)'
+                    ? 'linear-gradient(135deg, rgba(0, 51, 255, 0.2) 0%, rgba(0, 40, 204, 0.15) 100%)'
                     : 'transparent',
-                  color: isActive ? '#c4b5fd' : '#94a3b8',
-                  border: isActive ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid transparent',
+                  color: isActive ? '#a5b4fc' : '#94a3b8',
+                  border: isActive ? '1px solid rgba(0, 51, 255, 0.3)' : '1px solid transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
                     e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                    e.currentTarget.style.color = '#e0e7ff'
+                    e.currentTarget.style.color = '#d1d9ff'
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -96,16 +96,21 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
           })}
         </nav>
 
-        {/* User Button */}
-        <UserButton
-          afterSignOutUrl="/sign-in"
-          appearance={{
-            elements: {
-              avatarBox: 'w-9 h-9 ring-2 ring-violet-500/30 ring-offset-2 ring-offset-transparent',
-              userButtonPopoverCard: 'shadow-lg',
-            }
-          }}
-        />
+        {/* User Button - fixed width to prevent layout shift during load */}
+        <div className="flex items-center justify-end" style={{ minWidth: '36px', width: '36px' }}>
+          <UserButton
+            afterSignOutUrl="/sign-in"
+            appearance={{
+              elements: {
+                avatarBox: 'w-9 h-9 ring-2 ring-offset-2 ring-offset-transparent',
+                userButtonPopoverCard: 'shadow-lg',
+              },
+              variables: {
+                colorPrimary: '#0033FF'
+              }
+            }}
+          />
+        </div>
       </div>
     </header>
   )

@@ -161,8 +161,8 @@ export const EDITORIAL_QUERY_MAPPINGS: Record<string, {
     }
   },
 
-  // Open source / democratization queries
-  'open.*source|democratiz|access|transparen': {
+  // Open source / democratization queries (avoid matching "opens up", "opened", etc.)
+  'open\\s+(source|ai|model|weight)|democratiz|\\baccess\\b|transparen': {
     intent: {
       sentiment: 'optimistic',
       topic: 'governance',
@@ -177,6 +177,101 @@ export const EDITORIAL_QUERY_MAPPINGS: Record<string, {
     stanceMap: {
       supports: ['open', 'democratiz', 'access', 'builder'],
       challenges: ['safety', 'regulation', 'control', 'cautious']
+    }
+  },
+
+  // Vibe coding / AI-assisted development queries
+  'vibe.*cod|ai.*cod|copilot|cursor|code.*assist|developer.*tool|programming.*ai|replit|codeium': {
+    intent: {
+      sentiment: 'optimistic',
+      topic: 'work',
+      focus: 'technical'
+    },
+    shouldMatch: [
+      'collaboration', 'democratiz', 'builder', 'tool', 'developer', 'human', 'augment'
+    ],
+    shouldNotMatch: [
+      'governance', 'regulation', 'policy', 'existential', 'ethics'
+    ],
+    stanceMap: {
+      supports: ['collaboration', 'augment', 'builder', 'democratiz', 'tool'],
+      challenges: ['displacement', 'replacement', 'automat', 'threat']
+    }
+  },
+
+  // Multi-agent / Agentic AI queries
+  'agent|agentic|multi-agent|autonomous.*ai|crewai|autogen|langchain|llamaindex|babyagi|rag|orchestrat': {
+    intent: {
+      sentiment: 'optimistic',
+      topic: 'capabilities',
+      focus: 'technical'
+    },
+    shouldMatch: [
+      'builder', 'scaling', 'collaboration', 'framework', 'tool', 'democratiz'
+    ],
+    shouldNotMatch: [
+      'regulation', 'governance', 'policy', 'ethics', 'displacement'
+    ],
+    stanceMap: {
+      supports: ['builder', 'scaling', 'progress', 'democratiz'],
+      challenges: ['safety', 'cautio', 'regulation', 'limit']
+    }
+  },
+
+  // AI infrastructure queries
+  'infrastructure|gpu|cloud.*ai|deploy|modal|replicate|hugging.*face|together.*ai|serverless': {
+    intent: {
+      sentiment: 'neutral',
+      topic: 'capabilities',
+      focus: 'technical'
+    },
+    shouldMatch: [
+      'builder', 'scaling', 'democratiz', 'infrastructure', 'deployment'
+    ],
+    shouldNotMatch: [
+      'worker', 'job', 'governance', 'ethics', 'policy'
+    ],
+    stanceMap: {
+      supports: ['builder', 'scaling', 'democratiz', 'open'],
+      challenges: ['centraliz', 'monopol', 'control']
+    }
+  },
+
+  // AI workforce impact (broader pattern)
+  'ai.*will|will.*ai|replace.*work|future.*work|workforce|automat.*job|ai.*take': {
+    intent: {
+      sentiment: 'questioning',
+      topic: 'work',
+      focus: 'societal'
+    },
+    shouldMatch: [
+      'displacement', 'collaboration', 'worker', 'human', 'job', 'augment'
+    ],
+    shouldNotMatch: [
+      'technical', 'model', 'training', 'architecture', 'enterprise'
+    ],
+    stanceMap: {
+      supports: ['displacement', 'realist', 'threat', 'automat'],
+      challenges: ['collaboration', 'augment', 'human', 'complement']
+    }
+  },
+
+  // AI skepticism / Snake oil queries
+  'snake.*oil|scam|fake.*ai|mislead|exaggerat|doesn.*work|ai.*hype|limitation': {
+    intent: {
+      sentiment: 'skeptical',
+      topic: 'hype',
+      focus: 'technical'
+    },
+    shouldMatch: [
+      'skeptic', 'realist', 'grounding', 'limitation', 'critical'
+    ],
+    shouldNotMatch: [
+      'enterprise', 'adoption', 'worker', 'governance', 'safety'
+    ],
+    stanceMap: {
+      supports: ['skeptic', 'realist', 'critical', 'grounding', 'limitation'],
+      challenges: ['maximalist', 'optimist', 'scaling', 'progress']
     }
   }
 }
@@ -214,13 +309,13 @@ export function detectQueryIntent(query: string): QueryIntent {
   }
 
   // Detect topic
-  if (/bubble|hype|overhyp|overrat/.test(queryLower)) {
+  if (/bubble|hype|overhyp|overrat|snake.*oil|scam/.test(queryLower)) {
     topic = 'hype'
-  } else if (/capabilit|limitation|can.*do|performance/.test(queryLower)) {
+  } else if (/capabilit|limitation|can.*do|performance|agent|agentic|infrastructure|gpu|deploy/.test(queryLower)) {
     topic = 'capabilities'
   } else if (/safe|risk|danger|alignment|threat/.test(queryLower)) {
     topic = 'safety'
-  } else if (/job|work|worker|employ|labor/.test(queryLower)) {
+  } else if (/job|work|worker|employ|labor|workforce|replace|displace|vibe|coding|developer/.test(queryLower)) {
     topic = 'work'
   } else if (/enterprise|business|company|corporate|adopt/.test(queryLower)) {
     topic = 'adoption'
@@ -231,9 +326,9 @@ export function detectQueryIntent(query: string): QueryIntent {
   }
 
   // Detect focus
-  if (/model|training|architecture|parameter|compute/.test(queryLower)) {
+  if (/model|training|architecture|parameter|compute|agent|infrastructure|gpu|deploy|coding|developer|tool/.test(queryLower)) {
     focus = 'technical'
-  } else if (/society|people|human|social|culture/.test(queryLower)) {
+  } else if (/society|people|human|social|culture|workforce|worker/.test(queryLower)) {
     focus = 'societal'
   } else if (/business|enterprise|company|market|revenue/.test(queryLower)) {
     focus = 'business'
@@ -423,9 +518,9 @@ export function determineStance(
  * Quality thresholds for filtering results
  */
 export const QUALITY_THRESHOLDS = {
-  HIGH_RELEVANCE: 30,    // Only show camps with score >= 30
-  MEDIUM_RELEVANCE: 20,  // Acceptable but lower priority
-  LOW_RELEVANCE: 10      // Filter out anything below this
+  HIGH_RELEVANCE: 20,    // Primary results - score >= 20
+  MEDIUM_RELEVANCE: 12,  // Related results - show with indicator
+  LOW_RELEVANCE: 8       // Filter out anything below this
 }
 
 /**

@@ -42,8 +42,11 @@ function ExplorePageContent() {
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useHowPerspectivesWorkModal()
 
   // Handle camps loaded from CampAccordion
-  const handleCampsLoaded = useCallback((camps: any[]) => {
+  const handleCampsLoaded = useCallback((camps: any[], expandedQueriesData?: any[] | null) => {
     setLoadedCamps(camps)
+    if (expandedQueriesData !== undefined) {
+      setExpandedQueries(expandedQueriesData)
+    }
   }, [])
 
   // Handle clicking on a perspective in the DiscourseMap
@@ -54,30 +57,33 @@ function ExplorePageContent() {
     setTimeout(() => setScrollToCampId(null), 100)
   }, [])
 
-  // Fetch expanded queries when query changes
+  // Save search to recent searches when query changes
   useEffect(() => {
-    const fetchExpandedQueries = async () => {
-      if (!query || !query.trim()) {
-        setExpandedQueries(null)
-        return
-      }
+    if (!query || !query.trim()) return
 
-      setLoadingQueries(true)
-      try {
-        const params = new URLSearchParams({ query })
-        const response = await fetch(`/api/camps?${params}`)
-        if (response.ok) {
-          const data = await response.json()
-          setExpandedQueries(data.expandedQueries || null)
-        }
-      } catch (error) {
-        console.error('Error fetching expanded queries:', error)
-      } finally {
-        setLoadingQueries(false)
-      }
+    try {
+      const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+      // Remove if already exists
+      const filtered = recent.filter((s: any) => s.query !== query)
+      // Add to beginning
+      filtered.unshift({
+        id: `recent-${Date.now()}`,
+        query,
+        timestamp: new Date().toISOString()
+      })
+      // Keep only last 20
+      const limited = filtered.slice(0, 20)
+      localStorage.setItem('recentSearches', JSON.stringify(limited))
+    } catch (error) {
+      console.error('Error saving recent search:', error)
     }
+  }, [query])
 
-    fetchExpandedQueries()
+  // Reset expanded queries when query is cleared
+  useEffect(() => {
+    if (!query || !query.trim()) {
+      setExpandedQueries(null)
+    }
   }, [query])
 
   // Calculate margins for layout

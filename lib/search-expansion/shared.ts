@@ -104,19 +104,24 @@ export async function expandSearchTermsWithQueries(query: string): Promise<{
     console.log('⚠️  n8n expansion failed, using semantic fallback:', error)
   }
 
-  // Fallback: Use semantic expansion
-  const semanticTerms = expandQuerySemantics(queryLower)
+  // Fallback: Use semantic expansion (returns meaningful phrases)
+  const semanticPhrases = expandQuerySemantics(queryLower)
   const originalWords = queryLower
     .split(/\s+/)
     .filter(word => word.length > 2)
 
-  const terms = Array.from(new Set([...originalWords, ...semanticTerms]))
+  // For search terms, include both original words and words from semantic phrases
+  const semanticWords = semanticPhrases.flatMap(phrase =>
+    phrase.toLowerCase().split(/\s+/).filter(word => word.length > 2)
+  )
+  const terms = Array.from(new Set([...originalWords, ...semanticWords]))
 
   // Create expanded queries for UI display (semantic fallback)
-  if (semanticTerms.length > 0) {
-    expandedQueriesResult = semanticTerms.map((term, idx) => ({
-      query: term,
-      role: 'context' as const,
+  // Show the full semantic phrases to users
+  if (semanticPhrases.length > 0) {
+    expandedQueriesResult = semanticPhrases.map((phrase, idx) => ({
+      query: phrase,
+      role: 'semantic context' as const,
       priority: 10 - idx
     }))
   }

@@ -59,6 +59,7 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
   const affiliation = author?.affiliation || ''
   const hasQuote = author?.key_quote && author.key_quote !== 'Quote coming soon'
   const quoteSourceUrl = author?.quote_source_url || author?.sources?.[0]?.url
+  const matchType = author?._matchType || 'credibility' // exact, expanded, credibility
 
   // Extract search terms for highlighting
   const searchTerms = query ? extractSearchTerms(expandedQueries, query) : []
@@ -86,12 +87,24 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
 
         {/* Name & Affiliation */}
         <div className="flex-1 min-w-0">
-          <button
-            onClick={handleAuthorClick}
-            className="font-semibold text-[15px] text-gray-900 hover:text-indigo-600 transition-colors text-left"
-          >
-            {searchTerms.length > 0 ? highlightText(name, searchTerms) : name}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleAuthorClick}
+              className="font-semibold text-[15px] text-gray-900 hover:text-indigo-600 transition-colors text-left"
+            >
+              {searchTerms.length > 0 ? highlightText(name, searchTerms) : name}
+            </button>
+            {query && matchType === 'exact' && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 border border-green-200">
+                Direct Match
+              </span>
+            )}
+            {query && matchType === 'expanded' && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                Related
+              </span>
+            )}
+          </div>
           {affiliation && (
             <p className="text-[13px] text-gray-500 leading-snug">
               {searchTerms.length > 0 ? highlightText(affiliation, searchTerms) : affiliation}

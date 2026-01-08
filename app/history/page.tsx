@@ -544,7 +544,7 @@ export default function HistoryPage() {
     { id: 'analyses' as TabType, label: 'Analyses', count: filteredAnalyses.length },
     { id: 'insights' as TabType, label: 'Helpful Insights', count: filteredInsights.length },
     { id: 'authors' as TabType, label: 'Authors', count: getFilteredAuthorsCount() },
-    { id: 'searches' as TabType, label: 'Recent Searches', count: filteredRecentSearches.length + filteredSavedSearches.length },
+    { id: 'searches' as TabType, label: 'Searches', count: filteredRecentSearches.length + filteredSavedSearches.length },
   ]
 
   if (!mounted) return null
@@ -794,66 +794,141 @@ export default function HistoryPage() {
               size="lg"
             />
           ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Recent Searches - Collapsible (always visible) */}
-            <CollapsibleSection
-              id="searches"
-              title="Recent Searches"
-              icon={<Search size={16} style={{ color: '#3b82f6' }} />}
-              count={filteredRecentSearches.length + filteredSavedSearches.length}
-              isCollapsed={collapsedSections['searches']}
-              onToggle={() => toggleSection('searches')}
-              onClear={() => { clearAllByType('recent'); clearAllByType('saved') }}
-              color="#3b82f6"
-            >
-              {(filteredRecentSearches.length > 0 || filteredSavedSearches.length > 0) ? (
-                <>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                    maxHeight: (filteredRecentSearches.length + filteredSavedSearches.length) > 3 ? '320px' : 'none',
-                    overflowY: (filteredRecentSearches.length + filteredSavedSearches.length) > 3 ? 'auto' : 'visible',
-                    paddingRight: (filteredRecentSearches.length + filteredSavedSearches.length) > 3 ? '4px' : '0'
-                  }}>
-                    {[...filteredSavedSearches, ...filteredRecentSearches].slice(0, 5).map(s => (
-                      <SearchCard
-                        key={s.id}
-                        query={s.query}
-                        timestamp={timeAgo(s.timestamp)}
-                        isSaved={filteredSavedSearches.some(ss => ss.id === s.id)}
-                        onClick={() => handleSearchClick(s.query, s.cachedResult)}
-                        onDelete={() => filteredSavedSearches.some(ss => ss.id === s.id) ? deleteSavedSearch(s.id) : deleteRecentSearch(s.id)}
-                      />
-                    ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Saved Searches - Collapsible */}
+            {filteredSavedSearches.length > 0 && (
+              <CollapsibleSection
+                id="saved-searches"
+                title="Saved Searches"
+                icon={<Star size={16} style={{ color: '#f59e0b' }} />}
+                count={filteredSavedSearches.length}
+                isCollapsed={collapsedSections['saved-searches']}
+                onToggle={() => toggleSection('saved-searches')}
+                onClear={() => clearAllByType('saved')}
+                color="#f59e0b"
+              >
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  width: '100%',
+                  maxHeight: filteredSavedSearches.length > 3 ? '260px' : 'none',
+                  overflowY: filteredSavedSearches.length > 3 ? 'auto' : 'visible',
+                  paddingRight: filteredSavedSearches.length > 3 ? '4px' : '0'
+                }}>
+                  {filteredSavedSearches.slice(0, 3).map(s => (
+                    <SearchCard
+                      key={s.id}
+                      query={s.query}
+                      timestamp={timeAgo(s.timestamp)}
+                      isSaved={true}
+                      onClick={() => handleSearchClick(s.query, s.cachedResult)}
+                      onDelete={() => deleteSavedSearch(s.id)}
+                    />
+                  ))}
+                </div>
+                {filteredSavedSearches.length > 3 && (
+                  <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
+                    <button
+                      onClick={() => setActiveTab('searches')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#3b82f6',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: 500
+                      }}
+                    >
+                      View all {filteredSavedSearches.length} saved searches →
+                    </button>
                   </div>
-                  {(filteredRecentSearches.length + filteredSavedSearches.length) > 5 && (
-                    <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
-                      <button
-                        onClick={() => setActiveTab('searches')}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#3b82f6',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          fontWeight: 500
-                        }}
-                      >
-                        View all {filteredRecentSearches.length + filteredSavedSearches.length} searches →
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <EmptySection
-                  message={timeFilter !== 'all' ? 'No searches in this time period' : 'Your search history will appear here'}
-                  actionLabel="Start Exploring"
-                  actionIcon={<Search size={14} />}
-                  onAction={() => router.push('/explore')}
-                />
-              )}
-            </CollapsibleSection>
+                )}
+              </CollapsibleSection>
+            )}
+
+            {/* Recent Searches - Collapsible */}
+            {filteredRecentSearches.length > 0 && (
+              <CollapsibleSection
+                id="recent-searches"
+                title="Recent Searches"
+                icon={<Clock size={16} style={{ color: '#6b7280' }} />}
+                count={filteredRecentSearches.length}
+                isCollapsed={collapsedSections['recent-searches']}
+                onToggle={() => toggleSection('recent-searches')}
+                onClear={() => clearAllByType('recent')}
+                color="#6b7280"
+              >
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  width: '100%',
+                  maxHeight: filteredRecentSearches.length > 3 ? '260px' : 'none',
+                  overflowY: filteredRecentSearches.length > 3 ? 'auto' : 'visible',
+                  paddingRight: filteredRecentSearches.length > 3 ? '4px' : '0'
+                }}>
+                  {filteredRecentSearches.slice(0, 3).map(s => (
+                    <SearchCard
+                      key={s.id}
+                      query={s.query}
+                      timestamp={timeAgo(s.timestamp)}
+                      isSaved={false}
+                      onClick={() => handleSearchClick(s.query, s.cachedResult)}
+                      onDelete={() => deleteRecentSearch(s.id)}
+                    />
+                  ))}
+                </div>
+                {filteredRecentSearches.length > 3 && (
+                  <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
+                    <button
+                      onClick={() => setActiveTab('searches')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#3b82f6',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: 500
+                      }}
+                    >
+                      View all {filteredRecentSearches.length} recent searches →
+                    </button>
+                  </div>
+                )}
+              </CollapsibleSection>
+            )}
+
+            {/* Empty state when no searches at all */}
+            {filteredRecentSearches.length === 0 && filteredSavedSearches.length === 0 && (
+              <div style={{
+                padding: '32px 20px',
+                textAlign: 'center',
+                background: '#fafafa',
+                borderRadius: '12px',
+                border: '1px dashed #e5e7eb'
+              }}>
+                <Search size={32} style={{ color: '#d1d5db', margin: '0 auto 12px' }} />
+                <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>
+                  {timeFilter !== 'all' ? 'No searches in this time period' : 'Your search history will appear here'}
+                </div>
+                <button
+                  onClick={() => router.push('/explore')}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Start Exploring
+                </button>
+              </div>
+            )}
 
             {/* AI Analyses - Collapsible (always visible) */}
             <CollapsibleSection
@@ -872,6 +947,7 @@ export default function HistoryPage() {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
+                    width: '100%',
                     maxHeight: filteredAnalyses.length > 3 ? '320px' : 'none',
                     overflowY: filteredAnalyses.length > 3 ? 'auto' : 'visible',
                     paddingRight: filteredAnalyses.length > 3 ? '4px' : '0'
@@ -1884,7 +1960,9 @@ function SearchCard({
         transition: 'all 0.15s ease',
         display: 'flex',
         alignItems: 'center',
-        gap: '10px'
+        gap: '12px',
+        width: '100%',
+        boxSizing: 'border-box'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = '#3b82f6'
@@ -1918,20 +1996,8 @@ function SearchCard({
         }}>
           {query}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-          <span style={{ fontSize: '11px', color: '#9ca3af' }}>{timestamp}</span>
-          {isSaved && (
-            <span style={{
-              fontSize: '9px',
-              padding: '1px 5px',
-              borderRadius: '4px',
-              background: '#dbeafe',
-              color: '#2563eb',
-              fontWeight: 600
-            }}>
-              SAVED
-            </span>
-          )}
+        <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
+          {timestamp}{isSaved && ' · Saved'}
         </div>
       </div>
       <button
@@ -1997,7 +2063,9 @@ function AnalysisCard({
         border: '1px solid #f3f4f6',
         background: '#fafafa',
         cursor: 'pointer',
-        transition: 'all 0.15s ease'
+        transition: 'all 0.15s ease',
+        width: '100%',
+        boxSizing: 'border-box'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = '#8b5cf6'
@@ -2008,7 +2076,7 @@ function AnalysisCard({
         e.currentTarget.style.background = '#fafafa'
       }}
     >
-      <div style={{ display: 'flex', gap: '10px' }}>
+      <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
         <div style={{
           width: '28px',
           height: '28px',
@@ -2022,53 +2090,31 @@ function AnalysisCard({
           <Sparkles size={14} style={{ color: '#8b5cf6' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Top row: type + timestamp + badges - matches InsightCard */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', flexWrap: 'wrap' }}>
-            <span style={{
-              fontSize: '10px',
-              fontWeight: 600,
-              color: '#8b5cf6',
-              textTransform: 'uppercase',
-              letterSpacing: '0.02em'
-            }}>
-              Analysis
-            </span>
-            <span style={{ fontSize: '10px', color: '#9ca3af' }}>·</span>
-            <span style={{ fontSize: '10px', color: '#9ca3af' }}>{timestamp}</span>
-            {campCount > 0 && (
-              <>
-                <span style={{ fontSize: '10px', color: '#9ca3af' }}>·</span>
-                <span style={{ fontSize: '10px', color: '#6b7280' }}>
-                  {campCount} perspective{campCount !== 1 ? 's' : ''}
-                </span>
-              </>
-            )}
-            {note && (
-              <>
-                <span style={{ fontSize: '10px', color: '#9ca3af' }}>·</span>
-                <span style={{ fontSize: '10px', color: '#4f46e5' }}>Note</span>
-              </>
-            )}
+          {/* Top row: type + timestamp + badges */}
+          <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '4px' }}>
+            <span style={{ fontWeight: 600, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Analysis</span>
+            {' · '}{timestamp}
+            {campCount > 0 && ` · ${campCount} perspective${campCount !== 1 ? 's' : ''}`}
+            {note && ' · Note'}
           </div>
-          {/* Input text - prominent, 2 lines */}
+          {/* Input text - single line */}
           <p style={{
             fontSize: '13px',
             color: '#374151',
             margin: 0,
-            lineHeight: 1.5,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden'
+            lineHeight: 1.4,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
           }}>
             {inputPreview.trim()}
           </p>
-          {/* AI Summary - muted, 1 line at bottom */}
+          {/* AI Summary - single line */}
           {summary && (
             <p style={{
               fontSize: '11px',
-              color: '#9ca3af',
-              margin: '6px 0 0',
+              color: '#6b7280',
+              margin: '4px 0 0',
               lineHeight: 1.4,
               whiteSpace: 'nowrap',
               overflow: 'hidden',

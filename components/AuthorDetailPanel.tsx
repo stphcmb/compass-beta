@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { X, Quote, ExternalLink, BookOpen, FileText, Video, Mic, Newspaper, GraduationCap, Star, MessageSquare, Edit3, Check } from 'lucide-react'
 import { getAuthorWithDetails } from '@/lib/api/thought-leaders'
+import { CitationBadge, CitationStatus } from './CitationBadge'
 
 interface AuthorDetailPanelProps {
   authorId: string | null
@@ -23,6 +24,30 @@ const DOMAIN_COLORS: Record<string, { bg: string; text: string; border: string }
 }
 
 const DEFAULT_COLORS = { bg: '#f3f4f6', text: '#6b7280', border: '#d1d5db' }
+
+// Domain descriptions for intuitive display
+const DOMAIN_DESCRIPTIONS: Record<string, string> = {
+  'AI Technical Capabilities': 'AI capabilities',
+  'AI & Society': 'AI & society',
+  'Enterprise AI Adoption': 'AI in business',
+  'AI Governance & Oversight': 'AI governance',
+  'Future of Work': 'AI & work',
+}
+
+function getDomainFocusText(domains: string[]): string {
+  if (!domains || domains.length === 0) return ''
+
+  const descriptions = domains.map(d => DOMAIN_DESCRIPTIONS[d] || d)
+
+  if (descriptions.length === 1) {
+    return `Focused on ${descriptions[0]}`
+  } else if (descriptions.length === 2) {
+    return `Explores ${descriptions[0]} and ${descriptions[1]}`
+  } else {
+    const last = descriptions.pop()
+    return `Explores ${descriptions.join(', ')}, and ${last}`
+  }
+}
 
 function getInitials(name: string): string {
   const parts = name.split(' ').filter(Boolean)
@@ -266,7 +291,7 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                   style={{
                     fontSize: '18px',
                     fontWeight: 700,
-                    margin: '0 0 2px 0',
+                    margin: '0 0 4px 0',
                     color: 'var(--color-quantum-navy)',
                     cursor: embedded ? 'default' : 'pointer',
                     transition: 'color 0.15s ease'
@@ -281,26 +306,16 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                 >
                   {author.name}
                 </h2>
-                <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
-                  {author.header_affiliation || author.primary_affiliation || 'Independent'}
-                </div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {author.author_type && (
-                    <span style={{
-                      padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 600,
-                      backgroundColor: colors.text, color: 'white', textTransform: 'uppercase'
-                    }}>
-                      {author.author_type}
-                    </span>
-                  )}
-                  {author.credibility_tier && (
-                    <span style={{
-                      padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 500,
-                      backgroundColor: 'white', color: '#374151', border: '1px solid #e5e7eb'
-                    }}>
-                      {author.credibility_tier}
-                    </span>
-                  )}
+                {/* Compact single-line metadata */}
+                <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.4 }}>
+                  {[
+                    author.header_affiliation || author.primary_affiliation || 'Independent',
+                    author.author_type,
+                    (() => {
+                      const domains = author.camps ? Array.from(new Set(author.camps.map((c: any) => c.domain))) as string[] : []
+                      return getDomainFocusText(domains)
+                    })()
+                  ].filter(Boolean).join(' · ')}
                 </div>
               </div>
 
@@ -517,106 +532,171 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                 </div>
               )}
 
-              {/* Camps/Advocacy - Main content */}
-              {author.camps && author.camps.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <h3 style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-                    Positions & Quotes ({author.camps.length})
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {author.camps.map((camp: any, idx: number) => {
-                      const campColors = DOMAIN_COLORS[camp.domain] || DEFAULT_COLORS
-                      return (
-                        <div
-                          key={idx}
-                          style={{
-                            borderRadius: '8px',
-                            border: `1px solid ${campColors.border}`,
-                            backgroundColor: campColors.bg,
-                            overflow: 'hidden'
-                          }}
-                        >
-                          {/* Camp header */}
-                          <div style={{ padding: '10px 12px', borderBottom: `1px solid ${campColors.border}` }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                              <Link
-                                href={`/results?q=${encodeURIComponent(camp.name)}`}
-                                style={{
-                                  fontSize: '13px', fontWeight: 600, color: campColors.text,
-                                  textDecoration: 'none'
-                                }}
-                              >
-                                {camp.name}
-                              </Link>
-                              <span style={{
-                                fontSize: '9px', padding: '1px 6px', borderRadius: '10px',
-                                backgroundColor: 'white', color: campColors.text, fontWeight: 500
-                              }}>
-                                {camp.domain}
-                              </span>
-                            </div>
-                            {camp.description && (
-                              <p style={{ fontSize: '11px', color: '#6b7280', margin: 0, lineHeight: 1.4 }}>
-                                {camp.description}
-                              </p>
-                            )}
-                          </div>
+              {/* Camps/Advocacy - Grouped by stance */}
+              {author.camps && author.camps.length > 0 && (() => {
+                // Separate camps into believes vs challenges
+                const believesCamps = author.camps.filter((c: any) =>
+                  ['strong', 'partial', 'emerging'].includes(c.relevance)
+                )
+                const challengesCamps = author.camps.filter((c: any) =>
+                  c.relevance === 'challenges'
+                )
 
-                          {/* Position + Quote */}
-                          <div style={{ padding: '10px 12px', backgroundColor: 'white' }}>
-                            {camp.whyItMatters && (
-                              <div style={{ marginBottom: camp.quote ? '10px' : 0 }}>
-                                <span style={{
-                                  fontSize: '9px', fontWeight: 600, color: campColors.text,
-                                  textTransform: 'uppercase', letterSpacing: '0.05em'
-                                }}>
-                                  Position:
-                                </span>
-                                <p style={{ fontSize: '12px', color: '#374151', margin: '4px 0 0 0', lineHeight: 1.5 }}>
-                                  {camp.whyItMatters}
-                                </p>
-                              </div>
-                            )}
+                // Relevance display config
+                const relevanceConfig: Record<string, { label: string; color: string; bg: string }> = {
+                  strong: { label: 'Strong', color: '#059669', bg: '#d1fae5' },
+                  partial: { label: 'Partial', color: '#d97706', bg: '#fef3c7' },
+                  emerging: { label: 'Emerging', color: '#6366f1', bg: '#e0e7ff' },
+                  challenges: { label: 'Opposes', color: '#dc2626', bg: '#fee2e2' }
+                }
 
-                            {camp.quote && (
-                              <div style={{
-                                backgroundColor: '#f9fafb',
-                                borderRadius: '6px',
-                                padding: '10px',
-                                borderLeft: `3px solid ${campColors.border}`
-                              }}>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                  <Quote style={{ width: '14px', height: '14px', color: campColors.text, opacity: 0.5, flexShrink: 0, marginTop: '2px' }} />
-                                  <div>
-                                    <p style={{ fontSize: '12px', fontStyle: 'italic', color: '#4b5563', lineHeight: 1.5, margin: 0 }}>
-                                      "{camp.quote}"
-                                    </p>
-                                    {camp.quoteSourceUrl && (
-                                      <a
-                                        href={camp.quoteSourceUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{
-                                          display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                          fontSize: '10px', color: campColors.text, textDecoration: 'none',
-                                          marginTop: '6px'
-                                        }}
-                                      >
-                                        <ExternalLink style={{ width: '10px', height: '10px' }} />
-                                        View source
-                                      </a>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                const renderCampCard = (camp: any, idx: number, isChallenge: boolean) => {
+                  const campColors = DOMAIN_COLORS[camp.domain] || DEFAULT_COLORS
+                  const relevance = relevanceConfig[camp.relevance] || relevanceConfig.partial
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        borderRadius: '8px',
+                        border: isChallenge ? '1px solid #fca5a5' : `1px solid ${campColors.border}`,
+                        backgroundColor: isChallenge ? '#fef2f2' : campColors.bg,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      {/* Camp header */}
+                      <div style={{
+                        padding: '10px 12px',
+                        borderBottom: isChallenge ? '1px solid #fca5a5' : `1px solid ${campColors.border}`
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                          <Link
+                            href={`/results?q=${encodeURIComponent(camp.name)}`}
+                            style={{
+                              fontSize: '13px', fontWeight: 600,
+                              color: isChallenge ? '#991b1b' : campColors.text,
+                              textDecoration: 'none'
+                            }}
+                          >
+                            {camp.name}
+                          </Link>
+                          <span style={{
+                            fontSize: '9px', padding: '2px 6px', borderRadius: '10px',
+                            backgroundColor: relevance.bg, color: relevance.color, fontWeight: 600
+                          }}>
+                            {relevance.label}
+                          </span>
+                          <span style={{
+                            fontSize: '9px', padding: '1px 6px', borderRadius: '10px',
+                            backgroundColor: 'white', color: campColors.text, fontWeight: 500
+                          }}>
+                            {camp.domain}
+                          </span>
                         </div>
-                      )
-                    })}
+                        {camp.description && (
+                          <p style={{ fontSize: '11px', color: '#6b7280', margin: 0, lineHeight: 1.4 }}>
+                            {camp.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Position + Quote */}
+                      <div style={{ padding: '10px 12px', backgroundColor: 'white' }}>
+                        {camp.whyItMatters && (
+                          <div style={{ marginBottom: camp.quote ? '10px' : 0 }}>
+                            <span style={{
+                              fontSize: '9px', fontWeight: 600,
+                              color: isChallenge ? '#dc2626' : campColors.text,
+                              textTransform: 'uppercase', letterSpacing: '0.05em'
+                            }}>
+                              {isChallenge ? 'Why they oppose:' : 'Position:'}
+                            </span>
+                            <p style={{ fontSize: '12px', color: '#374151', margin: '4px 0 0 0', lineHeight: 1.5 }}>
+                              {camp.whyItMatters}
+                            </p>
+                          </div>
+                        )}
+
+                        {camp.quote && (
+                          <div style={{
+                            backgroundColor: '#f9fafb',
+                            borderRadius: '6px',
+                            padding: '10px',
+                            borderLeft: `3px solid ${isChallenge ? '#fca5a5' : campColors.border}`
+                          }}>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <Quote style={{ width: '14px', height: '14px', color: isChallenge ? '#dc2626' : campColors.text, opacity: 0.5, flexShrink: 0, marginTop: '2px' }} />
+                              <div>
+                                <p style={{ fontSize: '12px', fontStyle: 'italic', color: '#4b5563', lineHeight: 1.5, margin: 0 }}>
+                                  "{camp.quote}"
+                                </p>
+                                {camp.quoteSourceUrl && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                                    <a
+                                      href={camp.quoteSourceUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                        fontSize: '10px', color: campColors.text, textDecoration: 'none',
+                                      }}
+                                    >
+                                      <ExternalLink style={{ width: '10px', height: '10px' }} />
+                                      View source
+                                    </a>
+                                    <CitationBadge
+                                      status={(camp.citationStatus as CitationStatus) || 'unchecked'}
+                                      lastChecked={camp.citationLastChecked}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div style={{ marginBottom: '16px' }}>
+                    {/* Believes In Section */}
+                    {believesCamps.length > 0 && (
+                      <div style={{ marginBottom: challengesCamps.length > 0 ? '20px' : 0 }}>
+                        <h3 style={{
+                          fontSize: '11px', fontWeight: 600, color: '#059669',
+                          textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px',
+                          display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                          Believes In ({believesCamps.length})
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {believesCamps.map((camp: any, idx: number) => renderCampCard(camp, idx, false))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Challenges Section */}
+                    {challengesCamps.length > 0 && (
+                      <div>
+                        <h3 style={{
+                          fontSize: '11px', fontWeight: 600, color: '#dc2626',
+                          textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px',
+                          display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                          Challenges / Opposes ({challengesCamps.length})
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {challengesCamps.map((camp: any, idx: number) => renderCampCard(camp, idx, true))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                )
+              })()}
 
               {/* Sources - Compact list */}
               {author.sources && author.sources.length > 0 && (
@@ -789,26 +869,16 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                 >
                   {author.name}
                 </h2>
-                <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
-                  {author.header_affiliation || author.primary_affiliation || 'Independent'}
-                </div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {author.author_type && (
-                    <span style={{
-                      padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 600,
-                      backgroundColor: colors.text, color: 'white', textTransform: 'uppercase'
-                    }}>
-                      {author.author_type}
-                    </span>
-                  )}
-                  {author.credibility_tier && (
-                    <span style={{
-                      padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 500,
-                      backgroundColor: 'white', color: '#374151', border: '1px solid #e5e7eb'
-                    }}>
-                      {author.credibility_tier}
-                    </span>
-                  )}
+                {/* Compact single-line metadata */}
+                <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.4 }}>
+                  {[
+                    author.header_affiliation || author.primary_affiliation || 'Independent',
+                    author.author_type,
+                    (() => {
+                      const domains = author.camps ? Array.from(new Set(author.camps.map((c: any) => c.domain))) as string[] : []
+                      return getDomainFocusText(domains)
+                    })()
+                  ].filter(Boolean).join(' · ')}
                 </div>
               </div>
               {/* Favorite Button */}
@@ -1005,35 +1075,110 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                 </div>
               )}
 
-              {author.camps && author.camps.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <h3 style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-                    Positions & Quotes ({author.camps.length})
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {author.camps.map((camp: any, idx: number) => {
-                      const campColors = DOMAIN_COLORS[camp.domain] || DEFAULT_COLORS
-                      return (
-                        <div key={idx} style={{ borderRadius: '8px', border: `1px solid ${campColors.border}`, backgroundColor: campColors.bg, overflow: 'hidden' }}>
-                          <div style={{ padding: '10px 12px', borderBottom: `1px solid ${campColors.border}` }}>
-                            <Link href={`/results?q=${encodeURIComponent(camp.name)}`} style={{ fontSize: '13px', fontWeight: 600, color: campColors.text, textDecoration: 'none' }}>
-                              {camp.name}
-                            </Link>
-                          </div>
-                          <div style={{ padding: '10px 12px', backgroundColor: 'white' }}>
-                            {camp.quote && (
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                <Quote style={{ width: '14px', height: '14px', color: campColors.text, opacity: 0.5, flexShrink: 0, marginTop: '2px' }} />
-                                <p style={{ fontSize: '12px', fontStyle: 'italic', color: '#4b5563', lineHeight: 1.5, margin: 0 }}>"{camp.quote}"</p>
-                              </div>
-                            )}
-                          </div>
+              {author.camps && author.camps.length > 0 && (() => {
+                // Separate camps into believes vs challenges
+                const believesCamps = author.camps.filter((c: any) =>
+                  ['strong', 'partial', 'emerging'].includes(c.relevance)
+                )
+                const challengesCamps = author.camps.filter((c: any) =>
+                  c.relevance === 'challenges'
+                )
+
+                // Relevance display config
+                const relevanceConfig: Record<string, { label: string; color: string; bg: string }> = {
+                  strong: { label: 'Strong', color: '#059669', bg: '#d1fae5' },
+                  partial: { label: 'Partial', color: '#d97706', bg: '#fef3c7' },
+                  emerging: { label: 'Emerging', color: '#6366f1', bg: '#e0e7ff' },
+                  challenges: { label: 'Opposes', color: '#dc2626', bg: '#fee2e2' }
+                }
+
+                const renderCampCard = (camp: any, idx: number, isChallenge: boolean) => {
+                  const campColors = DOMAIN_COLORS[camp.domain] || DEFAULT_COLORS
+                  const relevance = relevanceConfig[camp.relevance] || relevanceConfig.partial
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        borderRadius: '8px',
+                        border: isChallenge ? '1px solid #fca5a5' : `1px solid ${campColors.border}`,
+                        backgroundColor: isChallenge ? '#fef2f2' : campColors.bg,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div style={{
+                        padding: '10px 12px',
+                        borderBottom: isChallenge ? '1px solid #fca5a5' : `1px solid ${campColors.border}`
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <Link
+                            href={`/results?q=${encodeURIComponent(camp.name)}`}
+                            style={{
+                              fontSize: '13px', fontWeight: 600,
+                              color: isChallenge ? '#991b1b' : campColors.text,
+                              textDecoration: 'none'
+                            }}
+                          >
+                            {camp.name}
+                          </Link>
+                          <span style={{
+                            fontSize: '9px', padding: '2px 6px', borderRadius: '10px',
+                            backgroundColor: relevance.bg, color: relevance.color, fontWeight: 600
+                          }}>
+                            {relevance.label}
+                          </span>
                         </div>
-                      )
-                    })}
+                      </div>
+                      <div style={{ padding: '10px 12px', backgroundColor: 'white' }}>
+                        {camp.quote && (
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <Quote style={{ width: '14px', height: '14px', color: isChallenge ? '#dc2626' : campColors.text, opacity: 0.5, flexShrink: 0, marginTop: '2px' }} />
+                            <p style={{ fontSize: '12px', fontStyle: 'italic', color: '#4b5563', lineHeight: 1.5, margin: 0 }}>"{camp.quote}"</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div style={{ marginBottom: '16px' }}>
+                    {/* Believes In Section */}
+                    {believesCamps.length > 0 && (
+                      <div style={{ marginBottom: challengesCamps.length > 0 ? '20px' : 0 }}>
+                        <h3 style={{
+                          fontSize: '11px', fontWeight: 600, color: '#059669',
+                          textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px',
+                          display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                          Believes In ({believesCamps.length})
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {believesCamps.map((camp: any, idx: number) => renderCampCard(camp, idx, false))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Challenges Section */}
+                    {challengesCamps.length > 0 && (
+                      <div>
+                        <h3 style={{
+                          fontSize: '11px', fontWeight: 600, color: '#dc2626',
+                          textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px',
+                          display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                          Challenges / Opposes ({challengesCamps.length})
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {challengesCamps.map((camp: any, idx: number) => renderCampCard(camp, idx, true))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
           </>
         ) : (
