@@ -1,5 +1,5 @@
 // Quick script to check if Supabase tables have data
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../../lib/supabase'
 
 async function checkData() {
   if (!supabase) {

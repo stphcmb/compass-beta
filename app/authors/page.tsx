@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Search, X, Users } from 'lucide-react'
+import { Search, X, Users, PanelLeftClose, Layers } from 'lucide-react'
 import Header from '@/components/Header'
 import PageHeader from '@/components/PageHeader'
 import AuthorDetailPanel from '@/components/AuthorDetailPanel'
@@ -11,6 +11,9 @@ import { AboutThoughtLeadersModal, useAboutThoughtLeadersModal } from '@/compone
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { getCampsWithAuthors } from '@/lib/api/thought-leaders'
 import { DOMAINS, getDomainConfig } from '@/lib/constants/domains'
+
+// Layout constants - match Explore page sidebar
+const SIDEBAR_WIDTH = 320
 
 // Helper to get domain style for components
 const getDomainStyle = (domain: string | null) => {
@@ -36,11 +39,12 @@ function AuthorIndexPageContent() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [domainFilter, setDomainFilter] = useState<string | null>(null)
-  const [panelOpen, setPanelOpen] = useState(true) // Open by default
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [groupBy, setGroupBy] = useState<'alphabet' | 'domain' | 'recent'>('alphabet')
   const letterRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const domainRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [urlAuthorHandled, setUrlAuthorHandled] = useState(false)
+  const mainRef = useRef<HTMLElement>(null)
 
   // Modal for teaching users about thought leaders
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useAboutThoughtLeadersModal()
@@ -100,7 +104,6 @@ function AuthorIndexPageContent() {
       )
       if (foundAuthor) {
         setSelectedAuthorId(foundAuthor.id)
-        setPanelOpen(true)
         // Also set the search query to highlight the author in the list
         setSearchQuery(authorFromUrl)
       }
@@ -116,10 +119,9 @@ function AuthorIndexPageContent() {
     return authorCamps.length > 0 ? authorCamps[0].domain : null
   }
 
-  // Handle author selection - auto-open panel
+  // Handle author selection
   const handleAuthorClick = (authorId: string) => {
     setSelectedAuthorId(authorId)
-    setPanelOpen(true)
   }
 
   // Scroll to letter
@@ -254,57 +256,36 @@ function AuthorIndexPageContent() {
     return { favoriteAuthors: favorites, recentAddedAuthors: recent }
   }, [authors, favoriteAuthorNames])
 
+  // Calculate margins for layout - match Explore page
+  const actualSidebarWidth = sidebarCollapsed ? 0 : SIDEBAR_WIDTH
+  const mainContentLeft = actualSidebarWidth
+
   if (loading) {
     return (
       <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
         <Header sidebarCollapsed={true} />
-        <main className="flex-1 mt-16 overflow-hidden" style={{ display: 'flex' }}>
-          {/* Left skeleton */}
-          <div style={{
-            width: '320px',
-            minWidth: '320px',
-            borderRight: '1px solid var(--color-light-gray)',
-            padding: '24px 16px',
+        {/* Sidebar skeleton */}
+        <aside
+          className="fixed top-16 h-[calc(100vh-64px)] border-r border-gray-200 z-10"
+          style={{
+            left: 0,
+            width: `${SIDEBAR_WIDTH}px`,
             backgroundColor: 'var(--color-air-white)'
-          }}>
-            <div style={{
-              height: '20px',
-              width: '100px',
-              backgroundColor: '#e2e8f0',
-              borderRadius: '4px',
-              marginBottom: '16px'
-            }} />
-            <div style={{
-              height: '32px',
-              backgroundColor: '#e2e8f0',
-              borderRadius: '8px',
-              marginBottom: '12px'
-            }} />
-            <div style={{
-              height: '36px',
-              backgroundColor: '#e2e8f0',
-              borderRadius: '8px'
-            }} />
+          }}
+        >
+          <div style={{ padding: '24px 16px 16px 22px' }}>
+            <div style={{ height: '20px', width: '100px', backgroundColor: '#e2e8f0', borderRadius: '4px', marginBottom: '16px' }} />
+            <div style={{ height: '32px', backgroundColor: '#e2e8f0', borderRadius: '8px', marginBottom: '12px' }} />
+            <div style={{ height: '36px', backgroundColor: '#e2e8f0', borderRadius: '8px' }} />
           </div>
-          {/* Right skeleton */}
-          <div style={{ flex: 1, padding: '24px' }}>
-            <div style={{
-              height: '24px',
-              width: '200px',
-              backgroundColor: '#e2e8f0',
-              borderRadius: '4px',
-              marginBottom: '24px'
-            }} />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} style={{
-                  height: '120px',
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0'
-                }} />
-              ))}
-            </div>
+        </aside>
+        {/* Main content skeleton */}
+        <main className="flex-1 mt-16 overflow-y-auto" style={{ marginLeft: `${SIDEBAR_WIDTH}px` }}>
+          <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
+            <div style={{ height: '32px', width: '200px', backgroundColor: '#e2e8f0', borderRadius: '4px', marginBottom: '8px' }} />
+            <div style={{ height: '16px', width: '300px', backgroundColor: '#e2e8f0', borderRadius: '4px', marginBottom: '24px' }} />
+            <div style={{ height: '48px', backgroundColor: '#e2e8f0', borderRadius: '12px', marginBottom: '24px' }} />
+            <div style={{ backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', height: '400px' }} />
           </div>
         </main>
       </div>
@@ -314,232 +295,145 @@ function AuthorIndexPageContent() {
   return (
     <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
       <Header sidebarCollapsed={true} />
-      <main
-        className="flex-1 mt-16 overflow-hidden"
-        style={{ display: 'flex', flexDirection: 'column' }}
+
+      {/* Sidebar Expand Button - animated appearance (like Explore) */}
+      <button
+        onClick={() => setSidebarCollapsed(false)}
+        className={`fixed top-20 z-20 p-2 bg-white border border-gray-200 rounded-lg shadow-md hover:bg-gray-50 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 ${
+          sidebarCollapsed
+            ? 'opacity-100 translate-x-0'
+            : 'opacity-0 -translate-x-2 pointer-events-none'
+        }`}
+        style={{
+          left: '16px',
+          transitionDelay: sidebarCollapsed ? '150ms' : '0ms'
+        }}
+        title="Expand author panel"
       >
-        {/* Header Section - left panel filters + right panel header */}
-        <div style={{ borderBottom: '1px solid var(--color-light-gray)', backgroundColor: 'var(--color-air-white)' }}>
-          <div style={{ display: 'flex' }}>
-            {/* Left side - Filters in header area */}
-            <div style={{
-              width: '320px',
-              minWidth: '320px',
-              padding: '24px 16px 16px 22px',
-              borderRight: '1px solid var(--color-light-gray)'
-            }}>
-              {/* Author count */}
-              <div style={{ marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-soft-black)' }}>
-                  {totalFiltered} authors
-                </span>
-              </div>
+        <Layers className="w-5 h-5 text-emerald-600" />
+      </button>
 
-              {/* Group toggle */}
-              <div style={{
-                display: 'flex',
-                backgroundColor: 'var(--color-pale-gray)',
-                borderRadius: '8px',
-                padding: '3px',
-                gap: '2px',
-                marginBottom: '12px'
-              }}>
-                <button
-                  onClick={() => setGroupBy('alphabet')}
-                  style={{
-                    flex: 1,
-                    padding: '7px 10px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: groupBy === 'alphabet' ? 'var(--color-air-white)' : 'transparent',
-                    color: groupBy === 'alphabet' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
-                    cursor: 'pointer',
-                    boxShadow: groupBy === 'alphabet' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                    transition: 'all 150ms ease'
-                  }}
-                >
-                  A–Z
-                </button>
-                <button
-                  onClick={() => setGroupBy('domain')}
-                  style={{
-                    flex: 1,
-                    padding: '7px 10px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: groupBy === 'domain' ? 'var(--color-air-white)' : 'transparent',
-                    color: groupBy === 'domain' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
-                    cursor: 'pointer',
-                    boxShadow: groupBy === 'domain' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                    transition: 'all 150ms ease'
-                  }}
-                >
-                  Domain
-                </button>
-                <button
-                  onClick={() => setGroupBy('recent')}
-                  style={{
-                    flex: 1,
-                    padding: '7px 10px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: groupBy === 'recent' ? 'var(--color-air-white)' : 'transparent',
-                    color: groupBy === 'recent' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
-                    cursor: 'pointer',
-                    boxShadow: groupBy === 'recent' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                    transition: 'all 150ms ease'
-                  }}
-                >
-                  Recent
-                </button>
+      {/* Author Directory Sidebar - Fixed position (like Explore) */}
+      <aside
+        className="fixed top-16 h-[calc(100vh-64px)] border-r border-gray-200 z-10 overflow-hidden"
+        style={{
+          left: 0,
+          width: sidebarCollapsed ? '0px' : `${SIDEBAR_WIDTH}px`,
+          opacity: sidebarCollapsed ? 0 : 1,
+          backgroundColor: 'var(--color-air-white)',
+          transition: 'width 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease-out',
+          transitionDelay: sidebarCollapsed ? '0ms' : '50ms'
+        }}
+      >
+        <div
+          className="h-full flex flex-col"
+          style={{
+            width: `${SIDEBAR_WIDTH}px`,
+            transform: sidebarCollapsed ? 'translateX(-20px)' : 'translateX(0)',
+            opacity: sidebarCollapsed ? 0 : 1,
+            transition: 'transform 250ms ease-out, opacity 200ms ease-out',
+            transitionDelay: sidebarCollapsed ? '0ms' : '100ms'
+          }}
+        >
+          {/* Sidebar Header - matches DomainOverview styling */}
+          <div
+            className="flex-shrink-0 border-b border-emerald-100 relative"
+            style={{ padding: '24px 16px 16px 22px' }}
+          >
+            <div
+              className="absolute top-0 left-0 right-0 h-0.5"
+              style={{ background: 'linear-gradient(90deg, #059669 0%, rgba(5, 150, 105, 0.3) 100%)' }}
+            />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-emerald-600" />
+                <h2 className="text-[13px] font-semibold text-gray-900 uppercase tracking-wider">
+                  Author Directory
+                </h2>
               </div>
-
-              {/* Domain filter chips */}
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {DOMAINS.map(d => {
-                  const isActive = domainFilter === d.name
-                  return (
-                    <button
-                      key={d.name}
-                      onClick={() => setDomainFilter(isActive ? null : d.name)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '5px 10px',
-                        borderRadius: '14px',
-                        border: isActive ? `1.5px solid ${d.text}` : '1px solid var(--color-light-gray)',
-                        backgroundColor: isActive ? d.bgLight : 'var(--color-air-white)',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        color: isActive ? d.text : 'var(--color-charcoal)',
-                        transition: 'all 100ms ease-out'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive) {
-                          e.currentTarget.style.backgroundColor = d.bgLight
-                          e.currentTarget.style.borderColor = d.border
-                          e.currentTarget.style.color = d.text
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) {
-                          e.currentTarget.style.backgroundColor = 'var(--color-air-white)'
-                          e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                          e.currentTarget.style.color = 'var(--color-charcoal)'
-                        }
-                      }}
-                    >
-                      <span style={{
-                        width: '6px', height: '6px', borderRadius: '50%',
-                        backgroundColor: d.text
-                      }} />
-                      {d.shortName}
-                    </button>
-                  )
-                })}
-                {domainFilter && (
-                  <button
-                    onClick={() => setDomainFilter(null)}
-                    style={{
-                      fontSize: '12px',
-                      color: 'var(--color-accent)',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontWeight: 500,
-                      padding: '5px 6px'
-                    }}
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
+              <button
+                onClick={() => setSidebarCollapsed(true)}
+                className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                title="Collapse panel"
+              >
+                <PanelLeftClose className="w-4 h-4 text-gray-500" />
+              </button>
             </div>
+            <p className="text-[12px] text-gray-500 mt-1">
+              {totalFiltered} thought leaders
+            </p>
+          </div>
 
-            {/* Right side - PageHeader and search */}
-            <div style={{ flex: 1, padding: '20px 16px' }}>
-              <div style={{ maxWidth: '896px', margin: '0 auto' }}>
-                <PageHeader
-                  icon={<Users size={24} />}
-                  iconVariant="green"
-                  title="Thought Leaders"
-                  subtitle={`${totalFiltered} experts shaping AI discourse`}
-                  helpButton={{
-                    label: 'How it works',
-                    onClick: openModal
-                  }}
-                />
-
-                {/* Search Bar - same style as Explore */}
-                <div style={{ marginTop: '16px' }}>
-                  <div style={{ position: 'relative' }}>
-                    <Search style={{
-                      position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
-                      width: '18px', height: '18px', color: 'var(--color-mid-gray)'
-                    }} />
-                    <input
-                      type="text"
-                      placeholder="Search by name or affiliation..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '14px 48px 14px 48px',
-                        borderRadius: '12px',
-                        border: '1px solid var(--color-light-gray)',
-                        fontSize: '15px',
-                        outline: 'none',
-                        transition: 'border-color 150ms ease, box-shadow 150ms ease',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--color-velocity-blue)'
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'
-                      }}
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        style={{
-                          position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
-                          background: 'var(--color-pale-gray)', border: 'none', cursor: 'pointer',
-                          padding: '6px', borderRadius: '50%', display: 'flex'
-                        }}
-                      >
-                        <X style={{ width: '14px', height: '14px', color: 'var(--color-mid-gray)' }} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+          {/* Group toggle */}
+          <div
+            className="flex-shrink-0 border-b border-gray-100"
+            style={{ padding: '12px 16px 12px 22px' }}
+          >
+            <div style={{
+              display: 'flex',
+              backgroundColor: 'var(--color-pale-gray)',
+              borderRadius: '8px',
+              padding: '3px',
+              gap: '2px'
+            }}>
+              <button
+                onClick={() => setGroupBy('alphabet')}
+                style={{
+                  flex: 1,
+                  padding: '7px 10px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: groupBy === 'alphabet' ? 'var(--color-air-white)' : 'transparent',
+                  color: groupBy === 'alphabet' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
+                  cursor: 'pointer',
+                  boxShadow: groupBy === 'alphabet' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 150ms ease'
+                }}
+              >
+                A–Z
+              </button>
+              <button
+                onClick={() => setGroupBy('domain')}
+                style={{
+                  flex: 1,
+                  padding: '7px 10px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: groupBy === 'domain' ? 'var(--color-air-white)' : 'transparent',
+                  color: groupBy === 'domain' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
+                  cursor: 'pointer',
+                  boxShadow: groupBy === 'domain' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 150ms ease'
+                }}
+              >
+                Domain
+              </button>
+              <button
+                onClick={() => setGroupBy('recent')}
+                style={{
+                  flex: 1,
+                  padding: '7px 10px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: groupBy === 'recent' ? 'var(--color-air-white)' : 'transparent',
+                  color: groupBy === 'recent' ? 'var(--color-quantum-navy)' : 'var(--color-mid-gray)',
+                  cursor: 'pointer',
+                  boxShadow: groupBy === 'recent' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 150ms ease'
+                }}
+              >
+                Recent
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Split panel area */}
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          {/* Left panel - Author directory */}
-          <div style={{
-            width: '320px',
-            minWidth: '320px',
-            display: 'flex',
-            flexDirection: 'column',
-            borderRight: '1px solid var(--color-light-gray)',
-            backgroundColor: 'var(--color-air-white)'
-          }}>
-          {/* Scrollable list with quick-jump sidebar */}
+          {/* Author list section */}
           <div style={{ flex: 1, display: 'flex', overflow: 'hidden', paddingLeft: '16px' }}>
             {/* Quick-jump sidebar */}
             <div style={{
@@ -969,26 +863,153 @@ function AuthorIndexPageContent() {
             </div>
           </div>
         </div>
+      </aside>
 
-          {/* Right panel - Author detail or welcome state */}
-          <div style={{
-            flex: 1,
-            overflow: 'hidden',
-            backgroundColor: 'var(--color-bone)',
-            display: 'flex',
-            justifyContent: 'center',
-            padding: '16px'
-          }}>
-            <div style={{
-              width: '100%',
-              maxWidth: '896px',
-              height: '100%',
-              overflow: 'hidden',
-              backgroundColor: 'var(--color-air-white)',
-              border: '1px solid var(--color-light-gray)',
-              borderRadius: '12px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+      {/* Main Content - with marginLeft like Explore */}
+      <main
+        ref={mainRef}
+        className="flex-1 mt-16 overflow-y-auto transition-all duration-300"
+        style={{ marginLeft: `${mainContentLeft}px` }}
+      >
+        <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
+          {/* Page Header - same as Explore */}
+          <PageHeader
+            icon={<Users size={24} />}
+            iconVariant="green"
+            title="Thought Leaders"
+            subtitle={`${totalFiltered} experts shaping AI discourse`}
+            helpButton={{
+              label: 'How it works',
+              onClick: openModal
+            }}
+          />
+
+          {/* Search Bar */}
+          <div style={{ position: 'relative', marginBottom: '16px' }}>
+            <Search style={{
+              position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
+              width: '18px', height: '18px', color: 'var(--color-mid-gray)'
+            }} />
+            <input
+              type="text"
+              placeholder="Search by name or affiliation..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '14px 48px 14px 48px',
+                borderRadius: '12px',
+                border: '1px solid var(--color-light-gray)',
+                fontSize: '15px',
+                outline: 'none',
+                transition: 'border-color 150ms ease, box-shadow 150ms ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-velocity-blue)'
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'var(--color-pale-gray)', border: 'none', cursor: 'pointer',
+                  padding: '6px', borderRadius: '50%', display: 'flex'
+                }}
+              >
+                <X style={{ width: '14px', height: '14px', color: 'var(--color-mid-gray)' }} />
+              </button>
+            )}
+          </div>
+
+          {/* Domain Filter - single line */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+            <span style={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: 'var(--color-mid-gray)',
+              whiteSpace: 'nowrap'
             }}>
+              Filter by domain:
+            </span>
+            {DOMAINS.map(d => {
+              const isActive = domainFilter === d.name
+              return (
+                <button
+                  key={d.name}
+                  onClick={() => setDomainFilter(isActive ? null : d.name)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: isActive ? `2px solid ${d.text}` : '1px solid #e5e7eb',
+                    backgroundColor: isActive ? d.bgLight : 'white',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? d.text : 'var(--color-charcoal)',
+                    transition: 'all 150ms ease',
+                    boxShadow: isActive ? `0 0 0 3px ${d.bgLight}` : 'none',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = d.bgLight
+                      e.currentTarget.style.borderColor = d.border
+                      e.currentTarget.style.color = d.text
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'white'
+                      e.currentTarget.style.borderColor = '#e5e7eb'
+                      e.currentTarget.style.color = 'var(--color-charcoal)'
+                    }
+                  }}
+                >
+                  <span style={{
+                    width: '8px', height: '8px', borderRadius: '50%',
+                    backgroundColor: d.text
+                  }} />
+                  {d.shortName}
+                </button>
+              )
+            })}
+            {domainFilter && (
+              <button
+                onClick={() => setDomainFilter(null)}
+                style={{
+                  fontSize: '12px',
+                  color: 'var(--color-accent)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                ✕ Clear
+              </button>
+            )}
+          </div>
+
+          {/* Author Detail Panel or Welcome State */}
+          <div style={{
+            backgroundColor: 'var(--color-air-white)',
+            border: '1px solid var(--color-light-gray)',
+            borderRadius: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            minHeight: '400px',
+            overflow: 'hidden'
+          }}>
             {selectedAuthorId ? (
               <AuthorDetailPanel
                 authorId={selectedAuthorId}
@@ -999,11 +1020,9 @@ function AuthorIndexPageContent() {
             ) : (
               // Welcome state when no author selected
               <div style={{
-                height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '24px 32px',
-                overflow: 'hidden'
+                padding: '24px 32px'
               }}>
                 {/* Compact header */}
                 <div style={{
@@ -1027,7 +1046,7 @@ function AuthorIndexPageContent() {
                     <Users size={18} style={{ color: '#059669' }} />
                   </div>
                   <p style={{ fontSize: '14px', color: 'var(--color-mid-gray)', margin: 0 }}>
-                    Select an author from the list to view their positions, quotes, and evidence.
+                    Select an author from the sidebar to view their positions, quotes, and evidence.
                   </p>
                 </div>
 
@@ -1190,7 +1209,6 @@ function AuthorIndexPageContent() {
                 </div>
               </div>
             )}
-            </div>
           </div>
         </div>
 

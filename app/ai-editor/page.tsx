@@ -17,7 +17,7 @@ export default function AIEditorPage() {
         ref={mainRef}
         className="flex-1 mt-16 overflow-y-auto"
       >
-        <div className="max-w-3xl mx-auto" style={{ padding: '24px' }}>
+        <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
           {/* Page Header */}
           <PageHeader
             icon={<Sparkles size={24} />}

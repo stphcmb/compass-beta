@@ -148,7 +148,7 @@ function ExplorePageContent() {
         className="flex-1 mt-16 overflow-y-auto transition-all duration-300"
         style={{ marginLeft: `${mainContentLeft}px` }}
       >
-        <div className="max-w-4xl mx-auto" style={{ padding: '20px 24px' }}>
+        <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
           {/* Page Header */}
           <PageHeader
             icon={<Compass size={24} />}

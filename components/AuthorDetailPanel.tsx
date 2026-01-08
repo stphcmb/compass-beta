@@ -532,66 +532,62 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                 </div>
               )}
 
-              {/* Camps/Advocacy - Grouped by stance */}
+              {/* Camps/Advocacy - Grouped by domain for clarity */}
               {author.camps && author.camps.length > 0 && (() => {
-                // Separate camps into believes vs challenges
-                const believesCamps = author.camps.filter((c: any) =>
-                  ['strong', 'partial', 'emerging'].includes(c.relevance)
-                )
-                const challengesCamps = author.camps.filter((c: any) =>
-                  c.relevance === 'challenges'
-                )
+                // Group camps by domain
+                const campsByDomain: Record<string, any[]> = {}
+                author.camps.forEach((camp: any) => {
+                  const domain = camp.domain || 'Other'
+                  if (!campsByDomain[domain]) campsByDomain[domain] = []
+                  campsByDomain[domain].push(camp)
+                })
 
-                // Relevance display config
-                const relevanceConfig: Record<string, { label: string; color: string; bg: string }> = {
-                  strong: { label: 'Strong', color: '#059669', bg: '#d1fae5' },
-                  partial: { label: 'Partial', color: '#d97706', bg: '#fef3c7' },
-                  emerging: { label: 'Emerging', color: '#6366f1', bg: '#e0e7ff' },
-                  challenges: { label: 'Opposes', color: '#dc2626', bg: '#fee2e2' }
-                }
-
-                const renderCampCard = (camp: any, idx: number, isChallenge: boolean) => {
+                const renderCampCard = (camp: any, idx: number) => {
                   const campColors = DOMAIN_COLORS[camp.domain] || DEFAULT_COLORS
-                  const relevance = relevanceConfig[camp.relevance] || relevanceConfig.partial
+                  const isChallenge = camp.relevance === 'challenges'
 
                   return (
                     <div
                       key={idx}
                       style={{
                         borderRadius: '8px',
-                        border: isChallenge ? '1px solid #fca5a5' : `1px solid ${campColors.border}`,
-                        backgroundColor: isChallenge ? '#fef2f2' : campColors.bg,
+                        border: `1px solid ${campColors.border}`,
+                        backgroundColor: 'white',
                         overflow: 'hidden'
                       }}
                     >
                       {/* Camp header */}
                       <div style={{
                         padding: '10px 12px',
-                        borderBottom: isChallenge ? '1px solid #fca5a5' : `1px solid ${campColors.border}`
+                        backgroundColor: campColors.bg,
+                        borderBottom: `1px solid ${campColors.border}`
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                          {/* Stance indicator */}
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '9px',
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            backgroundColor: isChallenge ? '#fef2f2' : '#f0fdf4',
+                            color: isChallenge ? '#dc2626' : '#059669',
+                            fontWeight: 600,
+                            border: `1px solid ${isChallenge ? '#fecaca' : '#bbf7d0'}`
+                          }}>
+                            {isChallenge ? '✗ Challenges' : '✓ Supports'}
+                          </span>
                           <Link
                             href={`/results?q=${encodeURIComponent(camp.name)}`}
                             style={{
                               fontSize: '13px', fontWeight: 600,
-                              color: isChallenge ? '#991b1b' : campColors.text,
+                              color: campColors.text,
                               textDecoration: 'none'
                             }}
                           >
                             {camp.name}
                           </Link>
-                          <span style={{
-                            fontSize: '9px', padding: '2px 6px', borderRadius: '10px',
-                            backgroundColor: relevance.bg, color: relevance.color, fontWeight: 600
-                          }}>
-                            {relevance.label}
-                          </span>
-                          <span style={{
-                            fontSize: '9px', padding: '1px 6px', borderRadius: '10px',
-                            backgroundColor: 'white', color: campColors.text, fontWeight: 500
-                          }}>
-                            {camp.domain}
-                          </span>
                         </div>
                         {camp.description && (
                           <p style={{ fontSize: '11px', color: '#6b7280', margin: 0, lineHeight: 1.4 }}>
@@ -601,15 +597,15 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                       </div>
 
                       {/* Position + Quote */}
-                      <div style={{ padding: '10px 12px', backgroundColor: 'white' }}>
+                      <div style={{ padding: '10px 12px' }}>
                         {camp.whyItMatters && (
                           <div style={{ marginBottom: camp.quote ? '10px' : 0 }}>
                             <span style={{
                               fontSize: '9px', fontWeight: 600,
-                              color: isChallenge ? '#dc2626' : campColors.text,
+                              color: campColors.text,
                               textTransform: 'uppercase', letterSpacing: '0.05em'
                             }}>
-                              {isChallenge ? 'Why they oppose:' : 'Position:'}
+                              {isChallenge ? 'Their critique:' : 'Their position:'}
                             </span>
                             <p style={{ fontSize: '12px', color: '#374151', margin: '4px 0 0 0', lineHeight: 1.5 }}>
                               {camp.whyItMatters}
@@ -622,10 +618,10 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                             backgroundColor: '#f9fafb',
                             borderRadius: '6px',
                             padding: '10px',
-                            borderLeft: `3px solid ${isChallenge ? '#fca5a5' : campColors.border}`
+                            borderLeft: `3px solid ${campColors.border}`
                           }}>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                              <Quote style={{ width: '14px', height: '14px', color: isChallenge ? '#dc2626' : campColors.text, opacity: 0.5, flexShrink: 0, marginTop: '2px' }} />
+                              <Quote style={{ width: '14px', height: '14px', color: campColors.text, opacity: 0.5, flexShrink: 0, marginTop: '2px' }} />
                               <div>
                                 <p style={{ fontSize: '12px', fontStyle: 'italic', color: '#4b5563', lineHeight: 1.5, margin: 0 }}>
                                   "{camp.quote}"
@@ -661,39 +657,50 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
 
                 return (
                   <div style={{ marginBottom: '16px' }}>
-                    {/* Believes In Section */}
-                    {believesCamps.length > 0 && (
-                      <div style={{ marginBottom: challengesCamps.length > 0 ? '20px' : 0 }}>
-                        <h3 style={{
-                          fontSize: '11px', fontWeight: 600, color: '#059669',
-                          textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px',
-                          display: 'flex', alignItems: 'center', gap: '6px'
-                        }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                          Believes In ({believesCamps.length})
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {believesCamps.map((camp: any, idx: number) => renderCampCard(camp, idx, false))}
-                        </div>
-                      </div>
-                    )}
+                    <h3 style={{
+                      fontSize: '11px', fontWeight: 600, color: '#9ca3af',
+                      textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px'
+                    }}>
+                      Positions ({author.camps.length})
+                    </h3>
 
-                    {/* Challenges Section */}
-                    {challengesCamps.length > 0 && (
-                      <div>
-                        <h3 style={{
-                          fontSize: '11px', fontWeight: 600, color: '#dc2626',
-                          textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px',
-                          display: 'flex', alignItems: 'center', gap: '6px'
-                        }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-                          Challenges / Opposes ({challengesCamps.length})
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {challengesCamps.map((camp: any, idx: number) => renderCampCard(camp, idx, true))}
+                    {/* Render by domain */}
+                    {Object.entries(campsByDomain).map(([domain, camps], domainIdx) => {
+                      const domainColors = DOMAIN_COLORS[domain] || DEFAULT_COLORS
+                      return (
+                        <div key={domain} style={{ marginBottom: domainIdx < Object.keys(campsByDomain).length - 1 ? '16px' : 0 }}>
+                          {/* Domain header */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginBottom: '10px',
+                            paddingBottom: '6px',
+                            borderBottom: `2px solid ${domainColors.border}`
+                          }}>
+                            <span style={{
+                              width: '10px', height: '10px', borderRadius: '50%',
+                              backgroundColor: domainColors.text
+                            }} />
+                            <span style={{
+                              fontSize: '12px', fontWeight: 600, color: domainColors.text
+                            }}>
+                              {DOMAIN_DESCRIPTIONS[domain] || domain}
+                            </span>
+                            <span style={{
+                              fontSize: '11px', color: '#9ca3af', fontWeight: 500
+                            }}>
+                              ({camps.length} {camps.length === 1 ? 'position' : 'positions'})
+                            </span>
+                          </div>
+
+                          {/* Camps in this domain */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {camps.map((camp: any, idx: number) => renderCampCard(camp, idx))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    })}
                   </div>
                 )
               })()}
@@ -1075,64 +1082,66 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                 </div>
               )}
 
+              {/* Camps/Advocacy - Grouped by domain for clarity */}
               {author.camps && author.camps.length > 0 && (() => {
-                // Separate camps into believes vs challenges
-                const believesCamps = author.camps.filter((c: any) =>
-                  ['strong', 'partial', 'emerging'].includes(c.relevance)
-                )
-                const challengesCamps = author.camps.filter((c: any) =>
-                  c.relevance === 'challenges'
-                )
+                // Group camps by domain
+                const campsByDomain: Record<string, any[]> = {}
+                author.camps.forEach((camp: any) => {
+                  const domain = camp.domain || 'Other'
+                  if (!campsByDomain[domain]) campsByDomain[domain] = []
+                  campsByDomain[domain].push(camp)
+                })
 
-                // Relevance display config
-                const relevanceConfig: Record<string, { label: string; color: string; bg: string }> = {
-                  strong: { label: 'Strong', color: '#059669', bg: '#d1fae5' },
-                  partial: { label: 'Partial', color: '#d97706', bg: '#fef3c7' },
-                  emerging: { label: 'Emerging', color: '#6366f1', bg: '#e0e7ff' },
-                  challenges: { label: 'Opposes', color: '#dc2626', bg: '#fee2e2' }
-                }
-
-                const renderCampCard = (camp: any, idx: number, isChallenge: boolean) => {
+                const renderCampCard = (camp: any, idx: number) => {
                   const campColors = DOMAIN_COLORS[camp.domain] || DEFAULT_COLORS
-                  const relevance = relevanceConfig[camp.relevance] || relevanceConfig.partial
+                  const isChallenge = camp.relevance === 'challenges'
 
                   return (
                     <div
                       key={idx}
                       style={{
                         borderRadius: '8px',
-                        border: isChallenge ? '1px solid #fca5a5' : `1px solid ${campColors.border}`,
-                        backgroundColor: isChallenge ? '#fef2f2' : campColors.bg,
+                        border: `1px solid ${campColors.border}`,
+                        backgroundColor: 'white',
                         overflow: 'hidden'
                       }}
                     >
                       <div style={{
                         padding: '10px 12px',
-                        borderBottom: isChallenge ? '1px solid #fca5a5' : `1px solid ${campColors.border}`
+                        backgroundColor: campColors.bg,
+                        borderBottom: `1px solid ${campColors.border}`
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '9px',
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            backgroundColor: isChallenge ? '#fef2f2' : '#f0fdf4',
+                            color: isChallenge ? '#dc2626' : '#059669',
+                            fontWeight: 600,
+                            border: `1px solid ${isChallenge ? '#fecaca' : '#bbf7d0'}`
+                          }}>
+                            {isChallenge ? '✗ Challenges' : '✓ Supports'}
+                          </span>
                           <Link
                             href={`/results?q=${encodeURIComponent(camp.name)}`}
                             style={{
                               fontSize: '13px', fontWeight: 600,
-                              color: isChallenge ? '#991b1b' : campColors.text,
+                              color: campColors.text,
                               textDecoration: 'none'
                             }}
                           >
                             {camp.name}
                           </Link>
-                          <span style={{
-                            fontSize: '9px', padding: '2px 6px', borderRadius: '10px',
-                            backgroundColor: relevance.bg, color: relevance.color, fontWeight: 600
-                          }}>
-                            {relevance.label}
-                          </span>
                         </div>
                       </div>
-                      <div style={{ padding: '10px 12px', backgroundColor: 'white' }}>
+                      <div style={{ padding: '10px 12px' }}>
                         {camp.quote && (
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            <Quote style={{ width: '14px', height: '14px', color: isChallenge ? '#dc2626' : campColors.text, opacity: 0.5, flexShrink: 0, marginTop: '2px' }} />
+                            <Quote style={{ width: '14px', height: '14px', color: campColors.text, opacity: 0.5, flexShrink: 0, marginTop: '2px' }} />
                             <p style={{ fontSize: '12px', fontStyle: 'italic', color: '#4b5563', lineHeight: 1.5, margin: 0 }}>"{camp.quote}"</p>
                           </div>
                         )}
@@ -1143,39 +1152,46 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
 
                 return (
                   <div style={{ marginBottom: '16px' }}>
-                    {/* Believes In Section */}
-                    {believesCamps.length > 0 && (
-                      <div style={{ marginBottom: challengesCamps.length > 0 ? '20px' : 0 }}>
-                        <h3 style={{
-                          fontSize: '11px', fontWeight: 600, color: '#059669',
-                          textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px',
-                          display: 'flex', alignItems: 'center', gap: '6px'
-                        }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                          Believes In ({believesCamps.length})
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {believesCamps.map((camp: any, idx: number) => renderCampCard(camp, idx, false))}
-                        </div>
-                      </div>
-                    )}
+                    <h3 style={{
+                      fontSize: '11px', fontWeight: 600, color: '#9ca3af',
+                      textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px'
+                    }}>
+                      Positions ({author.camps.length})
+                    </h3>
 
-                    {/* Challenges Section */}
-                    {challengesCamps.length > 0 && (
-                      <div>
-                        <h3 style={{
-                          fontSize: '11px', fontWeight: 600, color: '#dc2626',
-                          textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px',
-                          display: 'flex', alignItems: 'center', gap: '6px'
-                        }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-                          Challenges / Opposes ({challengesCamps.length})
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {challengesCamps.map((camp: any, idx: number) => renderCampCard(camp, idx, true))}
+                    {Object.entries(campsByDomain).map(([domain, camps], domainIdx) => {
+                      const domainColors = DOMAIN_COLORS[domain] || DEFAULT_COLORS
+                      return (
+                        <div key={domain} style={{ marginBottom: domainIdx < Object.keys(campsByDomain).length - 1 ? '16px' : 0 }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginBottom: '10px',
+                            paddingBottom: '6px',
+                            borderBottom: `2px solid ${domainColors.border}`
+                          }}>
+                            <span style={{
+                              width: '10px', height: '10px', borderRadius: '50%',
+                              backgroundColor: domainColors.text
+                            }} />
+                            <span style={{
+                              fontSize: '12px', fontWeight: 600, color: domainColors.text
+                            }}>
+                              {DOMAIN_DESCRIPTIONS[domain] || domain}
+                            </span>
+                            <span style={{
+                              fontSize: '11px', color: '#9ca3af', fontWeight: 500
+                            }}>
+                              ({camps.length})
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {camps.map((camp: any, idx: number) => renderCampCard(camp, idx))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    })}
                   </div>
                 )
               })()}

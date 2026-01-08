@@ -550,213 +550,14 @@ export default function HistoryPage() {
   if (!mounted) return null
 
   return (
-    <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
+    <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-page-bg)' }}>
       <Header sidebarCollapsed={true} />
-
-      {/* Left Sidebar - Stats & Navigation */}
-      <aside
-        className="fixed top-16 h-[calc(100vh-64px)] border-r overflow-y-auto"
-        style={{
-          width: '320px',
-          backgroundColor: 'var(--color-air-white)',
-          borderColor: 'var(--color-light-gray)',
-          padding: '24px 16px 16px 22px'
-        }}
-      >
-        {/* Sidebar Header */}
-        <div style={{ marginBottom: '20px' }}>
-          <h2 style={{
-            fontSize: '18px',
-            fontWeight: 700,
-            color: 'var(--color-quantum-navy)',
-            margin: 0
-          }}>
-            Your Activity
-          </h2>
-          <p style={{
-            fontSize: '12px',
-            color: 'var(--color-mid-gray)',
-            margin: '4px 0 0'
-          }}>
-            Saved analyses, insights & authors
-          </p>
-        </div>
-
-        {/* Time Filter */}
-        <div style={{ marginBottom: '16px' }}>
-          <select
-            value={timeFilter}
-            onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              border: '1px solid var(--color-light-gray)',
-              background: 'white',
-              fontSize: '13px',
-              color: 'var(--color-charcoal)',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="all">All time</option>
-            <option value="today">Today</option>
-            <option value="week">This week</option>
-            <option value="month">This month</option>
-          </select>
-        </div>
-
-        {/* Category Navigation */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {tabs.map(tab => {
-            const icons: Record<TabType, React.ReactNode> = {
-              all: <History size={16} />,
-              searches: <Search size={16} />,
-              analyses: <Sparkles size={16} />,
-              insights: <ThumbsUp size={16} />,
-              authors: <Users size={16} />
-            }
-            const colors: Record<TabType, string> = {
-              all: '#6366f1',
-              searches: '#3b82f6',
-              analyses: '#8b5cf6',
-              insights: '#10b981',
-              authors: '#059669'
-            }
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: activeTab === tab.id ? `${colors[tab.id]}15` : 'transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  textAlign: 'left'
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== tab.id) e.currentTarget.style.background = '#f5f5f5'
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== tab.id) e.currentTarget.style.background = 'transparent'
-                }}
-              >
-                <span style={{ color: activeTab === tab.id ? colors[tab.id] : 'var(--color-mid-gray)' }}>
-                  {icons[tab.id]}
-                </span>
-                <span style={{
-                  flex: 1,
-                  fontSize: '13px',
-                  fontWeight: activeTab === tab.id ? 600 : 500,
-                  color: activeTab === tab.id ? colors[tab.id] : 'var(--color-charcoal)'
-                }}>
-                  {tab.label}
-                </span>
-                <span style={{
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                  background: activeTab === tab.id ? `${colors[tab.id]}20` : '#f3f4f6',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: activeTab === tab.id ? colors[tab.id] : 'var(--color-mid-gray)'
-                }}>
-                  {tab.count}
-                </span>
-              </button>
-            )
-          })}
-
-          {/* Recently Deleted - in nav area (always visible) */}
-          <button
-            onClick={() => setShowRecentlyDeleted(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              textAlign: 'left',
-              width: '100%',
-              marginTop: '4px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = deletedItems.length > 0 ? '#fef2f2' : '#f5f5f5'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-            }}
-          >
-            <span style={{ color: deletedItems.length > 0 ? '#ef4444' : 'var(--color-mid-gray)' }}>
-              <Trash2 size={16} />
-            </span>
-            <span style={{
-              flex: 1,
-              fontSize: '13px',
-              fontWeight: 500,
-              color: deletedItems.length > 0 ? '#b91c1c' : 'var(--color-charcoal)'
-            }}>
-              Recently Deleted
-            </span>
-            <span style={{
-              padding: '2px 8px',
-              borderRadius: '10px',
-              background: deletedItems.length > 0 ? '#fecaca' : '#f3f4f6',
-              fontSize: '11px',
-              fontWeight: 600,
-              color: deletedItems.length > 0 ? '#dc2626' : 'var(--color-mid-gray)'
-            }}>
-              {deletedItems.length}
-            </span>
-          </button>
-        </div>
-
-        {/* Quick Stats */}
-        <div style={{
-          marginTop: '20px',
-          padding: '14px',
-          borderRadius: '10px',
-          backgroundColor: '#f9fafb',
-          border: '1px solid #f3f4f6'
-        }}>
-          <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-mid-gray)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
-            {timeFilter === 'all' ? 'Quick Stats' : `Stats (${timeFilter === 'today' ? 'Today' : timeFilter === 'week' ? 'This Week' : 'This Month'})`}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>{filteredRecentSearches.length + filteredSavedSearches.length}</div>
-              <div style={{ fontSize: '11px', color: 'var(--color-mid-gray)' }}>Searches</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>{filteredAnalyses.length}</div>
-              <div style={{ fontSize: '11px', color: 'var(--color-mid-gray)' }}>Analyses</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>{filteredInsights.length}</div>
-              <div style={{ fontSize: '11px', color: 'var(--color-mid-gray)' }}>Insights</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-quantum-navy)' }}>{getFilteredAuthorsCount()}</div>
-              <div style={{ fontSize: '11px', color: 'var(--color-mid-gray)' }}>Authors</div>
-            </div>
-          </div>
-        </div>
-
-      </aside>
 
       {/* Main Content */}
       <main
         className="flex-1 mt-16 overflow-auto"
-        style={{ marginLeft: '320px' }}
       >
-        <div className="max-w-5xl mx-auto" style={{ padding: '20px 24px' }}>
+        <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
           {/* Page Header - Centered like Explore page */}
           <PageHeader
             icon={<History size={24} />}
@@ -768,6 +569,163 @@ export default function HistoryPage() {
               onClick: () => setShowAboutModal(true)
             }}
           />
+
+          {/* Horizontal Navigation Tabs */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            marginBottom: '24px'
+          }}>
+            {/* Category Tabs */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              overflowX: 'auto',
+              paddingBottom: '4px'
+            }}>
+              {tabs.map(tab => {
+                const icons: Record<TabType, React.ReactNode> = {
+                  all: <History size={14} />,
+                  searches: <Search size={14} />,
+                  analyses: <Sparkles size={14} />,
+                  insights: <ThumbsUp size={14} />,
+                  authors: <Users size={14} />
+                }
+                const colors: Record<TabType, string> = {
+                  all: '#6366f1',
+                  searches: '#3b82f6',
+                  analyses: '#8b5cf6',
+                  insights: '#10b981',
+                  authors: '#059669'
+                }
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '7px 12px',
+                      borderRadius: '20px',
+                      border: activeTab === tab.id ? `1.5px solid ${colors[tab.id]}` : '1.5px solid transparent',
+                      background: activeTab === tab.id ? `${colors[tab.id]}12` : '#f5f5f5',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeTab !== tab.id) {
+                        e.currentTarget.style.background = '#ebebeb'
+                        e.currentTarget.style.borderColor = '#d1d5db'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeTab !== tab.id) {
+                        e.currentTarget.style.background = '#f5f5f5'
+                        e.currentTarget.style.borderColor = 'transparent'
+                      }
+                    }}
+                  >
+                    <span style={{ color: activeTab === tab.id ? colors[tab.id] : 'var(--color-mid-gray)' }}>
+                      {icons[tab.id]}
+                    </span>
+                    <span style={{
+                      fontSize: '13px',
+                      fontWeight: activeTab === tab.id ? 600 : 500,
+                      color: activeTab === tab.id ? colors[tab.id] : 'var(--color-charcoal)'
+                    }}>
+                      {tab.label}
+                    </span>
+                    <span style={{
+                      padding: '1px 6px',
+                      borderRadius: '8px',
+                      background: activeTab === tab.id ? `${colors[tab.id]}25` : '#e5e7eb',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: activeTab === tab.id ? colors[tab.id] : 'var(--color-mid-gray)'
+                    }}>
+                      {tab.count}
+                    </span>
+                  </button>
+                )
+              })}
+
+              {/* Recently Deleted */}
+              <button
+                onClick={() => setShowRecentlyDeleted(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '7px 12px',
+                  borderRadius: '20px',
+                  border: '1.5px solid transparent',
+                  background: deletedItems.length > 0 ? '#fef2f2' : '#f5f5f5',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = deletedItems.length > 0 ? '#fee2e2' : '#ebebeb'
+                  e.currentTarget.style.borderColor = deletedItems.length > 0 ? '#fecaca' : '#d1d5db'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = deletedItems.length > 0 ? '#fef2f2' : '#f5f5f5'
+                  e.currentTarget.style.borderColor = 'transparent'
+                }}
+              >
+                <span style={{ color: deletedItems.length > 0 ? '#ef4444' : 'var(--color-mid-gray)' }}>
+                  <Trash2 size={14} />
+                </span>
+                <span style={{
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: deletedItems.length > 0 ? '#b91c1c' : 'var(--color-charcoal)'
+                }}>
+                  Deleted
+                </span>
+                {deletedItems.length > 0 && (
+                  <span style={{
+                    padding: '1px 6px',
+                    borderRadius: '8px',
+                    background: '#fecaca',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: '#dc2626'
+                  }}>
+                    {deletedItems.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Time Filter */}
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
+              style={{
+                padding: '7px 10px',
+                borderRadius: '8px',
+                border: '1px solid var(--color-light-gray)',
+                background: 'white',
+                fontSize: '13px',
+                color: 'var(--color-charcoal)',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+            >
+              <option value="all">All time</option>
+              <option value="today">Today</option>
+              <option value="week">This week</option>
+              <option value="month">This month</option>
+            </select>
+          </div>
 
         {/* Content - Single column layout for "All" view */}
         {activeTab === 'all' ? (
