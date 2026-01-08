@@ -24,8 +24,11 @@ function ExplorePageContent() {
   const [activeDomain, setActiveDomain] = useState<string | null>(null)
 
   const query = searchParams.get('q') || ''
-  const domain = activeDomain || searchParams.get('domain') || undefined
-  const domains = searchParams.get('domains')?.split(',') || []
+  const domainFromUrl = searchParams.get('domain')
+  const domain = activeDomain || domainFromUrl || undefined
+  // Combine single domain into domains array for filtering
+  const domainsFromUrl = searchParams.get('domains')?.split(',') || []
+  const domains = domain ? [domain] : domainsFromUrl
   const camp = searchParams.get('camp') || undefined
   const camps = searchParams.get('camps')?.split(',') || []
   const authors = searchParams.get('authors')?.split(',') || []

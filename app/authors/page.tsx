@@ -40,7 +40,7 @@ function AuthorIndexPageContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [domainFilter, setDomainFilter] = useState<string | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [groupBy, setGroupBy] = useState<'alphabet' | 'domain' | 'recent'>('alphabet')
+  const [groupBy, setGroupBy] = useState<'alphabet' | 'domain' | 'recent' | 'favorites'>('alphabet')
   const letterRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const domainRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [urlAuthorHandled, setUrlAuthorHandled] = useState(false)
@@ -141,7 +141,7 @@ function AuthorIndexPageContent() {
   }
 
   // Filter and group authors
-  const { authorsByLetter, authorsByDomain, recentAuthors, domainCounts, availableLetters, availableDomains, totalFiltered } = useMemo(() => {
+  const { authorsByLetter, authorsByDomain, recentAuthors, allFavoriteAuthors, domainCounts, availableLetters, availableDomains, totalFiltered } = useMemo(() => {
     let filtered = authors
 
     // Apply search filter
@@ -225,35 +225,42 @@ function AuthorIndexPageContent() {
       availableDoms.push({ name: 'Other', shortName: 'Other', text: '#6b7280', bgLight: '#f3f4f6', border: '#d1d5db' } as any)
     }
 
+    // Get all favorite authors from filtered list
+    const allFavoriteAuthors = filtered.filter(a => favoriteAuthorNames.includes(a.name))
+
     return {
       authorsByLetter: byLetter,
       authorsByDomain: byDomain,
       recentAuthors: recent,
+      allFavoriteAuthors,
       domainCounts: counts,
       availableLetters: available,
       availableDomains: availableDoms,
       totalFiltered: filtered.length
     }
-  }, [authors, searchQuery, domainFilter, camps])
+  }, [authors, searchQuery, domainFilter, camps, favoriteAuthorNames])
 
   // Favorite and recent authors for welcome state
-  const { favoriteAuthors, recentAddedAuthors } = useMemo(() => {
-    if (authors.length === 0) return { favoriteAuthors: [], recentAddedAuthors: [] }
+  const { favoriteAuthors, totalFavorites, recentAddedAuthors, totalRecent } = useMemo(() => {
+    if (authors.length === 0) return { favoriteAuthors: [], totalFavorites: 0, recentAddedAuthors: [], totalRecent: 0 }
 
-    // Get favorite authors (match by name)
-    const favorites = authors.filter(a => favoriteAuthorNames.includes(a.name)).slice(0, 3)
+    // Get all favorite authors (match by name)
+    const allFavorites = authors.filter(a => favoriteAuthorNames.includes(a.name))
+    const totalFavorites = allFavorites.length
+    const favorites = allFavorites.slice(0, 3)
 
     // Get recent authors (excluding favorites)
-    const recent = [...authors]
+    const allRecent = [...authors]
       .filter(a => !favoriteAuthorNames.includes(a.name))
       .sort((a, b) => {
         const aDate = a.created_at ? new Date(a.created_at).getTime() : 0
         const bDate = b.created_at ? new Date(b.created_at).getTime() : 0
         return bDate - aDate
       })
-      .slice(0, 3)
+    const totalRecent = allRecent.length
+    const recent = allRecent.slice(0, 3)
 
-    return { favoriteAuthors: favorites, recentAddedAuthors: recent }
+    return { favoriteAuthors: favorites, totalFavorites, recentAddedAuthors: recent, totalRecent }
   }, [authors, favoriteAuthorNames])
 
   // Calculate margins for layout - match Explore page
@@ -430,6 +437,26 @@ function AuthorIndexPageContent() {
               >
                 Recent
               </button>
+              {favoriteAuthorNames.length > 0 && (
+                <button
+                  onClick={() => setGroupBy('favorites')}
+                  style={{
+                    flex: 1,
+                    padding: '7px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: groupBy === 'favorites' ? 'var(--color-air-white)' : 'transparent',
+                    color: groupBy === 'favorites' ? '#f59e0b' : 'var(--color-mid-gray)',
+                    cursor: 'pointer',
+                    boxShadow: groupBy === 'favorites' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 150ms ease'
+                  }}
+                >
+                  ★ Fav
+                </button>
+              )}
             </div>
           </div>
 
@@ -740,6 +767,61 @@ function AuthorIndexPageContent() {
                     </div>
                   )
                 })
+              ) : groupBy === 'favorites' ? (
+                // Favorites View
+                <div>
+                  <div style={{
+                    padding: '4px 12px', fontSize: '11px', fontWeight: 700, color: '#f59e0b',
+                    backgroundColor: '#fef3c7', borderRadius: '4px',
+                    marginBottom: '4px', position: 'sticky', top: 0, zIndex: 1,
+                    display: 'flex', alignItems: 'center', gap: '6px'
+                  }}>
+                    <span>★</span> Your Favorites ({allFavoriteAuthors.length})
+                  </div>
+                  <div style={{ marginBottom: '8px' }}>
+                    {allFavoriteAuthors.length > 0 ? allFavoriteAuthors.map((author: any) => {
+                      const domain = getAuthorDomain(author.id)
+                      const domainStyle = getDomainStyle(domain)
+                      const isSelected = selectedAuthorId === author.id
+                      return (
+                        <button
+                          key={author.id}
+                          onClick={() => handleAuthorClick(author.id)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                            padding: '6px 8px 6px 12px', borderRadius: '4px', border: 'none',
+                            backgroundColor: isSelected ? domainStyle.bg : 'transparent',
+                            cursor: 'pointer', transition: 'all 60ms ease-out', textAlign: 'left'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = '#fef3c7'
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'
+                          }}
+                        >
+                          <span style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            backgroundColor: domainStyle.text, flexShrink: 0
+                          }} />
+                          <span style={{
+                            fontSize: '13px', fontWeight: isSelected ? 600 : 400,
+                            color: isSelected ? domainStyle.text : 'var(--color-soft-black)',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            flex: 1
+                          }}>
+                            {author.name}
+                          </span>
+                          <span style={{ color: '#f59e0b', fontSize: '12px' }}>★</span>
+                        </button>
+                      )
+                    }) : (
+                      <p style={{ fontSize: '13px', color: 'var(--color-mid-gray)', padding: '12px', textAlign: 'center' }}>
+                        No favorites yet. Click the star icon on any author to add them.
+                      </p>
+                    )}
+                  </div>
+                </div>
               ) : (
                 // Domain View
                 <>
@@ -928,8 +1010,8 @@ function AuthorIndexPageContent() {
             )}
           </div>
 
-          {/* Domain Filter - single line */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          {/* Domain Filter - hidden but functional */}
+          <div style={{ display: 'none', alignItems: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
             <span style={{
               fontSize: '12px',
               fontWeight: 500,
@@ -1067,6 +1149,33 @@ function AuthorIndexPageContent() {
                         gap: '4px'
                       }}>
                         <span>★</span> Your Favorites
+                        {totalFavorites > 3 && (
+                          <button
+                            onClick={() => setGroupBy('favorites')}
+                            style={{
+                              fontWeight: 500,
+                              fontSize: '10px',
+                              color: '#92400e',
+                              backgroundColor: '#fef3c7',
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              marginLeft: '4px',
+                              border: '1px solid #fcd34d',
+                              cursor: 'pointer',
+                              transition: 'all 150ms ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#fde68a'
+                              e.currentTarget.style.borderColor = '#f59e0b'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#fef3c7'
+                              e.currentTarget.style.borderColor = '#fcd34d'
+                            }}
+                          >
+                            +{totalFavorites - 3} more →
+                          </button>
+                        )}
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                         {favoriteAuthors.map((author: any) => {
@@ -1140,9 +1249,40 @@ function AuthorIndexPageContent() {
                         color: 'var(--color-mid-gray)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
-                        marginBottom: '8px'
+                        marginBottom: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
                       }}>
                         Recently Added
+                        {totalRecent > 3 && (
+                          <button
+                            onClick={() => setGroupBy('recent')}
+                            style={{
+                              fontWeight: 500,
+                              fontSize: '10px',
+                              color: '#374151',
+                              backgroundColor: '#f3f4f6',
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              marginLeft: '4px',
+                              border: '1px solid #d1d5db',
+                              cursor: 'pointer',
+                              transition: 'all 150ms ease',
+                              textTransform: 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#e5e7eb'
+                              e.currentTarget.style.borderColor = '#9ca3af'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#f3f4f6'
+                              e.currentTarget.style.borderColor = '#d1d5db'
+                            }}
+                          >
+                            +{totalRecent - 3} more →
+                          </button>
+                        )}
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                         {recentAddedAuthors.map((author: any) => {

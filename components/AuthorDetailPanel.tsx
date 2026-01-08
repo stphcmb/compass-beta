@@ -562,7 +562,7 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                         backgroundColor: campColors.bg,
                         borderBottom: `1px solid ${campColors.border}`
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           {/* Stance indicator */}
                           <span style={{
                             display: 'inline-flex',
@@ -578,22 +578,24 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                           }}>
                             {isChallenge ? '✗ Challenges' : '✓ Supports'}
                           </span>
-                          <Link
-                            href={`/results?q=${encodeURIComponent(camp.name)}`}
-                            style={{
-                              fontSize: '13px', fontWeight: 600,
-                              color: campColors.text,
-                              textDecoration: 'none'
-                            }}
-                          >
-                            {camp.name}
-                          </Link>
+                          <span style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+                            <Link
+                              href={`/results?q=${encodeURIComponent(camp.name)}`}
+                              style={{
+                                fontSize: '13px', fontWeight: 600,
+                                color: campColors.text,
+                                textDecoration: 'none'
+                              }}
+                            >
+                              {camp.name}
+                            </Link>
+                            {camp.description && (
+                              <span style={{ fontSize: '11px', color: '#6b7280' }}>
+                                ({camp.description})
+                              </span>
+                            )}
+                          </span>
                         </div>
-                        {camp.description && (
-                          <p style={{ fontSize: '11px', color: '#6b7280', margin: 0, lineHeight: 1.4 }}>
-                            {camp.description}
-                          </p>
-                        )}
                       </div>
 
                       {/* Position + Quote */}
@@ -1126,16 +1128,23 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                           }}>
                             {isChallenge ? '✗ Challenges' : '✓ Supports'}
                           </span>
-                          <Link
-                            href={`/results?q=${encodeURIComponent(camp.name)}`}
-                            style={{
-                              fontSize: '13px', fontWeight: 600,
-                              color: campColors.text,
-                              textDecoration: 'none'
-                            }}
-                          >
-                            {camp.name}
-                          </Link>
+                          <span style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+                            <Link
+                              href={`/results?q=${encodeURIComponent(camp.name)}`}
+                              style={{
+                                fontSize: '13px', fontWeight: 600,
+                                color: campColors.text,
+                                textDecoration: 'none'
+                              }}
+                            >
+                              {camp.name}
+                            </Link>
+                            {camp.description && (
+                              <span style={{ fontSize: '11px', color: '#6b7280' }}>
+                                ({camp.description})
+                              </span>
+                            )}
+                          </span>
                         </div>
                       </div>
                       <div style={{ padding: '10px 12px' }}>

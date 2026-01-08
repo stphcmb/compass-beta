@@ -37,10 +37,10 @@ export default function Home() {
   const canAnalyze = text.trim().length > 0 && text.length <= 4000 && !isSubmitting
 
   return (
-    <div className="h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bone)' }}>
       <Header sidebarCollapsed={true} />
       <main
-        className="flex-1 mt-16 flex flex-col items-center justify-start overflow-y-auto"
+        className="flex-1 mt-16 flex flex-col items-center"
       >
         {/* Hero Section */}
         <div className="w-full relative" style={{
@@ -240,9 +240,9 @@ export default function Home() {
         <div className="w-full relative" style={{
           background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
         }}>
-          <div className="max-w-4xl mx-auto" style={{ padding: '24px 24px 28px' }}>
+          <div className="max-w-4xl mx-auto" style={{ padding: '16px 24px 20px' }}>
             {/* Section Header */}
-            <div className="text-center mb-6">
+            <div className="text-center mb-4">
               <span
                 style={{
                   fontSize: '11px',
@@ -257,7 +257,7 @@ export default function Home() {
                 Simple Process
               </span>
               <h2 style={{
-                fontSize: '28px',
+                fontSize: '24px',
                 fontWeight: '700',
                 color: '#0f172a',
                 letterSpacing: '-0.02em',
@@ -275,68 +275,90 @@ export default function Home() {
             </div>
 
             {/* Steps */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <HowItWorksStep
                 number="1"
                 icon={Edit3}
                 title="Paste your draft"
                 description="Any paragraph, thesis, or argument you're working on"
+                accentColor="#0033FF"
+                accentColorLight="#3D5FFF"
               />
               <HowItWorksStep
                 number="2"
                 icon={Search}
                 title="Match perspectives"
                 description="We compare against 200+ curated thought leaders"
+                accentColor="#1e40af"
+                accentColorLight="#3b82f6"
               />
               <HowItWorksStep
                 number="3"
                 icon={Sparkles}
                 title="See the gaps"
                 description="Discover what you're using and what you're missing"
+                accentColor="#4f46e5"
+                accentColorLight="#6366f1"
               />
             </div>
           </div>
         </div>
 
-        {/* Key Benefits Section - Compact */}
+        {/* Key Benefits Section - Glassmorphism */}
         <div className="w-full relative" style={{
           background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
-          padding: '24px 24px 32px'
+          padding: '16px 24px 20px'
         }}>
-          <div className="max-w-4xl mx-auto">
+          {/* Decorative gradient orbs */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+            <div
+              className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30"
+              style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)' }}
+            />
+            <div
+              className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full blur-3xl opacity-20"
+              style={{ background: 'radial-gradient(circle, #0033FF 0%, transparent 70%)' }}
+            />
+          </div>
+
+          <div className="max-w-4xl mx-auto relative z-10">
             {/* Section Header */}
-            <div className="text-center mb-6">
+            <div className="text-center mb-4">
               <span
                 style={{
                   fontSize: '11px',
                   fontWeight: '600',
-                  color: '#0033FF',
+                  background: 'linear-gradient(135deg, #0033FF 0%, #6366f1 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
-                  marginBottom: '6px',
+                  marginBottom: '4px',
                   display: 'block'
                 }}
               >
                 Why Compass
               </span>
               <h2 style={{
-                fontSize: '28px',
+                fontSize: '24px',
                 fontWeight: '700',
                 color: '#0f172a',
                 letterSpacing: '-0.02em',
-                marginBottom: '4px'
+                marginBottom: '0'
               }}>
                 Write with confidence
               </h2>
             </div>
 
-            {/* Compact Benefits - Bullet Points */}
+            {/* Glassmorphic Benefits Container */}
             <div style={{
-              background: 'white',
-              borderRadius: '12px',
-              padding: '20px 24px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 255, 0.85) 100%)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '16px',
+              padding: '12px 16px',
+              border: '1px solid rgba(226, 232, 240, 0.8)',
+              boxShadow: '0 12px 24px -8px rgba(0, 51, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9)'
             }}>
               <ul style={{
                 listStyle: 'none',
@@ -344,116 +366,83 @@ export default function Home() {
                 margin: 0,
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
-                gap: '16px'
+                gap: '8px'
               }}>
-                <li style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                  <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '6px',
-                    background: 'linear-gradient(135deg, rgba(0, 51, 255, 0.1) 0%, rgba(0, 40, 204, 0.1) 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    color: '#0033FF',
-                    marginTop: '2px'
-                  }}>
-                    <Zap size={14} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '14px', color: '#0f172a', fontWeight: '600' }}>Save hours</strong>
-                    <span style={{ fontSize: '14px', color: '#64748b' }}> — AI-powered perspective matching</span>
-                  </div>
-                </li>
-                <li style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                  <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '6px',
-                    background: 'linear-gradient(135deg, rgba(0, 51, 255, 0.1) 0%, rgba(0, 40, 204, 0.1) 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    color: '#0033FF',
-                    marginTop: '2px'
-                  }}>
-                    <Shield size={14} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '14px', color: '#0f172a', fontWeight: '600' }}>Avoid blind spots</strong>
-                    <span style={{ fontSize: '14px', color: '#64748b' }}> — Never miss counterarguments</span>
-                  </div>
-                </li>
-                <li style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                  <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '6px',
-                    background: 'linear-gradient(135deg, rgba(0, 51, 255, 0.1) 0%, rgba(0, 40, 204, 0.1) 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    color: '#0033FF',
-                    marginTop: '2px'
-                  }}>
-                    <Target size={14} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '14px', color: '#0f172a', fontWeight: '600' }}>Find unique angles</strong>
-                    <span style={{ fontSize: '14px', color: '#64748b' }}> — Discover fresh perspectives</span>
-                  </div>
-                </li>
-                <li style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                  <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '6px',
-                    background: 'linear-gradient(135deg, rgba(0, 51, 255, 0.1) 0%, rgba(0, 40, 204, 0.1) 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    color: '#0033FF',
-                    marginTop: '2px'
-                  }}>
-                    <TrendingUp size={14} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '14px', color: '#0f172a', fontWeight: '600' }}>Strengthen arguments</strong>
-                    <span style={{ fontSize: '14px', color: '#64748b' }}> — Build credible positions</span>
-                  </div>
-                </li>
+                <BenefitItem
+                  icon={Zap}
+                  title="Save hours"
+                  description="AI-powered perspective matching"
+                  gradientFrom="#0033FF"
+                  gradientTo="#3D5FFF"
+                />
+                <BenefitItem
+                  icon={Shield}
+                  title="Avoid blind spots"
+                  description="Never miss counterarguments"
+                  gradientFrom="#1e40af"
+                  gradientTo="#3b82f6"
+                />
+                <BenefitItem
+                  icon={Target}
+                  title="Find unique angles"
+                  description="Discover fresh perspectives"
+                  gradientFrom="#4f46e5"
+                  gradientTo="#6366f1"
+                />
+                <BenefitItem
+                  icon={TrendingUp}
+                  title="Strengthen arguments"
+                  description="Build credible positions"
+                  gradientFrom="#2563eb"
+                  gradientTo="#60a5fa"
+                />
               </ul>
             </div>
           </div>
         </div>
 
         {/* Features Grid - Visual First */}
-        <div className="w-full relative" style={{
-          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-          padding: '28px 24px 36px'
+        <div className="w-full relative overflow-hidden" style={{
+          background: 'linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%)',
+          padding: '20px 24px 32px'
         }}>
-          <div className="max-w-6xl mx-auto">
+          {/* Decorative gradient orbs */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div
+              className="absolute top-0 left-1/4 w-80 h-80 rounded-full blur-3xl opacity-20"
+              style={{ background: 'radial-gradient(circle, #0033FF 0%, transparent 70%)' }}
+            />
+            <div
+              className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-15"
+              style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }}
+            />
+            <div
+              className="absolute top-1/2 right-0 w-64 h-64 rounded-full blur-3xl opacity-10"
+              style={{ background: 'radial-gradient(circle, #10b981 0%, transparent 70%)' }}
+            />
+          </div>
+
+          <div className="max-w-6xl mx-auto relative z-10">
             {/* Section Header */}
-            <div className="text-center mb-6">
+            <div className="text-center mb-5">
               <span
                 style={{
                   fontSize: '11px',
                   fontWeight: '600',
-                  color: '#0033FF',
+                  background: 'linear-gradient(135deg, #0033FF 0%, #8b5cf6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
-                  marginBottom: '6px',
+                  marginBottom: '4px',
                   display: 'block'
                 }}
               >
                 Features
               </span>
               <h2 style={{
-                fontSize: '28px',
+                fontSize: '24px',
                 fontWeight: '700',
                 color: '#0f172a',
                 letterSpacing: '-0.02em',
@@ -462,7 +451,7 @@ export default function Home() {
                 Everything you need to navigate AI discourse
               </h2>
               <p style={{
-                fontSize: '14px',
+                fontSize: '13px',
                 color: '#64748b',
                 lineHeight: '1.5',
                 maxWidth: '540px',
@@ -479,12 +468,16 @@ export default function Home() {
                 title="Explore Perspectives"
                 description="See where thought leaders stand on any AI topic"
                 href="/explore"
+                gradientFrom="#0033FF"
+                gradientTo="#3D5FFF"
               />
               <FeatureCard
                 icon={Users}
                 title="200+ Thought Leaders"
                 description="Curated voices across academia, industry, policy"
                 href="/authors"
+                gradientFrom="#1e40af"
+                gradientTo="#3b82f6"
               />
               <FeatureCard
                 icon={Lightbulb}
@@ -492,12 +485,16 @@ export default function Home() {
                 description="Find underexplored angles for original pieces"
                 href="/content-helper"
                 badge="Coming Soon"
+                gradientFrom="#4f46e5"
+                gradientTo="#6366f1"
               />
               <FeatureCard
                 icon={Search}
                 title="Research History"
                 description="Never lose track of your past explorations"
                 href="/history"
+                gradientFrom="#2563eb"
+                gradientTo="#60a5fa"
               />
             </div>
           </div>
@@ -514,66 +511,84 @@ function HowItWorksStep({
   number,
   icon: Icon,
   title,
-  description
+  description,
+  accentColor = '#0033FF',
+  accentColorLight = '#3D5FFF'
 }: {
   number: string
-  icon: React.ComponentType<{ size?: number | string; className?: string }>
+  icon: React.ComponentType<{ size?: number | string; className?: string; style?: React.CSSProperties }>
   title: string
   description: string
+  accentColor?: string
+  accentColorLight?: string
 }) {
   const [isHovered, setIsHovered] = useState(false)
 
   return (
     <div
-      className="flex flex-col items-center text-center group"
+      className="flex flex-col items-center text-center group relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-        transition: 'transform 0.3s ease'
+        padding: '24px 20px',
+        borderRadius: '20px',
+        background: isHovered
+          ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 255, 0.9) 100%)'
+          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.7) 100%)',
+        backdropFilter: 'blur(20px)',
+        border: isHovered
+          ? '1px solid rgba(0, 51, 255, 0.25)'
+          : '1px solid rgba(226, 232, 240, 0.8)',
+        boxShadow: isHovered
+          ? '0 20px 40px -12px rgba(0, 51, 255, 0.2), 0 0 0 1px rgba(0, 51, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
+          : '0 8px 24px -8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+        transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
     >
+      {/* Decorative gradient glow behind card */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          width: '120px',
+          height: '120px',
+          background: `radial-gradient(circle, ${accentColor}15 0%, transparent 70%)`,
+          transform: 'translate(-50%, -50%)',
+          opacity: isHovered ? 1 : 0,
+          transition: 'opacity 0.4s ease',
+          pointerEvents: 'none',
+          zIndex: 0
+        }}
+      />
+
       {/* Step number with gradient */}
       <div
-        className="w-10 h-10 rounded-full flex items-center justify-center mb-3"
+        className="w-11 h-11 rounded-full flex items-center justify-center mb-4 relative z-10"
         style={{
-          background: isHovered
-            ? 'linear-gradient(135deg, #3D5FFF 0%, #0033FF 100%)'
-            : 'linear-gradient(135deg, #0033FF 0%, #0028CC 100%)',
+          background: `linear-gradient(135deg, ${accentColorLight} 0%, ${accentColor} 100%)`,
           boxShadow: isHovered
-            ? '0 6px 20px rgba(0, 51, 255, 0.5)'
-            : '0 3px 12px rgba(0, 51, 255, 0.4)',
+            ? `0 8px 24px ${accentColor}60, 0 0 0 4px ${accentColor}15`
+            : `0 4px 16px ${accentColor}40`,
           transform: isHovered ? 'scale(1.1)' : 'scale(1)',
           transition: 'all 0.3s ease'
         }}
       >
-        <span className="text-white font-bold" style={{ fontSize: '16px' }}>
+        <span className="text-white font-bold" style={{ fontSize: '17px' }}>
           {number}
         </span>
       </div>
-      {/* Icon with gradient background */}
-      <div
-        className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
-        style={{
-          background: isHovered
-            ? 'linear-gradient(135deg, rgba(0, 51, 255, 0.15) 0%, rgba(0, 40, 204, 0.15) 100%)'
-            : 'linear-gradient(135deg, rgba(0, 51, 255, 0.1) 0%, rgba(0, 40, 204, 0.1) 100%)',
-          border: `1px solid ${isHovered ? 'rgba(0, 51, 255, 0.3)' : 'rgba(0, 51, 255, 0.2)'}`,
-          transition: 'all 0.3s ease',
-          color: isHovered ? '#0033FF' : '#3D5FFF'
-        }}
-      >
-        <Icon size={22} />
-      </div>
+
       <h3
-        className="font-semibold mb-1"
-        style={{ fontSize: '15px', color: '#0f172a' }}
+        className="font-semibold mb-1 relative z-10"
+        style={{ fontSize: '16px', color: '#0f172a' }}
       >
         {title}
       </h3>
       <p
-        className="max-w-[220px]"
-        style={{ fontSize: '13px', lineHeight: '1.5', color: '#64748b' }}
+        className="max-w-[220px] relative z-10"
+        style={{ fontSize: '13px', lineHeight: '1.6', color: '#64748b' }}
       >
         {description}
       </p>
@@ -586,34 +601,58 @@ function FeatureCard({
   title,
   description,
   href,
-  badge
+  badge,
+  gradientFrom = '#0033FF',
+  gradientTo = '#6366f1'
 }: {
-  icon: React.ComponentType<{ size?: number | string; className?: string }>
+  icon: React.ComponentType<{ size?: number | string; className?: string; style?: React.CSSProperties }>
   title: string
   description: string
   href: string
   badge?: string
+  gradientFrom?: string
+  gradientTo?: string
 }) {
+  const [isHovered, setIsHovered] = useState(false)
+
   return (
     <Link
       href={href}
-      className="group block p-6 rounded-xl transition-all duration-300"
+      className="group block relative overflow-hidden"
       style={{
-        background: 'white',
-        border: '1px solid #e2e8f0',
-        position: 'relative'
+        padding: '24px',
+        borderRadius: '20px',
+        background: isHovered
+          ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 255, 0.95) 100%)'
+          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 255, 0.85) 100%)',
+        backdropFilter: 'blur(20px)',
+        border: isHovered
+          ? `1px solid ${gradientFrom}40`
+          : '1px solid rgba(226, 232, 240, 0.8)',
+        boxShadow: isHovered
+          ? `0 24px 48px -12px ${gradientFrom}25, 0 0 0 1px ${gradientFrom}10, inset 0 1px 0 rgba(255, 255, 255, 0.9)`
+          : '0 8px 24px -8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+        transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#0033FF'
-        e.currentTarget.style.transform = 'translateY(-4px)'
-        e.currentTarget.style.boxShadow = '0 12px 28px rgba(0, 51, 255, 0.15)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#e2e8f0'
-        e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.boxShadow = 'none'
-      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Decorative gradient glow */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-50%',
+          width: '100%',
+          height: '100%',
+          background: `radial-gradient(circle, ${gradientFrom}10 0%, transparent 60%)`,
+          opacity: isHovered ? 1 : 0,
+          transition: 'opacity 0.4s ease',
+          pointerEvents: 'none'
+        }}
+      />
+
       {/* Badge */}
       {badge && (
         <div
@@ -621,38 +660,48 @@ function FeatureCard({
             position: 'absolute',
             top: '16px',
             right: '16px',
-            padding: '4px 10px',
-            borderRadius: '6px',
-            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            padding: '5px 12px',
+            borderRadius: '8px',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)',
             color: 'white',
-            fontSize: '11px',
+            fontSize: '10px',
             fontWeight: '600',
             textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
+            letterSpacing: '0.06em',
+            boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)'
           }}
         >
           {badge}
         </div>
       )}
 
-      {/* Icon with gradient background */}
-      <div className="mb-4">
+      {/* Icon with gradient background and glow */}
+      <div className="mb-5 relative z-10">
         <div
-          className="w-12 h-12 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
           style={{
-            background: 'linear-gradient(135deg, #0033FF 0%, #0028CC 100%)',
+            width: '52px',
+            height: '52px',
+            borderRadius: '14px',
+            background: `linear-gradient(135deg, ${gradientFrom} 0%, ${gradientTo} 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: isHovered
+              ? `0 12px 28px -6px ${gradientFrom}60, 0 0 0 4px ${gradientFrom}10`
+              : `0 6px 16px -4px ${gradientFrom}40`,
+            transform: isHovered ? 'scale(1.08)' : 'scale(1)',
+            transition: 'all 0.3s ease'
           }}
         >
-          <Icon size={22} className="text-white" />
+          <Icon size={24} style={{ color: 'white' }} />
         </div>
       </div>
 
       {/* Title */}
       <h3
-        className="font-semibold mb-1 transition-colors"
+        className="font-semibold mb-2 relative z-10"
         style={{
-          fontSize: '16px',
+          fontSize: '17px',
           color: '#0f172a',
           lineHeight: '1.3'
         }}
@@ -662,11 +711,12 @@ function FeatureCard({
 
       {/* Description */}
       <p
+        className="relative z-10"
         style={{
           fontSize: '13px',
           color: '#64748b',
-          lineHeight: '1.5',
-          marginBottom: '12px'
+          lineHeight: '1.6',
+          marginBottom: '14px'
         }}
       >
         {description}
@@ -674,13 +724,82 @@ function FeatureCard({
 
       {/* Arrow indicator */}
       <div
-        className="inline-flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ fontSize: '13px', fontWeight: '500', color: '#0033FF' }}
+        className="relative z-10"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '13px',
+          fontWeight: '600',
+          color: gradientFrom,
+          opacity: isHovered ? 1 : 0,
+          transform: isHovered ? 'translateX(0)' : 'translateX(-8px)',
+          transition: 'all 0.3s ease'
+        }}
       >
         Explore
-        <span className="transition-transform group-hover:translate-x-1">→</span>
+        <span style={{
+          transition: 'transform 0.3s ease',
+          transform: isHovered ? 'translateX(4px)' : 'translateX(0)'
+        }}>→</span>
       </div>
     </Link>
+  )
+}
+
+function BenefitItem({
+  icon: Icon,
+  title,
+  description,
+  gradientFrom,
+  gradientTo
+}: {
+  icon: React.ComponentType<{ size?: number | string; className?: string; style?: React.CSSProperties }>
+  title: string
+  description: string
+  gradientFrom: string
+  gradientTo: string
+}) {
+  const [isHovered, setIsHovered] = useState(false)
+
+  return (
+    <li
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '8px 10px',
+        borderRadius: '10px',
+        background: isHovered
+          ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 255, 0.8) 100%)'
+          : 'transparent',
+        border: isHovered ? '1px solid rgba(99, 102, 241, 0.15)' : '1px solid transparent',
+        boxShadow: isHovered ? '0 4px 12px -4px rgba(0, 51, 255, 0.12)' : 'none',
+        transition: 'all 0.2s ease',
+        cursor: 'default'
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div style={{
+        width: '28px',
+        height: '28px',
+        borderRadius: '8px',
+        background: `linear-gradient(135deg, ${gradientFrom} 0%, ${gradientTo} 100%)`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        boxShadow: `0 2px 8px -2px ${gradientFrom}50`,
+        transition: 'all 0.2s ease'
+      }}>
+        <Icon size={14} style={{ color: 'white' }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <strong style={{ fontSize: '13px', color: '#0f172a', fontWeight: '600' }}>{title}</strong>
+        <span style={{ fontSize: '13px', color: '#64748b' }}> — {description}</span>
+      </div>
+    </li>
   )
 }
 
