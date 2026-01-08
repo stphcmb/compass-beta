@@ -1002,7 +1002,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
             fontSize: 'clamp(1.5rem, 4vw, 2rem)',
             fontWeight: 'var(--weight-bold)',
             marginBottom: 'var(--space-2)',
-            background: 'linear-gradient(135deg, #162950 0%, #1075DC 100%)',
+            background: 'linear-gradient(135deg, #0033FF 0%, #3D5FFF 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -1020,10 +1020,11 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
         /* Edit Mode - Editable textarea with Analyze button */
         <div
           style={{
-            borderRadius: '12px',
-            background: '#FFFFFF',
-            boxShadow: '0 4px 24px rgba(22, 41, 80, 0.08)',
-            border: '1px solid #AADAF9',
+            borderRadius: '16px',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+            border: '2px solid rgba(0, 51, 255, 0.3)',
             overflow: 'hidden',
             marginBottom: loading || error ? 'var(--space-6)' : 0
           }}
@@ -1042,7 +1043,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
               border: 'none',
               fontSize: '15px',
               lineHeight: '1.7',
-              color: '#141414',
+              color: '#1e293b',
               backgroundColor: 'transparent',
               resize: 'none',
               outline: 'none',
@@ -1056,20 +1057,20 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '12px 20px',
-              background: '#DCF2FA',
-              borderTop: '1px solid #AADAF9',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              borderTop: '1px solid rgba(148, 163, 184, 0.2)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '13px', color: text.length > 4000 ? '#ef4444' : '#162950', fontWeight: 500 }}>
+              <span style={{ fontSize: '13px', color: text.length > 4000 ? '#ef4444' : '#64748b', fontWeight: 500 }}>
                 {text.length > 0 ? `${text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
               </span>
-              <span style={{ color: '#AADAF9' }}>•</span>
-              <span style={{ fontSize: '12px', color: '#162950' }}>
+              <span style={{ color: '#cbd5e1' }}>•</span>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>
                 <kbd style={{
                   padding: '2px 6px',
                   backgroundColor: 'white',
-                  border: '1px solid #AADAF9',
+                  border: '1px solid #cbd5e1',
                   borderRadius: '4px',
                   fontSize: '11px',
                   fontFamily: 'monospace'
@@ -1085,7 +1086,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                 gap: '8px',
                 background: !canAnalyze
                   ? '#e2e8f0'
-                  : 'linear-gradient(135deg, #0158AE 0%, #1075DC 100%)',
+                  : 'linear-gradient(135deg, #0033FF 0%, #0028CC 100%)',
                 color: 'white',
                 padding: '12px 24px',
                 borderRadius: '8px',
@@ -1094,7 +1095,21 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                 border: 'none',
                 cursor: !canAnalyze ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s ease',
-                boxShadow: !canAnalyze ? 'none' : '0 4px 12px rgba(1, 88, 174, 0.3)',
+                boxShadow: !canAnalyze ? 'none' : '0 4px 20px rgba(0, 51, 255, 0.5)',
+              }}
+              onMouseEnter={(e) => {
+                if (canAnalyze) {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 51, 255, 0.6)'
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #3D5FFF 0%, #0033FF 100%)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (canAnalyze) {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 51, 255, 0.5)'
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #0033FF 0%, #0028CC 100%)'
+                }
               }}
             >
               {loading ? (

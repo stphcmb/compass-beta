@@ -258,8 +258,54 @@ function AuthorIndexPageContent() {
     return (
       <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
         <Header sidebarCollapsed={true} />
-        <main className="flex-1 mt-16 flex items-center justify-center">
-          <div style={{ color: 'var(--color-mid-gray)', fontSize: '14px' }}>Loading authors...</div>
+        <main className="flex-1 mt-16 overflow-hidden" style={{ display: 'flex' }}>
+          {/* Left skeleton */}
+          <div style={{
+            width: '320px',
+            minWidth: '320px',
+            borderRight: '1px solid var(--color-light-gray)',
+            padding: '24px 16px',
+            backgroundColor: 'var(--color-air-white)'
+          }}>
+            <div style={{
+              height: '20px',
+              width: '100px',
+              backgroundColor: '#e2e8f0',
+              borderRadius: '4px',
+              marginBottom: '16px'
+            }} />
+            <div style={{
+              height: '32px',
+              backgroundColor: '#e2e8f0',
+              borderRadius: '8px',
+              marginBottom: '12px'
+            }} />
+            <div style={{
+              height: '36px',
+              backgroundColor: '#e2e8f0',
+              borderRadius: '8px'
+            }} />
+          </div>
+          {/* Right skeleton */}
+          <div style={{ flex: 1, padding: '24px' }}>
+            <div style={{
+              height: '24px',
+              width: '200px',
+              backgroundColor: '#e2e8f0',
+              borderRadius: '4px',
+              marginBottom: '24px'
+            }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} style={{
+                  height: '120px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0'
+                }} />
+              ))}
+            </div>
+          </div>
         </main>
       </div>
     )

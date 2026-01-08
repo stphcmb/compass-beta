@@ -217,13 +217,37 @@ export default function CampAccordion({
   if (loading) {
     return (
       <div className="space-y-4">
-        {[1, 2].map((i) => (
-          <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-1/3 mb-3"></div>
-            <div className="h-4 bg-gray-100 rounded w-2/3 mb-4"></div>
-            <div className="space-y-4">
-              {[1, 2, 3].map((j) => (
-                <div key={j} className="h-40 bg-gray-100 rounded-lg"></div>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="scroll-mt-4">
+            {/* Domain header skeleton */}
+            <div className="mb-1.5 py-2 px-3 -mx-3 rounded-lg w-[calc(100%+24px)]" style={{
+              backgroundColor: '#f0f0ff',
+              borderLeft: '4px solid #cbd5e1',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+            }}>
+              <div className="flex items-center gap-2">
+                <div className="h-5 bg-gray-300 rounded w-40 animate-pulse" />
+                <div className="h-5 bg-gray-300 rounded w-12 animate-pulse" />
+                <div className="h-5 bg-gray-300 rounded w-12 animate-pulse" />
+              </div>
+              <div className="h-4 bg-gray-300 rounded w-3/4 mt-2 animate-pulse" />
+            </div>
+            {/* Camp cards skeleton */}
+            <div className="space-y-1.5 ml-1 pl-3 border-l-2 border-gray-200">
+              {[1, 2].map((j) => (
+                <div key={j} className="bg-white rounded-lg border border-gray-200 p-4 animate-pulse">
+                  <div className="h-5 bg-gray-300 rounded w-48 mb-2" />
+                  <div className="h-4 bg-gray-200 rounded w-full mb-3" />
+                  <div className="flex gap-2 mb-3">
+                    <div className="h-5 bg-gray-200 rounded w-16" />
+                    <div className="h-5 bg-gray-200 rounded w-16" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[1, 2, 3].map((k) => (
+                      <div key={k} className="h-32 bg-gray-100 rounded-lg" />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
