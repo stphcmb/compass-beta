@@ -1,68 +1,92 @@
-# Database Seeding Guide
+# Scripts
 
-This guide will help you populate your Supabase database with seed data.
+This directory contains utility scripts for database management, seeding, and maintenance.
 
-## Step 1: Get Your Database Connection String
+## Directory Structure
 
-1. Go to your [Supabase Dashboard](https://supabase.com/dashboard)
-2. Select your project: `qbobesjpzawlffbgytve`
-3. Click **"Project Settings"** (gear icon in the sidebar)
-4. Click **"Database"** in the left menu
-5. Scroll down to **"Connection string"**
-6. Select **"URI"** tab
-7. Copy the connection string (it looks like: `postgresql://postgres:[YOUR-PASSWORD]@db...`)
-8. Click "Reset database password" if you don't have the password
-
-## Step 2: Update .env.local
-
-Open `.env.local` and replace `[YOUR-PASSWORD]` in the DATABASE_URL with your actual database password:
-
-```bash
-DATABASE_URL=postgresql://postgres.YOUR_ACTUAL_PASSWORD@db.qbobesjpzawlffbgytve.supabase.co:5432/postgres
+```
+scripts/
+├── README.md                    # This file
+├── seed.ts                      # Basic seed data
+├── seed-client.ts               # Client-side seeding
+├── seed-supabase.ts             # Supabase-specific seeding
+├── seed-new-taxonomy.ts         # New taxonomy seeding
+├── test-db.ts                   # Database connection testing
+├── activate-citation-agent.ts   # Run citation verification
+├── citation-summary.ts          # Get citation status summary
+├── run-citation-fixes.ts        # Fix broken citation URLs
+├── fix_broken_citations.sql     # SQL for citation URL fixes
+├── validate_authors_pre_commit.mjs  # Pre-commit validation
+├── install_git_hooks.sh         # Install git hooks
+├── git-hooks/                   # Git hook scripts
+└── archive/                     # Retired one-off scripts
+    ├── authors/                 # Author data scripts
+    ├── quotes/                  # Quote management scripts
+    ├── analysis/                # Data analysis scripts
+    └── migrations/              # One-time migrations
 ```
 
-## Step 3: Run the Seed Script
+## Active Scripts
 
-You have two seeding options:
+### Database Seeding
 
-### Option A: Basic Seed Data (5 authors, 5 camps)
 ```bash
+# Basic seed data (5 authors, 5 camps)
 npm run seed
-```
 
-### Option B: Comprehensive MVP Data (32 authors, 14 camps) - RECOMMENDED
-```bash
+# Comprehensive MVP data (recommended)
 npm run seed:mvp
 ```
 
-## What the Script Does
-
-1. ✅ Connects to your Supabase database
-2. ✅ Creates all necessary tables (authors, camps, camp_authors, sources, topics, etc.)
-3. ✅ Loads seed data
-4. ✅ Verifies the data was inserted correctly
-5. ✅ Shows you a summary of what was created
-
-## Troubleshooting
-
-### "relation already exists"
-Tables are already created. This is fine! The script will skip table creation.
-
-### "duplicate key"
-Data already exists. To re-seed:
-1. Go to Supabase Dashboard → SQL Editor
-2. Run: `TRUNCATE authors, camps, camp_authors, sources, topics, source_topics, saved_searches, search_history CASCADE;`
-3. Run the seed script again
-
-### "password authentication failed"
-Your database password is incorrect. Go back to Step 1 and reset your password.
-
-## After Seeding
-
-Once seeding is complete, start your development server:
+### Citation Verification
 
 ```bash
-npm run dev
+# Check all citation URLs and update status
+npx tsx scripts/activate-citation-agent.ts
+
+# View citation health summary
+npx tsx scripts/citation-summary.ts
+
+# Fix broken URLs (run after updating fix_broken_citations.sql)
+npx tsx scripts/run-citation-fixes.ts
 ```
 
-Then visit `http://localhost:3000` to see your data in the frontend!
+### Database Testing
+
+```bash
+# Test database connection
+npx tsx scripts/test-db.ts
+```
+
+### Git Hooks
+
+```bash
+# Install pre-commit hooks for author validation
+./scripts/install_git_hooks.sh
+```
+
+## Environment Variables
+
+Required in `.env.local`:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key  # For write operations
+DATABASE_URL=postgresql://...                      # For direct DB access
+```
+
+## Archive
+
+The `archive/` directory contains one-off scripts that were used for specific data migrations or fixes. They are kept for reference but should not need to be run again.
+
+- **authors/**: Scripts for adding/updating author data
+- **quotes/**: Scripts for managing quotes and sources
+- **analysis/**: Data analysis and inspection scripts
+- **migrations/**: One-time database migrations
+
+## Adding New Scripts
+
+1. **Utility scripts** that will be reused → add to main `scripts/` folder
+2. **One-off scripts** for specific tasks → run them, then move to `archive/`
+3. Update this README when adding new utility scripts
