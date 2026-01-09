@@ -120,7 +120,8 @@ function getMatchReason(
 
   // 3. Check semantic expansion matches
   for (const eq of expandedQueries || []) {
-    const expandedText = (eq.query || eq).toLowerCase()
+    const rawQuery = eq?.query || eq
+    const expandedText = (typeof rawQuery === 'string' ? rawQuery : String(rawQuery || '')).toLowerCase()
     const expandedWords = expandedText.split(/\s+/).filter((w: string) => w.length > 3)
     const matchedExpanded = expandedWords.filter((word: string) => textContainsWord(searchableText, word))
     if (matchedExpanded.length >= 1) {
@@ -711,7 +712,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
                       {expandedQueries.map((eq, i) => (
                         <span key={i}>
                           {i > 0 && <span className="mx-1 text-gray-400">•</span>}
-                          <span className="font-medium">{eq.query || eq}</span>
+                          <span className="font-medium">{eq?.query || (typeof eq === 'string' ? eq : '')}</span>
                         </span>
                       ))}
                     </p>
