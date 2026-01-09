@@ -39,7 +39,7 @@ function AuthorIndexPageContent() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [domainFilter, setDomainFilter] = useState<string | null>(null)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [groupBy, setGroupBy] = useState<'alphabet' | 'domain' | 'recent' | 'favorites'>('alphabet')
   const letterRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const domainRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -1125,9 +1125,35 @@ function AuthorIndexPageContent() {
                   }}>
                     <Users size={18} style={{ color: '#059669' }} />
                   </div>
-                  <p style={{ fontSize: '14px', color: 'var(--color-mid-gray)', margin: 0 }}>
+                  <button
+                    onClick={() => {
+                      setSidebarCollapsed(false)
+                      setGroupBy('alphabet')
+                    }}
+                    style={{
+                      fontSize: '14px',
+                      color: 'var(--color-accent)',
+                      margin: 0,
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      textDecoration: 'underline',
+                      textDecorationStyle: 'dotted',
+                      textUnderlineOffset: '3px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#4338ca'
+                      e.currentTarget.style.textDecorationStyle = 'solid'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--color-accent)'
+                      e.currentTarget.style.textDecorationStyle = 'dotted'
+                    }}
+                  >
                     Select an author from the sidebar to view their positions, quotes, and evidence.
-                  </p>
+                  </button>
                 </div>
 
                 {/* Author sections */}
@@ -1149,7 +1175,10 @@ function AuthorIndexPageContent() {
                         <span>★</span> Your Favorites
                         {totalFavorites > 3 && (
                           <button
-                            onClick={() => setGroupBy('favorites')}
+                            onClick={() => {
+                              setSidebarCollapsed(false)
+                              setGroupBy('favorites')
+                            }}
                             style={{
                               fontWeight: 500,
                               fontSize: '10px',
@@ -1272,7 +1301,10 @@ function AuthorIndexPageContent() {
                         Recently Added
                         {totalRecent > 3 && (
                           <button
-                            onClick={() => setGroupBy('recent')}
+                            onClick={() => {
+                              setSidebarCollapsed(false)
+                              setGroupBy('recent')
+                            }}
                             style={{
                               fontWeight: 500,
                               fontSize: '10px',

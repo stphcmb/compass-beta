@@ -16,6 +16,31 @@ interface N8NResponse {
   results?: any[]
 }
 
+/**
+ * Cached demo query for the sample search on explore page
+ * Only the exact phrase "future of work" is cached - other queries always call n8n
+ */
+const DEMO_QUERY_CACHE: Record<string, ExpandedQuery[]> = {
+  'future of work': [
+    { query: 'future of work', role: 'core', priority: 10 },
+    { query: 'automation employment', role: 'related', priority: 8 },
+    { query: 'AI job displacement', role: 'related', priority: 8 },
+    { query: 'remote work trends', role: 'adjacent', priority: 7 },
+    { query: 'workforce transformation', role: 'related', priority: 7 },
+    { query: 'technological unemployment', role: 'related', priority: 6 },
+    { query: 'skills economy', role: 'adjacent', priority: 6 },
+    { query: 'labor market AI', role: 'related', priority: 5 }
+  ]
+}
+
+/**
+ * Normalize query for cache lookup
+ * Lowercase, trim, collapse spaces
+ */
+function normalizeQuery(query: string): string {
+  return query.toLowerCase().trim().replace(/\s+/g, ' ')
+}
+
 export class N8NQueryExpansionProvider implements QueryExpansionProvider {
   readonly name = 'N8N'
 
@@ -33,6 +58,13 @@ export class N8NQueryExpansionProvider implements QueryExpansionProvider {
    * @returns Array of expanded queries or null if service fails
    */
   async expand(query: string): Promise<ExpandedQuery[] | null> {
+    // Check demo cache first to avoid n8n calls for sample searches
+    const normalizedQuery = normalizeQuery(query)
+    const cachedResult = DEMO_QUERY_CACHE[normalizedQuery]
+    if (cachedResult) {
+      return cachedResult
+    }
+
     const webhookUrl = getWebhookUrl()
 
     if (!webhookUrl) {

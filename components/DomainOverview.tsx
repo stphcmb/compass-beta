@@ -16,9 +16,10 @@ interface DomainOverviewProps {
   activeDomain?: string | null
   isCollapsed?: boolean
   onToggleCollapse?: () => void
+  inline?: boolean  // When true, displays as inline grid in main content
 }
 
-export default function DomainOverview({ onDomainFilter, activeDomain, isCollapsed = false, onToggleCollapse }: DomainOverviewProps) {
+export default function DomainOverview({ onDomainFilter, activeDomain, isCollapsed = false, onToggleCollapse, inline = false }: DomainOverviewProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [domainData, setDomainData] = useState<Record<string, DomainData>>({})
@@ -115,6 +116,18 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
   }
 
   if (loading) {
+    if (inline) {
+      return (
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="h-4 w-32 rounded animate-pulse bg-gray-200 mb-4" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-20 rounded-lg animate-pulse bg-gray-100" />
+            ))}
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="h-full flex flex-col bg-white">
         <div className="border-b border-gray-200" style={{ padding: '24px 16px 16px 22px' }}>
@@ -129,6 +142,204 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
     )
   }
 
+  // INLINE MODE: Grid layout for main content area
+  if (inline) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-white">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-indigo-600" />
+            <h2 className="text-[14px] font-semibold text-gray-900">
+              The Core Debates
+            </h2>
+          </div>
+          <p className="text-[12px] text-gray-500 mt-1">
+            Five domains shaping AI discourse — click to explore and filter perspectives
+          </p>
+        </div>
+
+        {/* Domain Grid */}
+        <div className="p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {DOMAINS.map((domain) => {
+              const data = domainData[domain.name] || { perspectives: [], authorCount: 0 }
+              const colors = getDomainConfig(domain.name)
+              const isActive = activeDomain === domain.name
+              const tensionParts = domain.keyTension.split(' vs. ')
+              const leftLabel = tensionParts[0] || ''
+              const rightLabel = tensionParts[1] || ''
+
+              return (
+                <button
+                  key={domain.name}
+                  onClick={() => handleDomainClick(domain.name)}
+                  className="text-left transition-all duration-300 group"
+                  style={{
+                    padding: isActive ? '16px' : '12px 14px',
+                    borderRadius: '12px',
+                    border: `1px solid ${isActive ? colors.bgSolid : '#e5e7eb'}`,
+                    backgroundColor: isActive ? colors.bgLight : 'white',
+                    boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
+                    gridColumn: isActive ? 'span 1' : 'span 1'
+                  }}
+                >
+                  {/* Domain Header */}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span style={{ fontSize: isActive ? '18px' : '16px' }}>{domain.icon}</span>
+                    <span
+                      className="font-semibold flex-1 group-hover:text-indigo-700 transition-colors"
+                      style={{
+                        fontSize: isActive ? '15px' : '13px',
+                        color: isActive ? colors.text : '#1f2937'
+                      }}
+                    >
+                      {domain.shortName}
+                    </span>
+                    <ChevronRight
+                      className="transition-transform"
+                      style={{
+                        width: '14px',
+                        height: '14px',
+                        color: isActive ? colors.bgSolid : '#9ca3af',
+                        transform: isActive ? 'rotate(90deg)' : 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* Core Question */}
+                  <p
+                    className="leading-snug"
+                    style={{
+                      fontSize: isActive ? '13px' : '11px',
+                      color: isActive ? colors.text : '#6b7280'
+                    }}
+                  >
+                    {domain.coreQuestion}
+                  </p>
+
+                  {/* Expanded Details - Only when active */}
+                  {isActive && (
+                    <div style={{
+                      marginTop: '12px',
+                      paddingTop: '12px',
+                      borderTop: `1px solid ${colors.bgSolid}30`
+                    }}>
+                      {/* Description */}
+                      <p style={{
+                        fontSize: '12px',
+                        lineHeight: '1.6',
+                        color: '#374151',
+                        marginBottom: '12px'
+                      }}>
+                        {domain.description}
+                      </p>
+
+                      {/* You'll Find */}
+                      <div style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: `${colors.bgLight}`,
+                        border: `1px solid ${colors.bgSolid}30`,
+                        marginBottom: '12px'
+                      }}>
+                        <div style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: colors.text,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          marginBottom: '4px'
+                        }}>
+                          You'll Find
+                        </div>
+                        <p style={{
+                          fontSize: '11px',
+                          lineHeight: '1.5',
+                          color: '#4b5563',
+                          margin: 0
+                        }}>
+                          {domain.youWillFind}
+                        </p>
+                      </div>
+
+                      {/* The Debate Spectrum */}
+                      <div>
+                        <div style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          marginBottom: '8px'
+                        }}>
+                          The Debate
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px'
+                        }}>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: colors.text,
+                            whiteSpace: 'nowrap',
+                            minWidth: 'fit-content'
+                          }}>
+                            {leftLabel}
+                          </span>
+                          <div style={{
+                            flex: 1,
+                            height: '6px',
+                            borderRadius: '3px',
+                            background: `linear-gradient(90deg, ${colors.bgSolid} 0%, #fbbf24 50%, #9ca3af 100%)`
+                          }} />
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: '#6b7280',
+                            whiteSpace: 'nowrap',
+                            minWidth: 'fit-content'
+                          }}>
+                            {rightLabel}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Stats row */}
+                      <div className="flex items-center gap-4 mt-3 pt-3 border-t" style={{ borderColor: `${colors.bgSolid}30` }}>
+                        <span style={{ fontSize: '11px', color: colors.text, fontWeight: 500 }}>
+                          {data.perspectives.length} perspectives
+                        </span>
+                        <span style={{ fontSize: '11px', color: colors.text, fontWeight: 500 }}>
+                          {data.authorCount} authors
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Compact Stats - Only when not active */}
+                  {!isActive && (
+                    <div className="flex items-center gap-3 mt-2 pt-2 border-t" style={{ borderColor: '#f3f4f6' }}>
+                      <span style={{ fontSize: '10px', color: '#9ca3af' }}>
+                        {data.perspectives.length} perspectives
+                      </span>
+                      <span style={{ fontSize: '10px', color: '#9ca3af' }}>
+                        {data.authorCount} authors
+                      </span>
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // SIDEBAR MODE: Vertical list for fixed sidebar
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Header with collapse toggle */}

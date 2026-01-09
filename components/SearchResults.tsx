@@ -147,7 +147,7 @@ interface SearchResultsProps {
   onResultsLoaded?: (camps: any[], expandedQueries: any[] | null) => void
 }
 
-type SortOption = 'relevance' | 'name-asc' | 'name-desc' | 'domain'
+type SortOption = 'relevance' | 'name-asc' | 'name-desc' | 'domain-asc'
 
 function getInitials(name?: string) {
   if (!name) return 'A'
@@ -280,6 +280,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
   const [loading, setLoading] = useState(true)
   const [showAll, setShowAll] = useState(false)
   const [sortBy, setSortBy] = useState<SortOption>('relevance')
+  const [selectedDomains, setSelectedDomains] = useState<Set<string>>(new Set())
 
   // Note state for search
   const [isEditingNote, setIsEditingNote] = useState(false)
@@ -423,15 +424,43 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
     }))
   ), [camps])
 
+  // Extract available domains from results
+  const availableDomains = useMemo(() => {
+    const domains = new Set<string>()
+    flattenedAuthors.forEach(author => {
+      if (author.domainName) domains.add(author.domainName)
+    })
+    return Array.from(domains).sort()
+  }, [flattenedAuthors])
+
+  // Toggle domain filter
+  const toggleDomain = (domain: string) => {
+    setSelectedDomains(prev => {
+      const next = new Set(prev)
+      if (next.has(domain)) {
+        next.delete(domain)
+      } else {
+        next.add(domain)
+      }
+      return next
+    })
+  }
+
+  // Filter authors by selected domains
+  const filteredAuthors = useMemo(() => {
+    if (selectedDomains.size === 0) return flattenedAuthors
+    return flattenedAuthors.filter(author => selectedDomains.has(author.domainName || ''))
+  }, [flattenedAuthors, selectedDomains])
+
   // Sort based on selected option
   const sortedAuthors = useMemo(() => {
-    return [...flattenedAuthors].sort((a, b) => {
+    return [...filteredAuthors].sort((a, b) => {
       switch (sortBy) {
         case 'name-asc':
           return (a.name || '').localeCompare(b.name || '')
         case 'name-desc':
           return (b.name || '').localeCompare(a.name || '')
-        case 'domain':
+        case 'domain-asc':
           const domainCompare = (a.domainName || '').localeCompare(b.domainName || '')
           if (domainCompare !== 0) return domainCompare
           return (a.name || '').localeCompare(b.name || '')
@@ -450,7 +479,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
           return (a.name || '').localeCompare(b.name || '')
       }
     })
-  }, [flattenedAuthors, sortBy, query, expandedQueries])
+  }, [filteredAuthors, sortBy, query, expandedQueries])
 
   // Deduplicate authors (all are relevant since backend already filtered)
   const uniqueAuthors = useMemo(() => {
@@ -570,14 +599,49 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
                 className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-[13px] text-gray-700 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
-                <option value="relevance">Sort: Relevance</option>
-                <option value="name-asc">Sort: A → Z</option>
-                <option value="name-desc">Sort: Z → A</option>
+                <option value="relevance">Relevance</option>
+                <option value="name-asc">Name: A → Z</option>
+                <option value="name-desc">Name: Z → A</option>
+                <option value="domain-asc">Domain: A → Z</option>
               </select>
               <ArrowUpDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
           </div>
         </div>
+
+        {/* Domain Filter Badges */}
+        {availableDomains.length > 1 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[12px] text-gray-500 mr-1">Filter by domain:</span>
+            {availableDomains.map(domainName => {
+              const isSelected = selectedDomains.has(domainName)
+              return (
+                <button
+                  key={domainName}
+                  onClick={() => toggleDomain(domainName)}
+                  className={`px-2.5 py-1 text-[11px] font-medium rounded-full transition-all ${
+                    isSelected
+                      ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                      : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {domainName}
+                  {isSelected && (
+                    <X className="inline-block w-3 h-3 ml-1 -mr-0.5" />
+                  )}
+                </button>
+              )
+            })}
+            {selectedDomains.size > 0 && (
+              <button
+                onClick={() => setSelectedDomains(new Set())}
+                className="text-[11px] text-gray-500 hover:text-indigo-600 ml-1"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Note Editing Panel - shown when editing */}
         {isEditingNote && (
@@ -709,12 +773,15 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
                       </span>
                     </div>
                     <p className={`text-[12px] mt-1 ${expansionMeta?.method === 'ai' ? 'text-indigo-800' : 'text-gray-700'}`}>
-                      {expandedQueries.map((eq, i) => (
-                        <span key={i}>
-                          {i > 0 && <span className="mx-1 text-gray-400">•</span>}
-                          <span className="font-medium">{eq?.query || (typeof eq === 'string' ? eq : '')}</span>
-                        </span>
-                      ))}
+                      {expandedQueries
+                        .map(eq => eq?.query || (typeof eq === 'string' ? eq : ''))
+                        .filter(q => q && q.trim())
+                        .map((queryText, i) => (
+                          <span key={i}>
+                            {i > 0 && <span className="mx-1 text-gray-400">•</span>}
+                            <span className="font-medium">{queryText}</span>
+                          </span>
+                        ))}
                     </p>
                   </div>
                 </div>

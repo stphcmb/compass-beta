@@ -48,8 +48,10 @@ export async function expandQuery(query: string): Promise<ExpandedQuery[] | null
 
 /**
  * Stopwords to exclude from highlighting - common words that cause false matches
+ * Includes generic academic/contextual words that appear in expansions but shouldn't dominate
  */
 const HIGHLIGHT_STOPWORDS = new Set([
+  // Common function words
   'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'her', 'was', 'one',
   'our', 'out', 'has', 'have', 'had', 'his', 'how', 'its', 'may', 'new', 'now', 'old',
   'see', 'way', 'who', 'did', 'get', 'got', 'let', 'put', 'say', 'she', 'too', 'use',
@@ -60,7 +62,12 @@ const HIGHLIGHT_STOPWORDS = new Set([
   'while', 'would', 'could', 'should', 'about', 'after', 'being', 'come', 'every',
   'first', 'into', 'know', 'made', 'many', 'might', 'other', 'some', 'still', 'thing',
   'think', 'those', 'through', 'under', 'using', 'without', 'your', 'also', 'back',
-  'because', 'before', 'between', 'both', 'during', 'give', 'going', 'good', 'great'
+  'because', 'before', 'between', 'both', 'during', 'give', 'going', 'good', 'great',
+  // Generic academic/contextual words that shouldn't dominate search
+  'research', 'study', 'studies', 'analysis', 'development', 'approach', 'approaches',
+  'impact', 'impacts', 'issue', 'issues', 'challenge', 'challenges', 'topic', 'topics',
+  'area', 'areas', 'field', 'fields', 'work', 'works', 'system', 'systems', 'related',
+  'based', 'level', 'levels', 'type', 'types', 'form', 'forms', 'role', 'roles'
 ])
 
 /**

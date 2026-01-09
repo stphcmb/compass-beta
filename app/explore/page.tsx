@@ -14,14 +14,10 @@ import { HowPerspectivesWorkModal, useHowPerspectivesWorkModal } from '@/compone
 import DomainOverview from '@/components/DomainOverview'
 // import DomainSpectrum from '@/components/DomainSpectrum' // Temporarily hidden
 import { TERMINOLOGY } from '@/lib/constants/terminology'
-import { Layers, Compass, Search as SearchIcon, Grid3X3, ArrowLeft, Lightbulb, Users, TrendingUp } from 'lucide-react'
-
-// Layout constants - match Authors page sidebar
-const SIDEBAR_WIDTH = 320
+import { Compass, Search as SearchIcon, Grid3X3, ArrowLeft } from 'lucide-react'
 
 function ExplorePageContent() {
   const searchParams = useSearchParams()
-  const [domainPanelCollapsed, setDomainPanelCollapsed] = useState(false)
   const [activeDomain, setActiveDomain] = useState<string | null>(null)
 
   const query = searchParams.get('q') || ''
@@ -93,67 +89,18 @@ function ExplorePageContent() {
     }
   }, [query])
 
-  // Calculate margins for layout
-  const sidebarLeft = 0
-  const actualSidebarWidth = domainPanelCollapsed ? 0 : SIDEBAR_WIDTH
-  const mainContentLeft = actualSidebarWidth
+  // No sidebar - full width layout
 
   return (
     <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
       <Header sidebarCollapsed={true} />
 
-      {/* Domain Panel Expand Button - animated appearance */}
-      <button
-        onClick={() => setDomainPanelCollapsed(false)}
-        className={`fixed top-20 z-20 p-2 bg-white border border-gray-200 rounded-lg shadow-md hover:bg-gray-50 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 ${
-          domainPanelCollapsed
-            ? 'opacity-100 translate-x-0'
-            : 'opacity-0 -translate-x-2 pointer-events-none'
-        }`}
-        style={{
-          left: '16px',
-          transitionDelay: domainPanelCollapsed ? '150ms' : '0ms'
-        }}
-        title="Expand domain panel"
-      >
-        <Layers className="w-5 h-5 text-indigo-600" />
-      </button>
-
-      {/* Domain Overview Panel - Fixed position sidebar */}
-      <aside
-        className="fixed top-16 h-[calc(100vh-64px)] border-r border-gray-200 z-10 overflow-hidden"
-        style={{
-          left: `${sidebarLeft}px`,
-          width: domainPanelCollapsed ? '0px' : `${SIDEBAR_WIDTH}px`,
-          opacity: domainPanelCollapsed ? 0 : 1,
-          backgroundColor: 'var(--color-air-white)',
-          transition: 'width 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease-out',
-          transitionDelay: domainPanelCollapsed ? '0ms' : '50ms'
-        }}
-      >
-        <div
-          className="h-full"
-          style={{
-            width: `${SIDEBAR_WIDTH}px`,
-            transform: domainPanelCollapsed ? 'translateX(-20px)' : 'translateX(0)',
-            opacity: domainPanelCollapsed ? 0 : 1,
-            transition: 'transform 250ms ease-out, opacity 200ms ease-out',
-            transitionDelay: domainPanelCollapsed ? '0ms' : '100ms'
-          }}
-        >
-          <DomainOverview
-            onDomainFilter={setActiveDomain}
-            activeDomain={activeDomain}
-            onToggleCollapse={() => setDomainPanelCollapsed(true)}
-          />
-        </div>
-      </aside>
+      {/* Sidebar hidden in all modes - domain filtering now inline */}
 
       {/* Main Content */}
       <main
         ref={mainRef}
-        className="flex-1 mt-16 overflow-y-auto transition-all duration-300"
-        style={{ marginLeft: `${mainContentLeft}px` }}
+        className="flex-1 mt-16 overflow-y-auto"
       >
         <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
           {/* Page Header */}
@@ -174,14 +121,16 @@ function ExplorePageContent() {
           {/* Domain Spectrum - Temporarily hidden */}
           {/* {!query && <DomainSpectrum />} */}
 
-          {/* Search Bar - Prominent styling */}
-          <SearchBar
-            initialQuery={query}
-            showEdit={false}
-            showSaveButton={!!query}
-            domain={domain}
-            camp={camp}
-          />
+          {/* Search Bar - Show in welcome state and search mode, hide in browse mode */}
+          {(query || !exploreMode) && (
+            <SearchBar
+              initialQuery={query}
+              showEdit={false}
+              showSaveButton={!!query}
+              domain={domain}
+              camp={camp}
+            />
+          )}
 
           {/* How Perspectives Work Modal */}
           <HowPerspectivesWorkModal isOpen={isModalOpen} onClose={closeModal} />
@@ -235,15 +184,18 @@ function ExplorePageContent() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
-                  {/* Search Option - Just highlight the search bar */}
-                  <div className="p-4 bg-white rounded-xl border border-gray-200 text-center">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  {/* Search Option - Clickable with sample query */}
+                  <a
+                    href="/explore?q=future+of+work"
+                    className="p-4 bg-white rounded-xl border border-blue-200 text-center hover:border-blue-400 hover:shadow-md transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-200 transition-colors">
                       <SearchIcon className="w-5 h-5 text-blue-600" />
                     </div>
                     <div className="text-[14px] font-medium text-gray-800 mb-1">Search</div>
                     <div className="text-[12px] text-gray-500 mb-3">Find authors by topic, quote, or name</div>
-                    <div className="text-[11px] text-blue-600 font-medium">↑ Use the search bar above</div>
-                  </div>
+                    <div className="text-[11px] text-blue-600 font-medium">Try "future of work" →</div>
+                  </a>
 
                   {/* Browse Option - Click to enter explore mode */}
                   <button
@@ -263,7 +215,7 @@ function ExplorePageContent() {
               /* EXPLORE MODE: Hierarchical domain/camp discovery */
               <div>
                 {/* Explore Mode Header with Back Button */}
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-4">
                   <button
                     onClick={() => {
                       setExploreMode(false)
@@ -277,9 +229,18 @@ function ExplorePageContent() {
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100">
                     <Grid3X3 className="w-4 h-4 text-indigo-600" />
                     <span className="text-[13px] font-medium text-indigo-700">
-                      {activeDomain ? activeDomain : 'All Perspectives'}
+                      {activeDomain ? activeDomain : 'Browse Mode'}
                     </span>
                   </div>
+                </div>
+
+                {/* Core Debates Panel - Inline in browse mode */}
+                <div className="mb-6">
+                  <DomainOverview
+                    onDomainFilter={setActiveDomain}
+                    activeDomain={activeDomain}
+                    inline={true}
+                  />
                 </div>
 
                 {/* Domain Filter Indicator */}
@@ -295,7 +256,7 @@ function ExplorePageContent() {
                     }}
                   >
                     <div>
-                      <span style={{ fontSize: '9px', color: 'var(--color-accent)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filtering</span>
+                      <span style={{ fontSize: '9px', color: 'var(--color-accent)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Showing perspectives in</span>
                       <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-soft-black)' }}>{activeDomain}</div>
                     </div>
                     <button
@@ -303,7 +264,7 @@ function ExplorePageContent() {
                       style={{ fontSize: '11px', color: 'var(--color-accent)', fontWeight: 500 }}
                       className="hover:underline"
                     >
-                      Clear
+                      Show all domains
                     </button>
                   </div>
                 )}
