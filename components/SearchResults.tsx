@@ -736,15 +736,15 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
 
         {/* Section 3: Related Perspectives */}
         {groupedAuthors.perspective.length > 0 && (
-          <div className="bg-gradient-to-b from-gray-50 to-slate-50/30 border border-gray-200 rounded-lg p-3">
+          <div className="bg-gradient-to-b from-purple-50 to-violet-50/30 border border-purple-200 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 rounded-md bg-gray-500 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-md bg-purple-500 flex items-center justify-center">
                 <Layers className="w-3.5 h-3.5 text-white" />
               </div>
               <h3 className="text-[14px] font-semibold text-gray-900">
                 Related Perspectives <span className="font-normal text-gray-500">(aligned position summaries)</span>
               </h3>
-              <span className="ml-auto text-[12px] font-semibold text-gray-600 bg-gray-200 px-2 py-0.5 rounded-full">
+              <span className="ml-auto text-[12px] font-semibold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
                 {groupedAuthors.perspective.length}
               </span>
             </div>
