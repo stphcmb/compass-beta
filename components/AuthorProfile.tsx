@@ -507,7 +507,7 @@ export default function AuthorProfile({ authorId }: AuthorProfileProps) {
                             lineHeight: 'var(--leading-relaxed)',
                             margin: 0
                           }}>
-                            {camp.description}
+                            {camp.description.replace(/\.$/, '')}
                           </p>
                         )}
                       </div>

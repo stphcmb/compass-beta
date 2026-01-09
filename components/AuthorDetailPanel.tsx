@@ -591,7 +591,7 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                             </Link>
                             {camp.description && (
                               <span style={{ fontSize: '11px', color: '#6b7280' }}>
-                                ({camp.description})
+                                ({camp.description.replace(/\.$/, '')})
                               </span>
                             )}
                           </span>
@@ -688,11 +688,6 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                               fontSize: '12px', fontWeight: 600, color: domainColors.text
                             }}>
                               {DOMAIN_DESCRIPTIONS[domain] || domain}
-                            </span>
-                            <span style={{
-                              fontSize: '11px', color: '#9ca3af', fontWeight: 500
-                            }}>
-                              ({camps.length} {camps.length === 1 ? 'position' : 'positions'})
                             </span>
                           </div>
 
@@ -1141,7 +1136,7 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
                             </Link>
                             {camp.description && (
                               <span style={{ fontSize: '11px', color: '#6b7280' }}>
-                                ({camp.description})
+                                ({camp.description.replace(/\.$/, '')})
                               </span>
                             )}
                           </span>
