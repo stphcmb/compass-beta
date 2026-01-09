@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Users, Quote, BookOpen, Filter, ChevronRight } from 'lucide-react'
+import { X, Users, Quote, ExternalLink, Filter, ChevronRight, Star } from 'lucide-react'
 
 const STORAGE_KEY = 'aboutThoughtLeadersSeenCount'
 const MAX_AUTO_SHOWS = 2
@@ -13,6 +13,14 @@ interface AboutThoughtLeadersModalProps {
 
 export function AboutThoughtLeadersModal({ isOpen, onClose }: AboutThoughtLeadersModalProps) {
   if (!isOpen) return null
+
+  const steps = [
+    { icon: Filter, title: 'Filter by domain', color: '#2563eb' },
+    { icon: Users, title: 'Click to view full profile', color: '#059669' },
+    { icon: Quote, title: 'See positions & quotes', color: '#7c3aed' },
+    { icon: ExternalLink, title: 'Access primary sources', color: '#d97706' },
+    { icon: Star, title: 'Save to favorites', color: '#f59e0b' }
+  ]
 
   return (
     <div
@@ -41,7 +49,7 @@ export function AboutThoughtLeadersModal({ isOpen, onClose }: AboutThoughtLeader
       <div
         style={{
           position: 'relative',
-          maxWidth: '520px',
+          maxWidth: '480px',
           width: '100%',
           maxHeight: '90vh',
           overflow: 'auto',
@@ -85,86 +93,50 @@ export function AboutThoughtLeadersModal({ isOpen, onClose }: AboutThoughtLeader
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <Users size={20} style={{ color: '#059669' }} />
             <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-              Meet the Thought Leaders
+              How Authors Works
             </h2>
           </div>
           <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-            Explore the experts shaping the AI discourse, their positions, and the evidence behind their views.
+            Explore 200+ thought leaders shaping AI discourse.
           </p>
         </div>
 
         {/* Content */}
         <div style={{ padding: '20px 24px' }}>
-          {/* Feature 1 */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#dbeafe',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <Filter size={18} style={{ color: '#2563eb' }} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#111827', margin: '0 0 4px 0' }}>
-                Browse by Domain
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-                Filter experts by their primary focus area using the color-coded domain buttons. Each domain represents a key area of AI discourse.
-              </p>
-            </div>
-          </div>
-
-          {/* Feature 2 */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#f3e8ff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <Quote size={18} style={{ color: '#7c3aed' }} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#111827', margin: '0 0 4px 0' }}>
-                Positions & Quotes
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-                Click any author to see their full profile: the perspectives they advocate for, direct quotes, and links to their original sources.
-              </p>
-            </div>
-          </div>
-
-          {/* Feature 3 */}
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#fef3c7',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <BookOpen size={18} style={{ color: '#d97706' }} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#111827', margin: '0 0 4px 0' }}>
-                Primary Sources
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-                Each profile includes links to books, articles, interviews, and other works so you can explore their thinking in depth.
-              </p>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {steps.map((step, idx) => {
+              const Icon = step.icon
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    backgroundColor: `${step.color}15`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <Icon size={16} style={{ color: step.color }} />
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#111827',
+                  }}>
+                    {step.title}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -199,7 +171,7 @@ export function AboutThoughtLeadersModal({ isOpen, onClose }: AboutThoughtLeader
               e.currentTarget.style.backgroundColor = '#059669'
             }}
           >
-            Start Exploring
+            Got it!
             <ChevronRight size={16} />
           </button>
         </div>

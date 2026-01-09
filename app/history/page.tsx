@@ -21,7 +21,8 @@ import {
   Check,
   Users,
   Compass,
-  ThumbsUp
+  ThumbsUp,
+  RotateCcw
 } from 'lucide-react'
 import Header from '@/components/Header'
 import PageHeader from '@/components/PageHeader'
@@ -580,13 +581,21 @@ export default function HistoryPage() {
           <PageHeader
             icon={<History size={24} />}
             iconVariant="purple"
-            title="What have you explored?"
-            subtitle="Revisit your searches, analyses, and saved insights."
+            title="Your History"
+            subtitle="Your research journey, all in one place."
             helpButton={{
               label: 'How it works',
               onClick: () => setShowAboutModal(true)
             }}
           />
+
+          {/* Subheader - Framing Question */}
+          <div className="text-center mb-6">
+            <h3 className="text-[17px] font-semibold text-gray-900 mb-2">What have you explored?</h3>
+            <p className="text-[14px] text-gray-600">
+              Revisit your searches, analyses, and saved insights.
+            </p>
+          </div>
 
           {/* Horizontal Navigation Tabs */}
           <div style={{
@@ -3671,6 +3680,13 @@ function UnifiedAuthorCard({
 
 // About Modal Component
 function AboutHistoryModal({ onClose }: { onClose: () => void }) {
+  const steps = [
+    { icon: Search, title: 'Revisit past searches', color: '#2563eb' },
+    { icon: Sparkles, title: 'Reload saved analyses', color: '#7c3aed' },
+    { icon: Star, title: 'Access favorite authors', color: '#d97706' },
+    { icon: RotateCcw, title: 'Restore deleted items', color: '#059669' }
+  ]
+
   return (
     <div
       style={{
@@ -3719,6 +3735,12 @@ function AboutHistoryModal({ onClose }: { onClose: () => void }) {
             color: '#64748b',
             zIndex: 10,
           }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)'
+          }}
         >
           <X size={20} />
         </button>
@@ -3731,82 +3753,49 @@ function AboutHistoryModal({ onClose }: { onClose: () => void }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <History size={20} style={{ color: '#6366f1' }} />
             <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-              Your Research History
+              How History Works
             </h2>
           </div>
           <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-            Track your research journey and pick up where you left off.
+            Your research journey, all in one place.
           </p>
         </div>
 
         <div style={{ padding: '20px 24px' }}>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#dbeafe',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <Search size={18} style={{ color: '#2563eb' }} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#111827', margin: '0 0 4px 0' }}>
-                Search History
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-                All your past searches are saved automatically. Revisit any search to continue your research.
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#f3e8ff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <Sparkles size={18} style={{ color: '#7c3aed' }} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#111827', margin: '0 0 4px 0' }}>
-                AI Analyses
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-                Your saved AI analyses are stored here. Load any past analysis to continue refining your work.
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#fef3c7',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <Star size={18} style={{ color: '#d97706' }} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#111827', margin: '0 0 4px 0' }}>
-                Favorite Authors
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: '1.5' }}>
-                Star authors from the Authors page to quickly access their profiles and track their perspectives.
-              </p>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {steps.map((step, idx) => {
+              const Icon = step.icon
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    backgroundColor: `${step.color}15`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <Icon size={16} style={{ color: step.color }} />
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#111827',
+                  }}>
+                    {step.title}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -3832,8 +3821,14 @@ function AboutHistoryModal({ onClose }: { onClose: () => void }) {
               justifyContent: 'center',
               gap: '8px',
             }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#4f46e5'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#6366f1'
+            }}
           >
-            Got it
+            Got it!
             <ChevronRight size={16} />
           </button>
         </div>

@@ -1109,9 +1109,9 @@ export default function AIEditor({ showTitle = false, initialAnalysisId }: AIEdi
             <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Sparkles className="w-7 h-7 text-indigo-600" />
             </div>
-            <h3 className="text-[17px] font-semibold text-gray-900 mb-2">Analyze your content</h3>
+            <h3 className="text-[17px] font-semibold text-gray-900 mb-2">What's in your draft?</h3>
             <p className="text-[14px] text-gray-600 max-w-md mx-auto">
-              Paste your draft to discover aligned perspectives and get editorial suggestions from 200+ thought leaders.
+              Paste your draft to get editorial suggestions.
             </p>
           </div>
 

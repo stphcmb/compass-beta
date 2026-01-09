@@ -959,13 +959,21 @@ function AuthorIndexPageContent() {
           <PageHeader
             icon={<Users size={24} />}
             iconVariant="green"
-            title="Who would you like to explore?"
-            subtitle={`Browse ${totalFiltered} thought leaders and their perspectives on AI.`}
+            title="Thought Leaders"
+            subtitle={`${totalFiltered} experts shaping AI discourse`}
             helpButton={{
               label: 'How it works',
               onClick: openModal
             }}
           />
+
+          {/* Subheader - Framing Question */}
+          <div className="text-center mb-6">
+            <h3 className="text-[17px] font-semibold text-gray-900 mb-2">Who would you like to explore?</h3>
+            <p className="text-[14px] text-gray-600">
+              Browse by domain, search by name, or discover new perspectives.
+            </p>
+          </div>
 
           {/* Search Bar */}
           <div style={{ position: 'relative', marginBottom: '16px' }}>

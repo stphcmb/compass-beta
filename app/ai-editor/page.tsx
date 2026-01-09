@@ -27,8 +27,8 @@ function AIEditorPageContent() {
           <PageHeader
             icon={<Sparkles size={24} />}
             iconVariant="navy"
-            title="What's in your draft?"
-            subtitle="Paste your content to discover aligned perspectives and get editorial suggestions."
+            title="AI Editor"
+            subtitle="Refine your writing with AI-powered insights from 200+ thought leaders."
             helpButton={{
               label: 'How it works',
               onClick: openModal
