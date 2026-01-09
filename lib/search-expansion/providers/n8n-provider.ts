@@ -48,14 +48,22 @@ export class N8NQueryExpansionProvider implements QueryExpansionProvider {
     }
 
     try {
-      console.log('🔄 Calling N8N for query expansion:', query)
+      // Sanitize query for n8n/Supabase compatibility
+      // Replace multiple spaces with single space, trim
+      const sanitizedQuery = query.trim().replace(/\s+/g, ' ')
+
+      console.log('🔄 Calling N8N for query expansion:', sanitizedQuery)
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({
+          query: sanitizedQuery,
+          // Send a db-safe version with spaces replaced by wildcards
+          queryForDb: sanitizedQuery.replace(/\s+/g, '%')
+        }),
         signal: AbortSignal.timeout(config.timeoutMs),
       })
 
