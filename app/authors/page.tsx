@@ -75,10 +75,35 @@ function AuthorIndexPageContent() {
     }
   }, [])
 
-  // Fetch data
+  // Fetch data with caching
   useEffect(() => {
     const fetchData = async () => {
+      // Check cache first for instant loading
+      const CACHE_KEY = 'authors-page-cache'
+      const CACHE_DURATION = 10 * 60 * 1000 // 10 minutes
+
+      try {
+        const cached = localStorage.getItem(CACHE_KEY)
+        if (cached) {
+          const { authors: cachedAuthors, camps: cachedCamps, timestamp } = JSON.parse(cached)
+          if (Date.now() - timestamp < CACHE_DURATION && cachedAuthors?.length > 0) {
+            setAuthors(cachedAuthors)
+            setCamps(cachedCamps || [])
+            setLoading(false)
+            // Refresh in background
+            refreshData(CACHE_KEY)
+            return
+          }
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
+
       setLoading(true)
+      await refreshData(CACHE_KEY)
+    }
+
+    const refreshData = async (cacheKey: string) => {
       try {
         const [authorsData, result] = await Promise.all([
           getThoughtLeaders(),
@@ -86,12 +111,20 @@ function AuthorIndexPageContent() {
         ])
         setAuthors(authorsData)
         setCamps(result.camps)
+
+        // Update cache
+        localStorage.setItem(cacheKey, JSON.stringify({
+          authors: authorsData,
+          camps: result.camps,
+          timestamp: Date.now()
+        }))
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
         setLoading(false)
       }
     }
+
     fetchData()
   }, [])
 

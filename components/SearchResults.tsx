@@ -366,7 +366,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
 
       setLoading(true)
 
-      // Check for cached results
+      // Check for pending cache from history navigation (sessionStorage)
       const pendingCache = sessionStorage.getItem('pending-search-cache')
       if (pendingCache) {
         try {
@@ -384,6 +384,24 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
           // Ignore parse errors
         }
         sessionStorage.removeItem('pending-search-cache')
+      }
+
+      // Check for long-term cache (localStorage) - valid for 30 minutes
+      const localCacheKey = `search-cache-${query}`
+      const localCache = localStorage.getItem(localCacheKey)
+      if (localCache) {
+        try {
+          const cached = JSON.parse(localCache)
+          if (cached.camps && (Date.now() - cached.timestamp) < 30 * 60 * 1000) {
+            setCamps(cached.camps)
+            setExpandedQueries(cached.expandedQueries || null)
+            setLoading(false)
+            if (onResultsLoaded) onResultsLoaded(cached.camps, cached.expandedQueries)
+            return
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
       }
 
       try {

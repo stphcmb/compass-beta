@@ -77,7 +77,7 @@ interface HelpfulInsight {
 
 interface DeletedItem {
   id: string
-  type: 'favorite' | 'note'
+  type: 'favorite' | 'note' | 'search' | 'analysis'
   name: string
   data: any
   deletedAt: string
@@ -347,18 +347,48 @@ export default function HistoryPage() {
   }
 
   const deleteRecentSearch = (id: string) => {
+    const search = recentSearches.find(s => s.id === id)
+    if (search) {
+      addToRecentlyDeleted({
+        id: `deleted-search-${Date.now()}`,
+        type: 'search',
+        name: search.query,
+        data: search,
+        deletedAt: new Date().toISOString()
+      })
+    }
     const filtered = recentSearches.filter(s => s.id !== id)
     localStorage.setItem('recentSearches', JSON.stringify(filtered))
     setRecentSearches(filtered)
   }
 
   const deleteSavedSearch = (id: string) => {
+    const search = savedSearches.find(s => s.id === id)
+    if (search) {
+      addToRecentlyDeleted({
+        id: `deleted-search-${Date.now()}`,
+        type: 'search',
+        name: search.query,
+        data: { ...search, wasSaved: true },
+        deletedAt: new Date().toISOString()
+      })
+    }
     const filtered = savedSearches.filter(s => s.id !== id)
     localStorage.setItem('savedSearches', JSON.stringify(filtered))
     setSavedSearches(filtered)
   }
 
   const deleteAnalysis = (id: string) => {
+    const analysis = savedAnalyses.find(a => a.id === id)
+    if (analysis) {
+      addToRecentlyDeleted({
+        id: `deleted-analysis-${Date.now()}`,
+        type: 'analysis',
+        name: analysis.preview || analysis.text.slice(0, 50),
+        data: analysis,
+        deletedAt: new Date().toISOString()
+      })
+    }
     const filtered = savedAnalyses.filter(a => a.id !== id)
     localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(filtered))
     setSavedAnalyses(filtered)
@@ -406,6 +436,35 @@ export default function HistoryPage() {
   }
 
   const updateRecentSearchNote = (id: string, note: string) => {
+    // If adding a note, auto-save the search and move it to saved searches
+    if (note && note.trim()) {
+      const search = recentSearches.find(s => s.id === id)
+      if (search) {
+        // Create a new saved search with the note
+        const savedSearch = {
+          ...search,
+          id: `saved-${Date.now()}`, // New ID for saved search
+          note: note,
+          timestamp: new Date().toISOString() // Update timestamp
+        }
+
+        // Add to saved searches (avoid duplicates by query)
+        const existingSaved = savedSearches.filter(s => s.query !== search.query)
+        const updatedSaved = [savedSearch, ...existingSaved]
+        localStorage.setItem('savedSearches', JSON.stringify(updatedSaved))
+        setSavedSearches(updatedSaved)
+
+        // Remove from recent searches
+        const updatedRecent = recentSearches.filter(s => s.id !== id)
+        localStorage.setItem('recentSearches', JSON.stringify(updatedRecent))
+        setRecentSearches(updatedRecent)
+
+        showToast('Search saved with note', 'success')
+        return
+      }
+    }
+
+    // If removing note, just update in place
     const updated = recentSearches.map(s => s.id === id ? { ...s, note: note || undefined } : s)
     localStorage.setItem('recentSearches', JSON.stringify(updated))
     setRecentSearches(updated)
@@ -450,13 +509,40 @@ export default function HistoryPage() {
       window.dispatchEvent(new CustomEvent('author-note-updated', {
         detail: { name: item.name, note: item.data.note }
       }))
+    } else if (item.type === 'search') {
+      if (item.data.wasSaved) {
+        // Restore as saved search
+        const { wasSaved, ...searchData } = item.data
+        const current = JSON.parse(localStorage.getItem('savedSearches') || '[]')
+        const restored = [searchData, ...current]
+        localStorage.setItem('savedSearches', JSON.stringify(restored))
+        setSavedSearches(restored)
+      } else {
+        // Restore as recent search
+        const current = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+        const restored = [item.data, ...current]
+        localStorage.setItem('recentSearches', JSON.stringify(restored))
+        setRecentSearches(restored)
+      }
+    } else if (item.type === 'analysis') {
+      const current = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+      const restored = [item.data, ...current]
+      localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(restored))
+      setSavedAnalyses(restored)
     }
 
     // Remove from deleted items
     const filtered = deletedItems.filter(d => d.id !== item.id)
     localStorage.setItem('recentlyDeletedItems', JSON.stringify(filtered))
     setDeletedItems(filtered)
-    showToast(`Restored ${item.type === 'favorite' ? 'favorite' : 'note'} for ${item.name}`, 'success')
+
+    const typeLabels: Record<string, string> = {
+      favorite: 'favorite author',
+      note: 'author note',
+      search: item.data?.wasSaved ? 'saved search' : 'recent search',
+      analysis: 'analysis'
+    }
+    showToast(`Restored ${typeLabels[item.type] || item.type}`, 'success')
   }
 
   // Permanently delete item
@@ -589,12 +675,9 @@ export default function HistoryPage() {
             }}
           />
 
-          {/* Subheader - Framing Question */}
-          <div className="text-center mb-6">
-            <h3 className="text-[17px] font-semibold text-gray-900 mb-2">What have you explored?</h3>
-            <p className="text-[14px] text-gray-600">
-              Revisit your searches, analyses, and saved insights.
-            </p>
+          {/* Framing Question */}
+          <div className="text-center mb-4">
+            <h3 className="text-[17px] font-semibold text-gray-900 mb-2">What have you explored so far?</h3>
           </div>
 
           {/* Horizontal Navigation Tabs */}
@@ -602,24 +685,24 @@ export default function HistoryPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '16px',
-            marginBottom: '24px'
+            gap: '12px',
+            marginBottom: '16px'
           }}>
             {/* Category Tabs */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '4px',
               overflowX: 'auto',
-              paddingBottom: '4px'
+              paddingBottom: '2px'
             }}>
               {tabs.map(tab => {
                 const icons: Record<TabType, React.ReactNode> = {
-                  all: <History size={14} />,
-                  searches: <Search size={14} />,
-                  analyses: <Sparkles size={14} />,
-                  insights: <ThumbsUp size={14} />,
-                  authors: <Users size={14} />
+                  all: <History size={12} />,
+                  searches: <Search size={12} />,
+                  analyses: <Sparkles size={12} />,
+                  insights: <ThumbsUp size={12} />,
+                  authors: <Users size={12} />
                 }
                 const colors: Record<TabType, string> = {
                   all: '#6366f1',
@@ -635,9 +718,9 @@ export default function HistoryPage() {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '5px',
-                      padding: '7px 12px',
-                      borderRadius: '20px',
+                      gap: '4px',
+                      padding: '5px 10px',
+                      borderRadius: '16px',
                       border: activeTab === tab.id ? `1.5px solid ${colors[tab.id]}` : '1.5px solid transparent',
                       background: activeTab === tab.id ? `${colors[tab.id]}12` : '#f5f5f5',
                       cursor: 'pointer',
@@ -662,17 +745,17 @@ export default function HistoryPage() {
                       {icons[tab.id]}
                     </span>
                     <span style={{
-                      fontSize: '13px',
+                      fontSize: '12px',
                       fontWeight: activeTab === tab.id ? 600 : 500,
                       color: activeTab === tab.id ? colors[tab.id] : 'var(--color-charcoal)'
                     }}>
                       {tab.label}
                     </span>
                     <span style={{
-                      padding: '1px 6px',
-                      borderRadius: '8px',
+                      padding: '0px 5px',
+                      borderRadius: '6px',
                       background: activeTab === tab.id ? `${colors[tab.id]}25` : '#e5e7eb',
-                      fontSize: '11px',
+                      fontSize: '10px',
                       fontWeight: 600,
                       color: activeTab === tab.id ? colors[tab.id] : 'var(--color-mid-gray)'
                     }}>
@@ -688,9 +771,9 @@ export default function HistoryPage() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  padding: '7px 12px',
-                  borderRadius: '20px',
+                  gap: '4px',
+                  padding: '5px 10px',
+                  borderRadius: '16px',
                   border: '1.5px solid transparent',
                   background: deletedItems.length > 0 ? '#fef2f2' : '#f5f5f5',
                   cursor: 'pointer',
@@ -708,10 +791,10 @@ export default function HistoryPage() {
                 }}
               >
                 <span style={{ color: deletedItems.length > 0 ? '#ef4444' : 'var(--color-mid-gray)' }}>
-                  <Trash2 size={14} />
+                  <Trash2 size={12} />
                 </span>
                 <span style={{
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: 500,
                   color: deletedItems.length > 0 ? '#b91c1c' : 'var(--color-charcoal)'
                 }}>
@@ -719,10 +802,10 @@ export default function HistoryPage() {
                 </span>
                 {deletedItems.length > 0 && (
                   <span style={{
-                    padding: '1px 6px',
-                    borderRadius: '8px',
+                    padding: '0px 5px',
+                    borderRadius: '6px',
                     background: '#fecaca',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     fontWeight: 600,
                     color: '#dc2626'
                   }}>
@@ -737,11 +820,11 @@ export default function HistoryPage() {
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
               style={{
-                padding: '7px 10px',
-                borderRadius: '8px',
+                padding: '5px 8px',
+                borderRadius: '6px',
                 border: '1px solid var(--color-light-gray)',
                 background: 'white',
-                fontSize: '13px',
+                fontSize: '12px',
                 color: 'var(--color-charcoal)',
                 cursor: 'pointer',
                 flexShrink: 0
@@ -779,135 +862,157 @@ export default function HistoryPage() {
               size="lg"
             />
           ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Saved Searches - Collapsible */}
-            {filteredSavedSearches.length > 0 && (
-              <CollapsibleSection
-                id="saved-searches"
-                title="Saved Searches"
-                icon={<Star size={16} style={{ color: '#f59e0b' }} />}
-                count={filteredSavedSearches.length}
-                isCollapsed={collapsedSections['saved-searches']}
-                onToggle={() => toggleSection('saved-searches')}
-                onClear={() => clearAllByType('saved')}
-                color="#f59e0b"
-              >
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  width: '100%',
-                  maxHeight: filteredSavedSearches.length > 3 ? '260px' : 'none',
-                  overflowY: filteredSavedSearches.length > 3 ? 'auto' : 'visible',
-                  paddingRight: filteredSavedSearches.length > 3 ? '4px' : '0'
-                }}>
-                  {filteredSavedSearches.slice(0, 3).map(s => (
-                    <SearchCard
-                      key={s.id}
-                      query={s.query}
-                      timestamp={timeAgo(s.timestamp)}
-                      isSaved={true}
-                      note={s.note}
-                      onClick={() => handleSearchClick(s.query, s.cachedResult)}
-                      onDelete={() => deleteSavedSearch(s.id)}
-                    />
-                  ))}
-                </div>
-                {filteredSavedSearches.length > 3 && (
-                  <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
-                    <button
-                      onClick={() => setActiveTab('searches')}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#3b82f6',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                        fontWeight: 500
-                      }}
-                    >
-                      View all {filteredSavedSearches.length} saved searches →
-                    </button>
-                  </div>
-                )}
-              </CollapsibleSection>
-            )}
+          <div className="bg-gradient-to-br from-purple-50/70 via-white to-indigo-50/50 border border-purple-100/50 rounded-xl p-5">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Searches - 2-column layout */}
+            {(filteredSavedSearches.length > 0 || filteredRecentSearches.length > 0) && (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '8px'
+              }}>
+                {/* Saved Searches Column */}
+                <CollapsibleSection
+                  id="saved-searches"
+                  title="Saved"
+                  icon={<Star size={14} style={{ color: '#f59e0b' }} />}
+                  count={filteredSavedSearches.length}
+                  isCollapsed={collapsedSections['saved-searches']}
+                  onToggle={() => toggleSection('saved-searches')}
+                  onClear={() => clearAllByType('saved')}
+                  color="#f59e0b"
+                >
+                  {filteredSavedSearches.length > 0 ? (
+                    <>
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                        width: '100%',
+                        maxHeight: '180px',
+                        overflowY: filteredSavedSearches.length > 3 ? 'auto' : 'visible',
+                        paddingRight: filteredSavedSearches.length > 3 ? '4px' : '0'
+                      }}>
+                        {filteredSavedSearches.slice(0, 5).map(s => (
+                          <SearchCard
+                            key={s.id}
+                            query={s.query}
+                            timestamp={timeAgo(s.timestamp)}
+                            isSaved={true}
+                            note={s.note}
+                            onClick={() => handleSearchClick(s.query, s.cachedResult)}
+                            onDelete={() => deleteSavedSearch(s.id)}
+                          />
+                        ))}
+                      </div>
+                      {filteredSavedSearches.length > 5 && (
+                        <div style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', marginTop: '6px' }}>
+                          <button
+                            onClick={() => setActiveTab('searches')}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#3b82f6',
+                              cursor: 'pointer',
+                              fontSize: '10px',
+                              fontWeight: 500
+                            }}
+                          >
+                            +{filteredSavedSearches.length - 5} more →
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', padding: '12px 0' }}>
+                      No saved searches yet
+                    </div>
+                  )}
+                </CollapsibleSection>
 
-            {/* Recent Searches - Collapsible */}
-            {filteredRecentSearches.length > 0 && (
-              <CollapsibleSection
-                id="recent-searches"
-                title="Recent Searches"
-                icon={<Clock size={16} style={{ color: '#6b7280' }} />}
-                count={filteredRecentSearches.length}
-                isCollapsed={collapsedSections['recent-searches']}
-                onToggle={() => toggleSection('recent-searches')}
-                onClear={() => clearAllByType('recent')}
-                color="#6b7280"
-              >
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  width: '100%',
-                  maxHeight: filteredRecentSearches.length > 3 ? '260px' : 'none',
-                  overflowY: filteredRecentSearches.length > 3 ? 'auto' : 'visible',
-                  paddingRight: filteredRecentSearches.length > 3 ? '4px' : '0'
-                }}>
-                  {filteredRecentSearches.slice(0, 3).map(s => (
-                    <SearchCard
-                      key={s.id}
-                      query={s.query}
-                      timestamp={timeAgo(s.timestamp)}
-                      isSaved={false}
-                      note={s.note}
-                      onClick={() => handleSearchClick(s.query, s.cachedResult)}
-                      onDelete={() => deleteRecentSearch(s.id)}
-                    />
-                  ))}
-                </div>
-                {filteredRecentSearches.length > 3 && (
-                  <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
-                    <button
-                      onClick={() => setActiveTab('searches')}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#3b82f6',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                        fontWeight: 500
-                      }}
-                    >
-                      View all {filteredRecentSearches.length} recent searches →
-                    </button>
-                  </div>
-                )}
-              </CollapsibleSection>
+                {/* Recent Searches Column */}
+                <CollapsibleSection
+                  id="recent-searches"
+                  title="Recent"
+                  icon={<Clock size={14} style={{ color: '#6b7280' }} />}
+                  count={filteredRecentSearches.length}
+                  isCollapsed={collapsedSections['recent-searches']}
+                  onToggle={() => toggleSection('recent-searches')}
+                  onClear={() => clearAllByType('recent')}
+                  color="#6b7280"
+                >
+                  {filteredRecentSearches.length > 0 ? (
+                    <>
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                        width: '100%',
+                        maxHeight: '180px',
+                        overflowY: filteredRecentSearches.length > 3 ? 'auto' : 'visible',
+                        paddingRight: filteredRecentSearches.length > 3 ? '4px' : '0'
+                      }}>
+                        {filteredRecentSearches.slice(0, 5).map(s => (
+                          <SearchCard
+                            key={s.id}
+                            query={s.query}
+                            timestamp={timeAgo(s.timestamp)}
+                            isSaved={false}
+                            note={s.note}
+                            onClick={() => handleSearchClick(s.query, s.cachedResult)}
+                            onDelete={() => deleteRecentSearch(s.id)}
+                          />
+                        ))}
+                      </div>
+                      {filteredRecentSearches.length > 5 && (
+                        <div style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', marginTop: '6px' }}>
+                          <button
+                            onClick={() => setActiveTab('searches')}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#3b82f6',
+                              cursor: 'pointer',
+                              fontSize: '10px',
+                              fontWeight: 500
+                            }}
+                          >
+                            +{filteredRecentSearches.length - 5} more →
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', padding: '12px 0' }}>
+                      No recent searches yet
+                    </div>
+                  )}
+                </CollapsibleSection>
+              </div>
             )}
 
             {/* Empty state when no searches at all */}
             {filteredRecentSearches.length === 0 && filteredSavedSearches.length === 0 && (
               <div style={{
-                padding: '32px 20px',
+                padding: '24px 16px',
                 textAlign: 'center',
                 background: '#fafafa',
-                borderRadius: '12px',
+                borderRadius: '10px',
                 border: '1px dashed #e5e7eb'
               }}>
-                <Search size={32} style={{ color: '#d1d5db', margin: '0 auto 12px' }} />
-                <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>
+                <Search size={24} style={{ color: '#d1d5db', margin: '0 auto 8px' }} />
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
                   {timeFilter !== 'all' ? 'No searches in this time period' : 'Your search history will appear here'}
                 </div>
                 <button
                   onClick={() => router.push('/explore')}
                   style={{
-                    padding: '8px 16px',
+                    padding: '6px 12px',
                     background: '#3b82f6',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '12px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
                     fontWeight: 500,
                     cursor: 'pointer'
                   }}
@@ -933,9 +1038,9 @@ export default function HistoryPage() {
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px',
+                    gap: '6px',
                     width: '100%',
-                    maxHeight: filteredAnalyses.length > 3 ? '320px' : 'none',
+                    maxHeight: filteredAnalyses.length > 3 ? '260px' : 'none',
                     overflowY: filteredAnalyses.length > 3 ? 'auto' : 'visible',
                     paddingRight: filteredAnalyses.length > 3 ? '4px' : '0'
                   }}>
@@ -986,8 +1091,8 @@ export default function HistoryPage() {
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px',
-                    maxHeight: filteredInsights.length > 3 ? '320px' : 'none',
+                    gap: '6px',
+                    maxHeight: filteredInsights.length > 3 ? '260px' : 'none',
                     overflowY: filteredInsights.length > 3 ? 'auto' : 'visible',
                     paddingRight: filteredInsights.length > 3 ? '4px' : '0'
                   }}>
@@ -1134,6 +1239,7 @@ export default function HistoryPage() {
                 </CollapsibleSection>
               )
             })()}
+          </div>
           </div>
           )
         ) : (
@@ -1776,14 +1882,14 @@ function CollapsibleSection({
   return (
     <div style={{
       background: 'white',
-      borderRadius: '12px',
+      borderRadius: '10px',
       border: '1px solid #e5e7eb',
       overflow: 'hidden'
     }}>
       <div
         onClick={onToggle}
         style={{
-          padding: '14px 16px',
+          padding: '10px 14px',
           borderBottom: isCollapsed ? 'none' : '1px solid #f3f4f6',
           display: 'flex',
           alignItems: 'center',
@@ -1798,21 +1904,21 @@ function CollapsibleSection({
           e.currentTarget.style.background = 'white'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {icon}
-          <span style={{ fontWeight: '600', color: '#374151', fontSize: '14px' }}>{title}</span>
+          <span style={{ fontWeight: '600', color: '#374151', fontSize: '13px' }}>{title}</span>
           <span style={{
-            padding: '2px 8px',
-            borderRadius: '10px',
+            padding: '1px 6px',
+            borderRadius: '8px',
             background: `${color}15`,
-            fontSize: '12px',
+            fontSize: '11px',
             fontWeight: '600',
             color: color
           }}>
             {count}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {headerExtra}
           <button
             onClick={(e) => {
@@ -1820,16 +1926,16 @@ function CollapsibleSection({
               onClear()
             }}
             style={{
-              padding: '4px 8px',
-              borderRadius: '6px',
+              padding: '3px 6px',
+              borderRadius: '4px',
               border: 'none',
               background: 'transparent',
               color: '#d1d5db',
-              fontSize: '11px',
+              fontSize: '10px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '3px'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = '#fef2f2'
@@ -1840,17 +1946,17 @@ function CollapsibleSection({
               e.currentTarget.style.color = '#d1d5db'
             }}
           >
-            <Trash2 size={12} />
+            <Trash2 size={11} />
           </button>
           {isCollapsed ? (
-            <ChevronDown size={18} style={{ color: '#9ca3af' }} />
+            <ChevronDown size={16} style={{ color: '#9ca3af' }} />
           ) : (
-            <ChevronUp size={18} style={{ color: '#9ca3af' }} />
+            <ChevronUp size={16} style={{ color: '#9ca3af' }} />
           )}
         </div>
       </div>
       {!isCollapsed && (
-        <div style={{ padding: '12px 16px' }}>
+        <div style={{ padding: '10px 14px' }}>
           {children}
         </div>
       )}
@@ -1941,8 +2047,8 @@ function SearchCard({
     <div
       onClick={onClick}
       style={{
-        padding: '12px 14px',
-        borderRadius: '8px',
+        padding: '8px 10px',
+        borderRadius: '6px',
         border: note ? '1px solid #fde68a' : '1px solid #f3f4f6',
         background: note ? '#fffbeb' : '#fafafa',
         cursor: 'pointer',
@@ -1959,22 +2065,22 @@ function SearchCard({
         e.currentTarget.style.background = note ? '#fffbeb' : '#fafafa'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{
-          width: '28px',
-          height: '28px',
-          borderRadius: '6px',
+          width: '24px',
+          height: '24px',
+          borderRadius: '5px',
           background: isSaved ? '#dbeafe' : '#f3f4f6',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0
         }}>
-          <Search size={14} style={{ color: isSaved ? '#3b82f6' : '#9ca3af' }} />
+          <Search size={12} style={{ color: isSaved ? '#3b82f6' : '#9ca3af' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: '13px',
+            fontSize: '12px',
             fontWeight: 500,
             color: '#374151',
             overflow: 'hidden',
@@ -1983,7 +2089,7 @@ function SearchCard({
           }}>
             {query}
           </div>
-          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
+          <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '1px' }}>
             {timestamp}{isSaved && ' · Saved'}
           </div>
         </div>
@@ -1993,8 +2099,8 @@ function SearchCard({
             onDelete()
           }}
           style={{
-            padding: '4px',
-            borderRadius: '4px',
+            padding: '3px',
+            borderRadius: '3px',
             border: 'none',
             background: 'transparent',
             color: '#d1d5db',
@@ -2008,27 +2114,27 @@ function SearchCard({
             e.currentTarget.style.color = '#d1d5db'
           }}
         >
-          <X size={14} />
+          <X size={12} />
         </button>
       </div>
       {note && (
         <div style={{
-          marginTop: '8px',
-          paddingLeft: '40px',
+          marginTop: '6px',
+          paddingLeft: '34px',
           display: 'flex',
           alignItems: 'flex-start',
-          gap: '6px'
+          gap: '5px'
         }}>
-          <MessageSquare size={12} style={{ color: '#d97706', marginTop: '2px', flexShrink: 0 }} />
+          <MessageSquare size={10} style={{ color: '#d97706', marginTop: '2px', flexShrink: 0 }} />
           <p style={{
-            fontSize: '12px',
+            fontSize: '11px',
             color: '#92400e',
             margin: 0,
-            lineHeight: 1.4,
+            lineHeight: 1.3,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             display: '-webkit-box',
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 1,
             WebkitBoxOrient: 'vertical'
           }}>
             {note}
@@ -2070,8 +2176,8 @@ function AnalysisCard({
     <div
       onClick={onClick}
       style={{
-        padding: '12px 14px',
-        borderRadius: '8px',
+        padding: '8px 10px',
+        borderRadius: '6px',
         border: '1px solid #f3f4f6',
         background: '#fafafa',
         cursor: 'pointer',
@@ -2088,53 +2194,38 @@ function AnalysisCard({
         e.currentTarget.style.background = '#fafafa'
       }}
     >
-      <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+      <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
         <div style={{
-          width: '28px',
-          height: '28px',
-          borderRadius: '6px',
+          width: '24px',
+          height: '24px',
+          borderRadius: '5px',
           background: '#f3e8ff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0
         }}>
-          <Sparkles size={14} style={{ color: '#8b5cf6' }} />
+          <Sparkles size={12} style={{ color: '#8b5cf6' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Top row: type + timestamp + badges */}
-          <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '4px' }}>
+          <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '2px' }}>
             <span style={{ fontWeight: 600, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Analysis</span>
             {' · '}{timestamp}
-            {campCount > 0 && ` · ${campCount} perspective${campCount !== 1 ? 's' : ''}`}
-            {note && ' · Note'}
+            {campCount > 0 && ` · ${campCount} perspectives`}
           </div>
           {/* Input text - single line */}
           <p style={{
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#374151',
             margin: 0,
-            lineHeight: 1.4,
+            lineHeight: 1.3,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis'
           }}>
             {inputPreview.trim()}
           </p>
-          {/* AI Summary - single line */}
-          {summary && (
-            <p style={{
-              fontSize: '11px',
-              color: '#6b7280',
-              margin: '4px 0 0',
-              lineHeight: 1.4,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>
-              AI: {summary}
-            </p>
-          )}
         </div>
         <button
           onClick={(e) => {
@@ -2142,8 +2233,8 @@ function AnalysisCard({
             onDelete()
           }}
           style={{
-            padding: '4px',
-            borderRadius: '4px',
+            padding: '3px',
+            borderRadius: '3px',
             border: 'none',
             background: 'transparent',
             color: '#d1d5db',
@@ -2152,14 +2243,14 @@ function AnalysisCard({
             alignSelf: 'flex-start'
           }}
         >
-          <X size={14} />
+          <X size={12} />
         </button>
       </div>
     </div>
   )
 }
 
-// Insight Card - 3 lines of content preview
+// Insight Card - compact
 function InsightCard({
   content,
   type,
@@ -2179,8 +2270,8 @@ function InsightCard({
     <div
       onClick={onClick}
       style={{
-        padding: '12px 14px',
-        borderRadius: '8px',
+        padding: '8px 10px',
+        borderRadius: '6px',
         border: '1px solid #f3f4f6',
         background: '#fafafa',
         cursor: 'pointer',
@@ -2197,19 +2288,19 @@ function InsightCard({
     >
       <div style={{ display: 'flex', gap: '10px' }}>
         <div style={{
-          width: '28px',
-          height: '28px',
-          borderRadius: '6px',
+          width: '24px',
+          height: '24px',
+          borderRadius: '5px',
           background: '#d1fae5',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0
         }}>
-          <ThumbsUp size={14} style={{ color: '#059669' }} />
+          <ThumbsUp size={12} style={{ color: '#059669' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
             <span style={{
               fontSize: '10px',
               fontWeight: 600,
@@ -2223,30 +2314,17 @@ function InsightCard({
             <span style={{ fontSize: '10px', color: '#9ca3af' }}>{timestamp}</span>
           </div>
           <p style={{
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#374151',
             margin: 0,
-            lineHeight: 1.5,
+            lineHeight: 1.4,
             display: '-webkit-box',
-            WebkitLineClamp: 3,
+            WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden'
           }}>
             {content}
           </p>
-          {originalText && (
-            <p style={{
-              fontSize: '11px',
-              color: '#9ca3af',
-              margin: '6px 0 0',
-              fontStyle: 'italic',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>
-              From: "{originalText}"
-            </p>
-          )}
         </div>
         <button
           onClick={(e) => {
@@ -2254,8 +2332,8 @@ function InsightCard({
             onDelete()
           }}
           style={{
-            padding: '4px',
-            borderRadius: '4px',
+            padding: '3px',
+            borderRadius: '3px',
             border: 'none',
             background: 'transparent',
             color: '#d1d5db',
@@ -2264,14 +2342,14 @@ function InsightCard({
             alignSelf: 'flex-start'
           }}
         >
-          <X size={14} />
+          <X size={12} />
         </button>
       </div>
     </div>
   )
 }
 
-// Mini Author Card - for 3-column grid with 2-line note
+// Mini Author Card - shows notes when available
 function MiniAuthorCard({
   name,
   affiliation,
@@ -2289,22 +2367,19 @@ function MiniAuthorCard({
     <div
       onClick={onClick}
       style={{
-        padding: '12px',
+        padding: '10px 12px',
         borderRadius: '8px',
-        border: '1px solid #f3f4f6',
-        background: '#fafafa',
+        border: '1px solid #e5e7eb',
+        background: 'white',
         cursor: 'pointer',
-        transition: 'all 0.15s ease',
-        minHeight: '80px'
+        transition: 'all 0.15s ease'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = '#059669'
-        e.currentTarget.style.background = 'white'
-        e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.05)'
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(5, 150, 105, 0.1)'
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#f3f4f6'
-        e.currentTarget.style.background = '#fafafa'
+        e.currentTarget.style.borderColor = '#e5e7eb'
         e.currentTarget.style.boxShadow = 'none'
       }}
     >
@@ -2328,15 +2403,20 @@ function MiniAuthorCard({
           )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: '13px',
-            fontWeight: 600,
-            color: '#1f2937',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
-            {name}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              color: '#1f2937',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {name}
+            </div>
+            {isFavorite && (
+              <Star size={12} style={{ color: '#f59e0b', flexShrink: 0 }} />
+            )}
           </div>
           {affiliation && (
             <div style={{
@@ -2351,19 +2431,22 @@ function MiniAuthorCard({
             </div>
           )}
           {note && (
-            <p style={{
+            <div style={{
               fontSize: '11px',
               color: '#6b7280',
-              margin: '6px 0 0',
-              fontStyle: 'italic',
-              lineHeight: 1.4,
+              marginTop: '6px',
+              padding: '6px 8px',
+              background: '#f9fafb',
+              borderRadius: '4px',
+              borderLeft: '2px solid #10b981',
+              lineHeight: '1.4',
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden'
             }}>
-              "{note}"
-            </p>
+              {note}
+            </div>
           )}
         </div>
       </div>
@@ -3948,7 +4031,7 @@ function RecentlyDeletedModal({
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    background: item.type === 'favorite' ? '#fef3c7' : '#e0e7ff',
+                    background: item.type === 'favorite' ? '#fef3c7' : item.type === 'search' ? '#dbeafe' : item.type === 'analysis' ? '#ede9fe' : '#e0e7ff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -3956,6 +4039,10 @@ function RecentlyDeletedModal({
                   }}>
                     {item.type === 'favorite' ? (
                       <Star size={16} style={{ color: '#f59e0b' }} />
+                    ) : item.type === 'search' ? (
+                      <Search size={16} style={{ color: '#3b82f6' }} />
+                    ) : item.type === 'analysis' ? (
+                      <Sparkles size={16} style={{ color: '#8b5cf6' }} />
                     ) : (
                       <MessageSquare size={16} style={{ color: '#6366f1' }} />
                     )}
@@ -3969,9 +4056,9 @@ function RecentlyDeletedModal({
                         textTransform: 'uppercase',
                         fontSize: '10px',
                         fontWeight: 600,
-                        color: item.type === 'favorite' ? '#d97706' : '#6366f1'
+                        color: item.type === 'favorite' ? '#d97706' : item.type === 'search' ? '#2563eb' : item.type === 'analysis' ? '#7c3aed' : '#6366f1'
                       }}>
-                        {item.type === 'favorite' ? 'Favorite' : 'Note'}
+                        {item.type === 'favorite' ? 'Favorite' : item.type === 'search' ? (item.data?.wasSaved ? 'Saved Search' : 'Recent Search') : item.type === 'analysis' ? 'Analysis' : 'Note'}
                       </span>
                       <span>·</span>
                       <span>Deleted {timeAgo(item.deletedAt)}</span>
