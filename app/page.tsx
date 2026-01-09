@@ -62,7 +62,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="max-w-3xl mx-auto text-center relative z-10" style={{ padding: '24px 24px 28px' }}>
+          <div className="max-w-4xl mx-auto text-center relative z-10" style={{ padding: '24px 24px 28px' }}>
             {/* Badge */}
             <div
               className="inline-flex items-center gap-2 mb-3"
@@ -307,7 +307,6 @@ export default function Home() {
         {/* Key Benefits Section - Glassmorphism */}
         <div className="w-full relative" style={{
           background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
-          padding: '16px 24px 20px'
         }}>
           {/* Decorative gradient orbs */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
@@ -321,7 +320,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="max-w-4xl mx-auto relative z-10">
+          <div className="max-w-4xl mx-auto relative z-10" style={{ padding: '16px 24px 20px' }}>
             {/* Section Header */}
             <div className="text-center mb-4">
               <span

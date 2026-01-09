@@ -115,6 +115,16 @@ function ExplorePageContent() {
             }}
           />
 
+          {/* Framing Question - like Authors page */}
+          {!query && !exploreMode && !activeDomain && (
+            <div className="text-center mb-6">
+              <h3 className="text-[17px] font-semibold text-gray-900 mb-2">How would you like to explore?</h3>
+              <p className="text-[14px] text-gray-600">
+                Search for specific topics, or browse all perspectives organized by domain.
+              </p>
+            </div>
+          )}
+
           {/* Feature Hint */}
           <FeatureHint featureKey="explore" className="mb-4" />
 
@@ -171,18 +181,8 @@ function ExplorePageContent() {
                 </div>
               </div>
             ) : !exploreMode && !activeDomain ? (
-              /* WELCOME STATE: Prompt users to search or explore */
+              /* WELCOME STATE: Options to search or browse */
               <div className="bg-gradient-to-br from-indigo-50 via-white to-blue-50 border border-indigo-100 rounded-xl p-6">
-                <div className="text-center mb-6">
-                  <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <Compass className="w-7 h-7 text-indigo-600" />
-                  </div>
-                  <h3 className="text-[17px] font-semibold text-gray-900 mb-2">How would you like to explore?</h3>
-                  <p className="text-[14px] text-gray-600 max-w-md mx-auto">
-                    Search for specific topics, or browse all perspectives organized by domain.
-                  </p>
-                </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
                   {/* Search Option - Clickable with sample query */}
                   <a
