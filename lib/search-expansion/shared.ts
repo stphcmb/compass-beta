@@ -78,8 +78,8 @@ export async function expandSearchTerms(input: string | string[]): Promise<strin
       const n8nTerms = extractSearchTerms(expandedQueries)
       terms.push(...n8nTerms)
     }
-  } catch (error) {
-    console.log('⚠️  n8n expansion failed, using semantic fallback:', error)
+  } catch {
+    // n8n expansion failed, will use semantic fallback
   }
 
   // Add semantic expansion (either as fallback or supplement)
@@ -113,10 +113,7 @@ export async function expandSearchTermsWithQueries(query: string): Promise<{
   expandedQueries: any[] | null
   expansionMeta: ExpansionMetadata
 }> {
-  console.log('🔎 expandSearchTermsWithQueries called with:', query)
-
   if (!query || !query.trim()) {
-    console.log('⚠️ Empty query, returning early')
     return {
       terms: [],
       expandedQueries: null,
@@ -129,13 +126,10 @@ export async function expandSearchTermsWithQueries(query: string): Promise<{
 
   // Always get synonyms for the query (used in both paths)
   const synonymTerms = expandWithSynonyms(queryLower)
-  console.log('📝 Synonym terms:', synonymTerms.length)
 
   // Try n8n expansion (AI-powered)
-  console.log('🚀 About to call n8n expandQuery...')
   try {
     const expandedQueries = await expandQuery(queryLower)
-    console.log('📬 n8n expandQuery returned:', expandedQueries?.length || 'null')
 
     if (expandedQueries && expandedQueries.length > 0) {
       expandedQueriesResult = expandedQueries
@@ -156,8 +150,8 @@ export async function expandSearchTermsWithQueries(query: string): Promise<{
         }
       }
     }
-  } catch (error) {
-    console.log('⚠️  n8n expansion failed, using semantic fallback:', error)
+  } catch {
+    // n8n expansion failed, will use semantic fallback
   }
 
   // Fallback: Use local semantic expansion (returns meaningful phrases)

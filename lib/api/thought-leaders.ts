@@ -341,8 +341,6 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
   }
 
   try {
-    console.log('🔍 getCampsWithAuthors called with:', { query, domain })
-
     // Query camps with camp_authors and authors
     const { data, error } = await supabase
       .from('camps')
@@ -372,8 +370,6 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
       return { camps: [], expandedQueries: null }
     }
 
-    console.log('  Fetched camps from DB:', data?.length || 0)
-
     // Transform the data to match expected format
     let camps = (data || []).map((camp: any) => ({
       id: camp.id,
@@ -398,7 +394,6 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
 
     // Add domain filter if provided
     if (domain) {
-      console.log('  Filtering by domain:', domain)
       camps = camps.filter((camp: any) => camp.domain === domain)
     }
 
@@ -407,21 +402,14 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
     let expansionMetaResult: { method: 'ai' | 'local' | 'none', description: string } | undefined = undefined
     if (query && query.trim()) {
       const queryLower = query.toLowerCase().trim()
-      console.log('  Applying query filter:', queryLower)
 
       // Detect query intent using editorial system
       const intent = detectQueryIntent(queryLower)
-      console.log('  Detected intent:', intent)
 
       // Use shared expansion logic (n8n + semantic fallback)
-      console.log('🔄 Calling expandSearchTermsWithQueries...')
       const { terms: queryWords, expandedQueries, expansionMeta } = await expandSearchTermsWithQueries(queryLower)
-      console.log('✅ expandSearchTermsWithQueries returned:', { termsCount: queryWords.length, queriesCount: expandedQueries?.length, method: expansionMeta.method })
       expandedQueriesResult = expandedQueries
       expansionMetaResult = expansionMeta
-      console.log('  Expansion method:', expansionMeta.method, '-', expansionMeta.description)
-
-      console.log('  Query words:', queryWords.slice(0, 10), queryWords.length > 10 ? `... (${queryWords.length} total)` : '')
 
       // Score all camps using editorial system
       const scoredCamps = camps.map(camp => {
@@ -437,14 +425,6 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
         .filter(item => item.relevance.score >= QUALITY_THRESHOLDS.HIGH_RELEVANCE)
         .sort((a, b) => b.relevance.score - a.relevance.score)
 
-      console.log(`  Camps after quality filtering: ${filteredScored.length} (from ${camps.length})`)
-      console.log('  Top 3 matches:', filteredScored.slice(0, 3).map(item => ({
-        name: item.camp.name,
-        score: item.relevance.score,
-        stance: item.relevance.stance,
-        reasons: item.relevance.matchReasons.slice(0, 2)
-      })))
-
       // Store relevance scores in camps for later use
       camps = filteredScored.map(item => ({
         ...item.camp,
@@ -452,8 +432,6 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
         _stance: item.relevance.stance,
         _matchReasons: item.relevance.matchReasons
       }))
-
-      console.log('  Camps after filtering:', camps.length)
     }
 
     // Enrich camps with cross-perspective author data (pass query for relevancy ranking)
@@ -487,9 +465,6 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
       // Filter to only authors with positive relevance or credibility-based ranking
       const filteredAuthors = sortedAuthors.filter((a: any) => a._relevancyScore > 0)
 
-      // Log filtering for debugging
-      console.log(`    Camp "${camp.name}": ${camp.authors.length} authors -> ${filteredAuthors.length} relevant (top scores: ${sortedAuthors.slice(0, 3).map((a: any) => a._relevancyScore).join(', ')})`)
-
       return {
         ...camp,
         authors: filteredAuthors.length > 0 ? filteredAuthors : sortedAuthors.slice(0, 3), // Always show at least 3
@@ -497,7 +472,6 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
       }
     })
 
-    console.log('✅ Returning camps:', campsWithFilteredAuthors.length)
     return {
       camps: campsWithFilteredAuthors,
       expandedQueries: expandedQueriesResult,
