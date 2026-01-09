@@ -152,7 +152,7 @@ export async function expandSearchTermsWithQueries(query: string): Promise<{
         expandedQueries: expandedQueriesResult,
         expansionMeta: {
           method: 'ai',
-          description: 'AI-powered expansion via Gemini'
+          description: 'n8n and Gemini'
         }
       }
     }

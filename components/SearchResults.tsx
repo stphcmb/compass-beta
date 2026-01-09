@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { Users, ChevronDown, ChevronUp, Layers, ArrowUpDown, Sparkles, Search, MessageSquare, X, Check, Edit3 } from 'lucide-react'
-import { highlightText, findMatchingTerms, extractSearchTerms } from '@/lib/utils/highlight'
+import { highlightText, extractSearchTerms } from '@/lib/utils/highlight'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 import { DOMAIN_LABEL_STYLES } from '@/lib/constants/domains'
 import QuoteBox from './QuoteBox'
@@ -201,8 +201,6 @@ function SearchResultCard({
   const quoteSourceUrl = author?.quote_source_url || author?.sources?.[0]?.url
 
   const searchTerms = query ? extractSearchTerms(expandedQueries, query) : []
-  const quoteMatchedTerms = hasQuote ? findMatchingTerms(author.key_quote, searchTerms) : []
-  const quoteRelevant = quoteMatchedTerms.length > 0
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent opening panel if clicking on a link
@@ -259,7 +257,7 @@ function SearchResultCard({
           quote={author.key_quote}
           sourceUrl={quoteSourceUrl}
           sourceTitle={quoteSourceUrl ? getSourceTitle(quoteSourceUrl, author?.sources || []) : undefined}
-          variant={quoteRelevant ? 'highlighted' : 'default'}
+          variant="default"
           size="md"
           highlightedQuote={searchTerms.length > 0 ? highlightText(author.key_quote, searchTerms) : undefined}
         />
