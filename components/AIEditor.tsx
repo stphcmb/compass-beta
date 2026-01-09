@@ -1,13 +1,12 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AIEditorAnalyzeResponse } from '@/lib/ai-editor'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
-import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Plus } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Plus, Share2 } from 'lucide-react'
 
 // Loading phase messages for progressive feedback
 const LOADING_PHASES = [
@@ -19,10 +18,10 @@ const LOADING_PHASES = [
 
 interface AIEditorProps {
   showTitle?: boolean // When true, shows page title (for standalone page)
+  initialAnalysisId?: string | null // Analysis ID from URL for shareable links
 }
 
-export default function AIEditor({ showTitle = false }: AIEditorProps) {
-  const router = useRouter()
+export default function AIEditor({ showTitle = false, initialAnalysisId }: AIEditorProps) {
   const { openPanel } = useAuthorPanel()
   const [text, setText] = useState('')
   const [result, setResult] = useState<AIEditorAnalyzeResponse | null>(null)
@@ -38,6 +37,9 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
   const [likedCamps, setLikedCamps] = useState<Set<number>>(new Set())
   const [savedAnalyses, setSavedAnalyses] = useState<any[]>([])
   const [pendingFromHome, setPendingFromHome] = useState<boolean | null>(null) // null = checking, true/false = resolved
+  const [urlCopied, setUrlCopied] = useState(false)
+  const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null)
+  const [analysisNotFound, setAnalysisNotFound] = useState(false)
   const { showToast } = useToast()
 
   const suggestionsRef = useRef<HTMLDivElement>(null)
@@ -95,13 +97,20 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                 setLoadingPhase(0)
                 setPendingFromHome(false)
               } else {
-                // Save and navigate to results
+                // Save and show results inline
                 const analysisId = addToRecentSearches(pendingText, data)
                 updateSavedAnalysisCache(pendingText, data)
                 phaseTimers.forEach(timer => clearTimeout(timer))
                 setLoading(false)
                 setLoadingPhase(0)
-                navigateToResults(analysisId)
+                setResult(data)
+                setSavedOnce(true)
+                setPendingFromHome(false)
+                // Update URL with analysis ID for sharing
+                const url = new URL(window.location.href)
+                url.searchParams.set('analysis', analysisId)
+                window.history.replaceState({}, '', url.toString())
+                setCurrentAnalysisId(analysisId)
               }
             } catch (err) {
               setError(err instanceof Error ? err.message : 'Network error')
@@ -131,8 +140,16 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
         const textToLoad = ev.detail.text
 
         if (ev.detail.cachedResult && ev.detail.id) {
-          // Navigate directly to results page
-          router.push(`/ai-editor/results/${ev.detail.id}`)
+          // Show results inline
+          setText(ev.detail.text)
+          setResult(ev.detail.cachedResult)
+          setSavedOnce(true)
+          setError(null)
+          // Update URL with analysis ID for sharing
+          const url = new URL(window.location.href)
+          url.searchParams.set('analysis', ev.detail.id)
+          window.history.replaceState({}, '', url.toString())
+          setCurrentAnalysisId(ev.detail.id)
         } else if (ev.detail.autoAnalyze) {
           // Auto-analyze - set text and trigger analysis
           setText(textToLoad)
@@ -158,7 +175,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
 
     window.addEventListener('load-ai-editor-text', handleLoadText as EventListener)
     return () => window.removeEventListener('load-ai-editor-text', handleLoadText as EventListener)
-  }, [router])
+  }, [])
 
   // Fetch all authors on mount for linkification
   useEffect(() => {
@@ -172,6 +189,38 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
     }
     fetchAuthors()
   }, [])
+
+  // Load analysis from URL param (for shareable links)
+  useEffect(() => {
+    if (!initialAnalysisId) return
+
+    try {
+      const saved = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
+      const analysis = saved.find((a: any) => a.id === initialAnalysisId)
+
+      if (analysis && analysis.cachedResult) {
+        setText(analysis.text || '')
+        setResult(analysis.cachedResult)
+        setCurrentAnalysisId(analysis.id)
+        setSavedOnce(true)
+        setAnalysisNotFound(false)
+      } else {
+        // Analysis not found in localStorage (different device or cleared)
+        setAnalysisNotFound(true)
+      }
+    } catch (error) {
+      console.error('Error loading analysis from URL:', error)
+      setAnalysisNotFound(true)
+    }
+  }, [initialAnalysisId])
+
+  // Helper to update URL with analysis ID
+  const updateUrlWithAnalysisId = (analysisId: string) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('analysis', analysisId)
+    window.history.replaceState({}, '', url.toString())
+    setCurrentAnalysisId(analysisId)
+  }
 
   // Load saved analyses for history dropdown
   useEffect(() => {
@@ -191,11 +240,15 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
     return () => window.removeEventListener('ai-editor-saved', handleNewSave)
   }, [])
 
-  // Load a saved analysis - navigate to results page if cached, auto-analyze if not
+  // Load a saved analysis - show results inline if cached, auto-analyze if not
   const loadSavedAnalysis = (analysis: any) => {
     if (analysis.cachedResult && analysis.id) {
-      // Navigate directly to results page
-      navigateToResults(analysis.id)
+      // Show results inline
+      setText(analysis.text)
+      setResult(analysis.cachedResult)
+      setSavedOnce(true)
+      setError(null)
+      updateUrlWithAnalysisId(analysis.id)
     } else {
       // No cache - set text and trigger analysis
       setText(analysis.text)
@@ -294,11 +347,6 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
     return analysisId
   }
 
-  // Navigate to the results page for a given analysis
-  const navigateToResults = (analysisId: string) => {
-    router.push(`/ai-editor/results/${analysisId}`)
-  }
-
   // Check if we have a cached result for given text
   const findCachedResult = (searchText: string): AIEditorAnalyzeResponse | null => {
     const trimmedText = searchText.trim()
@@ -326,16 +374,9 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
     // Check for cached result first - instant loading!
     const cached = findCachedResult(textToAnalyze)
     if (cached) {
-      // Find the existing ID or create new one
-      const savedAnalyses = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
-      const existing = savedAnalyses.find((a: any) => a.text?.trim() === textToAnalyze.trim() && a.cachedResult)
-      if (existing?.id) {
-        navigateToResults(existing.id)
-        return
-      }
-      // Fallback: save and navigate
-      const newId = addToRecentSearches(textToAnalyze, cached)
-      navigateToResults(newId)
+      // Show cached result inline immediately
+      setResult(cached)
+      setSavedOnce(true)
       return
     }
 
@@ -378,13 +419,15 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
         setLoading(false)
         setLoadingPhase(0)
       } else {
-        // Save and navigate to results
+        // Save and show results inline
         const analysisId = addToRecentSearches(textToAnalyze, data)
         updateSavedAnalysisCache(textToAnalyze, data)
         phaseTimers.forEach(timer => clearTimeout(timer))
         setLoading(false)
         setLoadingPhase(0)
-        navigateToResults(analysisId)
+        setResult(data)
+        setSavedOnce(true)
+        updateUrlWithAnalysisId(analysisId)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error')
@@ -1015,119 +1058,231 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
         </div>
       )}
 
-      {/* Input Section - Two modes: Edit (no result) and View (has result) */}
-      {!result ? (
-        /* Edit Mode - Editable textarea with Analyze button */
-        <div
-          style={{
-            borderRadius: '16px',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-            border: '2px solid rgba(0, 51, 255, 0.3)',
-            overflow: 'hidden',
-            marginBottom: loading || error ? 'var(--space-6)' : 0
-          }}
-        >
-          <textarea
-            id="ai-editor-text-input"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Paste your draft, thesis, or argument here..."
-            disabled={loading}
-            style={{
-              width: '100%',
-              height: '160px',
-              padding: '20px',
-              border: 'none',
-              fontSize: '15px',
-              lineHeight: '1.7',
-              color: '#1e293b',
-              backgroundColor: 'transparent',
-              resize: 'none',
-              outline: 'none',
-              opacity: loading ? 0.5 : 1,
-              fontFamily: 'inherit'
-            }}
-          />
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px 20px',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-              borderTop: '1px solid rgba(148, 163, 184, 0.2)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '13px', color: text.length > 4000 ? '#ef4444' : '#64748b', fontWeight: 500 }}>
-                {text.length > 0 ? `${text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
-              </span>
-              <span style={{ color: '#cbd5e1' }}>•</span>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>
-                <kbd style={{
-                  padding: '2px 6px',
-                  backgroundColor: 'white',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  fontFamily: 'monospace'
-                }}>⌘↵</kbd>
-              </span>
+      {/* Analysis Not Found Message - for shared links from different devices */}
+      {analysisNotFound && !result && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-[14px] font-medium text-amber-800 mb-1">Analysis not found</h4>
+              <p className="text-[13px] text-amber-700">
+                This analysis may have been created on a different device. Paste your text below to analyze again.
+              </p>
             </div>
-            <button
-              onClick={() => handleAnalyze()}
-              disabled={!canAnalyze}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: !canAnalyze
-                  ? '#e2e8f0'
-                  : 'linear-gradient(135deg, #0033FF 0%, #0028CC 100%)',
-                color: 'white',
-                padding: '12px 24px',
-                borderRadius: '8px',
-                fontSize: '15px',
-                fontWeight: '600',
-                border: 'none',
-                cursor: !canAnalyze ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: !canAnalyze ? 'none' : '0 4px 20px rgba(0, 51, 255, 0.5)',
-              }}
-              onMouseEnter={(e) => {
-                if (canAnalyze) {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 51, 255, 0.6)'
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #3D5FFF 0%, #0033FF 100%)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (canAnalyze) {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 51, 255, 0.5)'
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #0033FF 0%, #0028CC 100%)'
-                }
-              }}
-            >
-              {loading ? (
-                <>
-                  <Loader2 style={{ width: '18px', height: '18px' }} className="animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Sparkles style={{ width: '18px', height: '18px' }} />
-                  Analyze
-                </>
-              )}
-            </button>
           </div>
         </div>
+      )}
+
+      {/* Results Header - Shows when analysis is complete */}
+      {result && (
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => {
+              setResult(null)
+              setText('')
+              setError(null)
+              setSavedOnce(false)
+              setCurrentAnalysisId(null)
+              // Clear the URL param
+              const url = new URL(window.location.href)
+              url.searchParams.delete('analysis')
+              window.history.replaceState({}, '', url.toString())
+            }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-[13px] text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>New Analysis</span>
+          </button>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-100">
+            <CheckCircle className="w-4 h-4 text-green-600" />
+            <span className="text-[13px] font-medium text-green-700">Analysis Complete</span>
+          </div>
+        </div>
+      )}
+
+      {/* Input Section - Two modes: Edit (no result) and View (has result) */}
+      {!result ? (
+        /* Edit Mode - Welcome state with clean layout matching explore page */
+        <div className="bg-gradient-to-br from-indigo-50 via-white to-blue-50 border border-indigo-100 rounded-xl p-6">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-7 h-7 text-indigo-600" />
+            </div>
+            <h3 className="text-[17px] font-semibold text-gray-900 mb-2">Analyze your content</h3>
+            <p className="text-[14px] text-gray-600 max-w-md mx-auto">
+              Paste your draft to discover aligned perspectives and get editorial suggestions from 200+ thought leaders.
+            </p>
+          </div>
+
+          {/* Input Card */}
+          <div className="max-w-2xl mx-auto">
+            <div
+              style={{
+                borderRadius: '12px',
+                background: 'white',
+                border: '1px solid #c7d2fe',
+                overflow: 'hidden',
+                marginBottom: loading || error ? '24px' : 0
+              }}
+            >
+              <textarea
+                id="ai-editor-text-input"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Paste your draft, thesis, or argument here..."
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  height: '140px',
+                  padding: '16px',
+                  border: 'none',
+                  fontSize: '14px',
+                  lineHeight: '1.7',
+                  color: '#1e293b',
+                  backgroundColor: 'transparent',
+                  resize: 'none',
+                  outline: 'none',
+                  opacity: loading ? 0.5 : 1,
+                  fontFamily: 'inherit'
+                }}
+              />
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 16px',
+                  backgroundColor: '#f8fafc',
+                  borderTop: '1px solid #e2e8f0',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '12px', color: text.length > 4000 ? '#ef4444' : '#64748b', fontWeight: 500 }}>
+                    {text.length > 0 ? `${text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
+                  </span>
+                  <span style={{ color: '#cbd5e1' }}>•</span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    <kbd style={{
+                      padding: '2px 5px',
+                      backgroundColor: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '3px',
+                      fontSize: '10px',
+                      fontFamily: 'monospace'
+                    }}>⌘↵</kbd>
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleAnalyze()}
+                  disabled={!canAnalyze}
+                  className="group"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: !canAnalyze
+                      ? '#e2e8f0'
+                      : 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                    color: 'white',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    border: 'none',
+                    cursor: !canAnalyze ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: !canAnalyze ? 'none' : '0 2px 8px rgba(79, 70, 229, 0.3)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (canAnalyze) {
+                      e.currentTarget.style.transform = 'translateY(-1px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.4)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (canAnalyze) {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.3)'
+                    }
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 style={{ width: '16px', height: '16px' }} className="animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles style={{ width: '16px', height: '16px' }} />
+                      Analyze
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Analyses - Inside welcome container */}
+          {!loading && !error && savedAnalyses.length > 0 && pendingFromHome === false && (
+            <div className="mt-6 pt-6 border-t border-indigo-100">
+              {/* Section Header */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-indigo-200">
+                  <History className="w-4 h-4 text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-semibold text-gray-900 m-0">Recent Analyses</h3>
+                  <p className="text-[12px] text-gray-500 m-0">Click to view results</p>
+                </div>
+              </div>
+
+              {/* Analysis Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
+                {savedAnalyses.slice(0, 4).map((analysis) => (
+                  <button
+                    key={analysis.id}
+                    onClick={() => loadSavedAnalysis(analysis)}
+                    className="p-4 bg-white rounded-xl border border-indigo-200 text-left hover:border-indigo-400 hover:shadow-md transition-all group"
+                  >
+                    <div className="text-[13px] text-gray-800 font-medium mb-2 line-clamp-2">
+                      {analysis.preview || analysis.text?.substring(0, 80)}
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-gray-400">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3 h-3" />
+                        {new Date(analysis.timestamp).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </div>
+                      {analysis.cachedResult && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-600 rounded-full text-[10px] font-medium">
+                          <CheckCircle className="w-2.5 h-2.5" />
+                          Ready
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {savedAnalyses.length > 4 && (
+                <div className="text-center mt-3">
+                  <Link
+                    href="/history"
+                    className="text-[12px] text-indigo-600 hover:text-indigo-700 hover:underline"
+                  >
+                    +{savedAnalyses.length - 4} more in history →
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       ) : (
-        /* View Mode - Read-only display of analyzed text */
+        /* View Mode - Analyzed text preview */
         <div
           style={{
             borderRadius: '12px',
@@ -1208,118 +1363,6 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
             <span style={{ fontSize: '12px', color: '#0158AE', fontWeight: 500 }}>
               {text.length.toLocaleString()} characters analyzed
             </span>
-          </div>
-        </div>
-      )}
-
-      {/* Recent Analyses - Show prominently when no results and not coming from home */}
-      {!result && !loading && !error && savedAnalyses.length > 0 && pendingFromHome === false && (
-        <div style={{ marginTop: 'var(--space-6)' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 'var(--space-4)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <History style={{ width: '18px', height: '18px', color: '#1075DC' }} />
-              <h3 style={{
-                fontSize: 'var(--text-body)',
-                fontWeight: 'var(--weight-semibold)',
-                color: '#162950',
-                margin: 0
-              }}>
-                Recent Analyses
-              </h3>
-              <span style={{
-                fontSize: '12px',
-                color: '#64748b',
-                fontWeight: '500'
-              }}>
-                Click to view
-              </span>
-            </div>
-          </div>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: 'var(--space-3)'
-          }}>
-            {savedAnalyses.map((analysis) => (
-              <button
-                key={analysis.id}
-                onClick={() => loadSavedAnalysis(analysis)}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '16px',
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#48AFF0'
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 117, 220, 0.15)'
-                  e.currentTarget.style.transform = 'translateY(-1px)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#e5e7eb'
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                }}
-              >
-                <div style={{
-                  fontSize: '14px',
-                  color: '#1f2937',
-                  fontWeight: '500',
-                  marginBottom: '8px',
-                  lineHeight: '1.5',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden'
-                }}>
-                  {analysis.preview || analysis.text?.substring(0, 80)}
-                </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  fontSize: '12px',
-                  color: '#9ca3af'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Clock style={{ width: '12px', height: '12px' }} />
-                    {new Date(analysis.timestamp).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </div>
-                  {analysis.cachedResult && (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '2px 8px',
-                      backgroundColor: '#d1fae5',
-                      color: '#059669',
-                      borderRadius: '10px',
-                      fontSize: '11px',
-                      fontWeight: '600'
-                    }}>
-                      <CheckCircle style={{ width: '10px', height: '10px' }} />
-                      View now
-                    </span>
-                  )}
-                </div>
-              </button>
-            ))}
           </div>
         </div>
       )}
@@ -1451,7 +1494,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                 New Analysis
               </button>
 
-              {/* Center: Navigation pills */}
+              {/* Center: Navigation - Jump to section */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1460,6 +1503,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                 backgroundColor: '#DCF2FA',
                 borderRadius: '10px'
               }}>
+                <span style={{ fontSize: '11px', color: '#64748b', padding: '0 8px' }}>Jump to:</span>
                 <button
                   onClick={() => scrollToSection(summaryRef)}
                   style={{
@@ -1505,7 +1549,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                     e.currentTarget.style.color = '#162950'
                   }}
                 >
-                  Suggestions
+                  Editorial Tips
                 </button>
                 <button
                   onClick={() => scrollToSection(authorsRef)}
@@ -1532,7 +1576,7 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                     e.currentTarget.style.color = '#162950'
                   }}
                 >
-                  Authors ({result.matchedCamps.length})
+                  {result.matchedCamps.reduce((total, camp) => total + camp.topAuthors.length, 0)} Authors
                 </button>
               </div>
 
@@ -1597,6 +1641,46 @@ export default function AIEditor({ showTitle = false }: AIEditorProps) {
                   }}
                 >
                   <FileDown style={{ width: '16px', height: '16px' }} />
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(window.location.href)
+                      setUrlCopied(true)
+                      showToast('Link copied!')
+                      setTimeout(() => setUrlCopied(false), 2000)
+                    } catch (e) {
+                      showToast('Failed to copy link', 'error')
+                    }
+                  }}
+                  title="Copy link to share"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '36px',
+                    height: '36px',
+                    backgroundColor: urlCopied ? '#dcfce7' : 'transparent',
+                    border: urlCopied ? '1px solid #86efac' : '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    color: urlCopied ? '#16a34a' : '#6b7280',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!urlCopied) {
+                      e.currentTarget.style.backgroundColor = '#f9fafb'
+                      e.currentTarget.style.borderColor = '#d1d5db'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!urlCopied) {
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                      e.currentTarget.style.borderColor = '#e5e7eb'
+                    }
+                  }}
+                >
+                  <Share2 style={{ width: '16px', height: '16px' }} />
                 </button>
                 <button
                   onClick={handleSave}

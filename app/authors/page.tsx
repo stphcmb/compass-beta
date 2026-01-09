@@ -959,8 +959,8 @@ function AuthorIndexPageContent() {
           <PageHeader
             icon={<Users size={24} />}
             iconVariant="green"
-            title="Thought Leaders"
-            subtitle={`${totalFiltered} experts shaping AI discourse`}
+            title="Who would you like to explore?"
+            subtitle={`Browse ${totalFiltered} thought leaders and their perspectives on AI.`}
             helpButton={{
               label: 'How it works',
               onClick: openModal

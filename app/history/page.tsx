@@ -580,8 +580,8 @@ export default function HistoryPage() {
           <PageHeader
             icon={<History size={24} />}
             iconVariant="purple"
-            title="Your History"
-            subtitle="Your research journey, all in one place"
+            title="What have you explored?"
+            subtitle="Revisit your searches, analyses, and saved insights."
             helpButton={{
               label: 'How it works',
               onClick: () => setShowAboutModal(true)
