@@ -15,7 +15,7 @@ export default function AIEditorPage() {
       <Header sidebarCollapsed={true} />
       <main
         ref={mainRef}
-        className="flex-1 mt-16 overflow-y-auto"
+        className="flex-1 mt-16 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-indigo-50/30"
       >
         <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
           {/* Page Header */}

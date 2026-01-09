@@ -5,22 +5,56 @@
 import React from 'react'
 
 /**
+ * Common stopwords that should not be highlighted in search results
+ * These are words that appear frequently but carry little semantic meaning
+ */
+const STOPWORDS = new Set([
+  // Common English stopwords
+  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'her', 'was', 'one',
+  'our', 'out', 'has', 'have', 'had', 'his', 'how', 'its', 'may', 'new', 'now', 'old',
+  'see', 'way', 'who', 'did', 'get', 'got', 'let', 'put', 'say', 'she', 'too', 'use',
+  'with', 'will', 'that', 'this', 'from', 'they', 'been', 'have', 'were', 'what', 'when',
+  'which', 'their', 'there', 'these', 'those', 'would', 'could', 'should', 'about',
+  // Common AI-related context words that aren't meaningful to highlight
+  'through', 'impact', 'effects', 'concerns', 'analysis', 'assessment', 'development',
+  'technology', 'capabilities', 'approaches', 'requirements', 'principles'
+])
+
+/**
+ * Check if a term is meaningful enough to highlight
+ * Filters out stopwords and very short terms
+ */
+function isMeaningfulTerm(term: string): boolean {
+  const termLower = term.toLowerCase()
+  // Must be longer than 2 characters
+  if (term.length <= 2) return false
+  // Must not be a stopword
+  if (STOPWORDS.has(termLower)) return false
+  // Must contain at least one letter (avoid pure numbers/symbols)
+  if (!/[a-z]/i.test(term)) return false
+  return true
+}
+
+/**
  * Extracts search terms from expanded queries
  */
 export function extractSearchTerms(expandedQueries: any[], originalQuery: string): string[] {
   const terms = new Set<string>()
 
-  // Add original query terms
+  // Add original query terms (these are always meaningful - user typed them)
   originalQuery.toLowerCase().split(/\s+/).forEach(term => {
     if (term.length > 2) terms.add(term)
   })
 
-  // Add expanded query terms
+  // Add expanded query terms (filter more strictly)
   expandedQueries?.forEach(eq => {
     const query = eq.query || eq
     if (typeof query === 'string') {
       query.toLowerCase().split(/\s+/).forEach(term => {
-        if (term.length > 2) terms.add(term)
+        // Only add expanded terms if they're meaningful
+        if (isMeaningfulTerm(term)) {
+          terms.add(term)
+        }
       })
     }
   })

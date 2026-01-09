@@ -29,7 +29,8 @@ export { expandQuery, extractSearchTerms } from './client'
 
 // Shared utilities (for both main search and AI Editor)
 export { expandSearchTerms, expandSearchTermsWithQueries } from './shared'
-export { expandQuerySemantics, extractPhrases } from './semantic-provider'
+export type { ExpansionMethod, ExpansionMetadata } from './shared'
+export { expandQuerySemantics, extractPhrases, expandWithSynonyms, CONCEPT_SYNONYMS } from './semantic-provider'
 
 // Types
 export type {
@@ -45,3 +46,7 @@ export { getConfig, getWebhookUrl, isEnabled, isTestMode } from './config'
 
 // Providers (for advanced usage)
 export { n8nProvider } from './providers/n8n-provider'
+
+// LLM Query Understanding (lightweight enhancement)
+export { understandQueryWithLLM, hasGoodLocalCoverage } from './llm-query-understanding'
+export type { QueryUnderstanding } from './llm-query-understanding'

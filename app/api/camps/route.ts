@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       camps: result.camps,
-      expandedQueries: result.expandedQueries
+      expandedQueries: result.expandedQueries,
+      expansionMeta: result.expansionMeta
     })
   } catch (error) {
     console.error('Error in /api/camps:', error)

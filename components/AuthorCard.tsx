@@ -75,38 +75,38 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-2.5 hover:shadow-sm hover:border-gray-300 transition-all">
+    <div className="bg-white border border-gray-200 rounded-xl p-3.5 hover:shadow-md hover:border-gray-300 transition-all">
       {/* Author Header */}
-      <div className="flex items-start gap-2 mb-1.5">
-        {/* Avatar */}
-        <div className="w-8 h-8 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-full flex items-center justify-center flex-shrink-0">
-          <span className="text-[11px] font-semibold text-indigo-700">
+      <div className="flex items-start gap-3 mb-2">
+        {/* Avatar - Larger */}
+        <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-full flex items-center justify-center flex-shrink-0">
+          <span className="text-[13px] font-semibold text-indigo-700">
             {getInitials(name)}
           </span>
         </div>
 
         {/* Name & Affiliation */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleAuthorClick}
-              className="font-semibold text-[15px] text-gray-900 hover:text-indigo-600 transition-colors text-left"
+              className="font-semibold text-[16px] text-gray-900 hover:text-indigo-600 transition-colors text-left leading-tight"
             >
               {searchTerms.length > 0 ? highlightText(name, searchTerms) : name}
             </button>
             {query && matchType === 'exact' && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 border border-green-200">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700 border border-green-200">
                 Direct Match
               </span>
             )}
             {query && matchType === 'expanded' && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700 border border-blue-200">
                 Related
               </span>
             )}
           </div>
           {affiliation && (
-            <p className="text-[13px] text-gray-500 leading-snug">
+            <p className="text-[14px] text-gray-500 leading-snug mt-0.5">
               {searchTerms.length > 0 ? highlightText(affiliation, searchTerms) : affiliation}
             </p>
           )}
@@ -115,7 +115,7 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
 
       {/* Position Summary */}
       {author.positionSummary && (
-        <p className="text-[13px] text-gray-600 leading-snug mb-1.5 ml-10">
+        <p className="text-[14px] text-gray-600 leading-snug mb-2">
           {searchTerms.length > 0
             ? highlightText(author.positionSummary, searchTerms)
             : author.positionSummary
@@ -123,31 +123,31 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
         </p>
       )}
 
-      {/* Quote with integrated source link */}
+      {/* Quote with integrated source link - More prominent */}
       {hasQuote && (
         quoteSourceUrl ? (
           <a
             href={quoteSourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={`block ml-10 px-2.5 py-1.5 rounded-md cursor-pointer transition-all group ${
+            className={`block px-3.5 py-2.5 rounded-lg cursor-pointer transition-all group ${
               quoteRelevant
-                ? 'bg-blue-50 border border-blue-100 hover:bg-blue-100/70 hover:border-blue-200'
-                : 'bg-gray-50 border border-gray-100 hover:bg-gray-100/70 hover:border-gray-200'
+                ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100/80 hover:border-blue-300'
+                : 'bg-gray-50 border border-gray-200 hover:bg-gray-100/80 hover:border-gray-300'
             }`}
           >
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2.5">
               <Quote className={`w-4 h-4 flex-shrink-0 mt-0.5 transition-colors ${
                 quoteRelevant ? 'text-blue-400 group-hover:text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
               }`} />
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] text-gray-700 italic leading-relaxed group-hover:text-gray-800 transition-colors">
+                <p className="text-[14px] text-gray-700 italic leading-relaxed group-hover:text-gray-800 transition-colors">
                   "{searchTerms.length > 0 ? highlightText(author.key_quote, searchTerms) : author.key_quote}"
                 </p>
                 {/* Source Link */}
-                <span className="inline-flex items-center gap-1 mt-1 text-[11px] text-gray-400 group-hover:text-indigo-600 transition-colors">
-                  <ExternalLink className="w-3 h-3" />
-                  <span className="truncate max-w-[220px] group-hover:underline">
+                <span className="inline-flex items-center gap-1.5 mt-1.5 text-[12px] text-gray-400 group-hover:text-indigo-600 transition-colors">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="group-hover:underline">
                     {getSourceTitle(quoteSourceUrl, author?.sources || [])}
                   </span>
                 </span>
@@ -155,14 +155,14 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
             </div>
           </a>
         ) : (
-          <div className={`ml-10 px-2.5 py-1.5 rounded-md ${
-            quoteRelevant ? 'bg-blue-50 border border-blue-100' : 'bg-gray-50 border border-gray-100'
+          <div className={`px-3.5 py-2.5 rounded-lg ${
+            quoteRelevant ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 border border-gray-200'
           }`}>
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2.5">
               <Quote className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
                 quoteRelevant ? 'text-blue-400' : 'text-gray-400'
               }`} />
-              <p className="text-[13px] text-gray-700 italic leading-relaxed">
+              <p className="text-[14px] text-gray-700 italic leading-relaxed">
                 "{searchTerms.length > 0 ? highlightText(author.key_quote, searchTerms) : author.key_quote}"
               </p>
             </div>
@@ -172,7 +172,7 @@ export default function AuthorCard({ author, query, expandedQueries = [], showMi
 
       {/* Note for non-matching quotes - shown at bottom when applicable */}
       {showMismatchNote && hasQuote && !quoteRelevant && query && (
-        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5 mt-1.5 ml-10">
+        <div className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
           <span className="font-medium">Note:</span> This quote may not directly mention your search terms.
           This author appears because of their expertise and position on this topic.
         </div>

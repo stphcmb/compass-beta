@@ -16,6 +16,30 @@ export interface DomainConfig {
   youWillFind: string
 }
 
+/**
+ * Subdued/Neutral Design Tokens
+ * Use these for consistent, non-distracting domain labels across the app
+ * These reduce cognitive load by avoiding colorful per-domain styling
+ */
+export const DOMAIN_LABEL_STYLES = {
+  // Default subdued style - use for most domain labels
+  subdued: {
+    bg: '#f5f5f5',
+    text: '#6b7280',
+    border: '#e5e7eb',
+  },
+  // Minimal style - just text, no background
+  minimal: {
+    text: '#9ca3af',
+  },
+  // Active/selected state
+  active: {
+    bg: '#f0f9ff',
+    text: '#0369a1',
+    border: '#bae6fd',
+  }
+} as const
+
 export const DOMAINS: DomainConfig[] = [
   {
     name: 'AI Technical Capabilities',

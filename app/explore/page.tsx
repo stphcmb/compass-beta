@@ -6,14 +6,15 @@ import Header from '@/components/Header'
 import PageHeader from '@/components/PageHeader'
 import SearchBar from '@/components/SearchBar'
 import CampAccordion from '@/components/CampAccordion'
+import SearchResults from '@/components/SearchResults'
 import BackToTop from '@/components/BackToTop'
-import { ExpandedQueries } from '@/components/search-expansion'
+// Note: ExpandedQueries component removed - using "Also searching for" in SearchResults instead
 import { FeatureHint } from '@/components/FeatureHint'
 import { HowPerspectivesWorkModal, useHowPerspectivesWorkModal } from '@/components/HowPerspectivesWorkModal'
 import DomainOverview from '@/components/DomainOverview'
 // import DomainSpectrum from '@/components/DomainSpectrum' // Temporarily hidden
 import { TERMINOLOGY } from '@/lib/constants/terminology'
-import { Layers, Compass } from 'lucide-react'
+import { Layers, Compass, Search as SearchIcon, Grid3X3, ArrowLeft, Lightbulb, Users, TrendingUp } from 'lucide-react'
 
 // Layout constants - match Authors page sidebar
 const SIDEBAR_WIDTH = 320
@@ -40,6 +41,9 @@ function ExplorePageContent() {
   const [loadedCamps, setLoadedCamps] = useState<any[]>([])
   const [scrollToCampId, setScrollToCampId] = useState<string | null>(null)
   const [activeCampId, setActiveCampId] = useState<string | null>(null)
+
+  // Explicit explore mode - only show perspectives when user clicks to explore
+  const [exploreMode, setExploreMode] = useState(false)
 
   // Modal for teaching users how perspectives work
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useHowPerspectivesWorkModal()
@@ -179,86 +183,152 @@ function ExplorePageContent() {
             camp={camp}
           />
 
-          {/* Show expanded queries beneath search bar */}
-          {query && expandedQueries && expandedQueries.length > 0 && (
-            <div style={{ marginBottom: '12px' }}>
-              <ExpandedQueries queries={expandedQueries} originalQuery={query} />
-            </div>
-          )}
-
-          {/* Domain Filter Indicator */}
-          {activeDomain && !query && (
-            <div
-              className="flex items-center justify-between"
-              style={{
-                marginBottom: '12px',
-                padding: '8px 12px',
-                backgroundColor: '#eef2ff',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid #c7d2fe'
-              }}
-            >
-              <div>
-                <span style={{ fontSize: '9px', color: 'var(--color-accent)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filtering</span>
-                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-soft-black)' }}>{activeDomain}</div>
-              </div>
-              <button
-                onClick={() => setActiveDomain(null)}
-                style={{ fontSize: '11px', color: 'var(--color-accent)', fontWeight: 500 }}
-                className="hover:underline"
-              >
-                Clear
-              </button>
-            </div>
-          )}
-
           {/* How Perspectives Work Modal */}
           <HowPerspectivesWorkModal isOpen={isModalOpen} onClose={closeModal} />
 
-          {/* Perspectives Section */}
+          {/* Content Section - Search Results vs Explore Mode */}
           <div ref={campsRef} style={{ marginTop: '16px' }}>
-            {/* Section Header - Different for search vs browse */}
             {query ? (
-              <div style={{ marginBottom: '12px' }}>
-                <div className="flex items-center gap-2">
-                  <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-soft-black)' }}>
-                    Results
-                  </h2>
-                  {loadedCamps.length > 0 && (
-                    <span style={{ fontSize: '12px', color: 'var(--color-mid-gray)' }}>
-                      {loadedCamps.reduce((sum, c) => sum + (c.authorCount || 0), 0)} authors · {loadedCamps.length} perspectives
-                    </span>
-                  )}
+              /* SEARCH MODE: Flat, author-focused results */
+              <div>
+                {/* Search Mode Header with Back Button */}
+                <div className="flex items-center justify-between mb-3">
+                  <a
+                    href={`/explore${domain ? `?domain=${encodeURIComponent(domain)}` : ''}`}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-[13px] text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Browse All Perspectives</span>
+                  </a>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
+                    <SearchIcon className="w-4 h-4 text-blue-600" />
+                    <span className="text-[13px] font-medium text-blue-700">Search Mode</span>
+                  </div>
+                </div>
+
+                {/* Search Results - Flat author list */}
+                <div style={{
+                  backgroundColor: 'var(--color-air-white)',
+                  border: '1px solid var(--color-light-gray)',
+                  borderRadius: '12px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  padding: '16px 20px'
+                }}>
+                  <SearchResults
+                    query={query}
+                    domain={domain}
+                    onResultsLoaded={handleCampsLoaded}
+                  />
+                </div>
+              </div>
+            ) : !exploreMode && !activeDomain ? (
+              /* WELCOME STATE: Prompt users to search or explore */
+              <div className="bg-gradient-to-br from-indigo-50 via-white to-blue-50 border border-indigo-100 rounded-xl p-6">
+                <div className="text-center mb-6">
+                  <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Compass className="w-7 h-7 text-indigo-600" />
+                  </div>
+                  <h3 className="text-[17px] font-semibold text-gray-900 mb-2">How would you like to explore?</h3>
+                  <p className="text-[14px] text-gray-600 max-w-md mx-auto">
+                    Search for specific topics, or browse all perspectives organized by domain.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+                  {/* Search Option - Just highlight the search bar */}
+                  <div className="p-4 bg-white rounded-xl border border-gray-200 text-center">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <SearchIcon className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="text-[14px] font-medium text-gray-800 mb-1">Search</div>
+                    <div className="text-[12px] text-gray-500 mb-3">Find authors by topic, quote, or name</div>
+                    <div className="text-[11px] text-blue-600 font-medium">↑ Use the search bar above</div>
+                  </div>
+
+                  {/* Browse Option - Click to enter explore mode */}
+                  <button
+                    onClick={() => setExploreMode(true)}
+                    className="p-4 bg-white rounded-xl border border-indigo-200 text-center hover:border-indigo-400 hover:shadow-md transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:bg-indigo-200 transition-colors">
+                      <Grid3X3 className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div className="text-[14px] font-medium text-gray-800 mb-1">Browse Perspectives</div>
+                    <div className="text-[12px] text-gray-500 mb-3">Explore all perspectives by domain</div>
+                    <div className="text-[11px] text-indigo-600 font-medium">Click to browse →</div>
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2" style={{ marginBottom: '12px' }}>
-                <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, var(--color-light-gray), transparent)' }} />
-                <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-mid-gray)', padding: '0 8px' }}>
-                  {activeDomain ? `${activeDomain}` : 'All Perspectives'}
-                </span>
-                <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, var(--color-light-gray), transparent)' }} />
+              /* EXPLORE MODE: Hierarchical domain/camp discovery */
+              <div>
+                {/* Explore Mode Header with Back Button */}
+                <div className="flex items-center justify-between mb-3">
+                  <button
+                    onClick={() => {
+                      setExploreMode(false)
+                      setActiveDomain(null)
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-[13px] text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100">
+                    <Grid3X3 className="w-4 h-4 text-indigo-600" />
+                    <span className="text-[13px] font-medium text-indigo-700">
+                      {activeDomain ? activeDomain : 'All Perspectives'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Domain Filter Indicator */}
+                {activeDomain && (
+                  <div
+                    className="flex items-center justify-between"
+                    style={{
+                      marginBottom: '12px',
+                      padding: '8px 12px',
+                      backgroundColor: '#eef2ff',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid #c7d2fe'
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '9px', color: 'var(--color-accent)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filtering</span>
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-soft-black)' }}>{activeDomain}</div>
+                    </div>
+                    <button
+                      onClick={() => setActiveDomain(null)}
+                      style={{ fontSize: '11px', color: 'var(--color-accent)', fontWeight: 500 }}
+                      className="hover:underline"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
+                {/* Camp Accordion - Hierarchical view */}
+                <div style={{
+                  backgroundColor: 'var(--color-air-white)',
+                  border: '1px solid var(--color-light-gray)',
+                  borderRadius: '12px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  padding: '12px 16px'
+                }}>
+                  <CampAccordion
+                    query={query}
+                    domain={domain}
+                    domains={domains}
+                    camp={camp}
+                    camps={camps}
+                    authors={authors}
+                    onCampsLoaded={handleCampsLoaded}
+                    scrollToCampId={scrollToCampId}
+                  />
+                </div>
               </div>
             )}
-
-            <div style={{
-              backgroundColor: 'var(--color-air-white)',
-              border: '1px solid var(--color-light-gray)',
-              borderRadius: '12px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              padding: '12px 16px'
-            }}>
-              <CampAccordion
-                query={query}
-                domain={domain}
-                domains={domains}
-                camp={camp}
-                camps={camps}
-                authors={authors}
-                onCampsLoaded={handleCampsLoaded}
-                scrollToCampId={scrollToCampId}
-              />
-            </div>
           </div>
         </div>
         <BackToTop containerRef={mainRef} />

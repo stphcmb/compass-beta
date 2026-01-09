@@ -328,9 +328,13 @@ function enrichWithCrossPerspectiveAuthors(camps: any[], query?: string, queryTe
 
 /**
  * Fetch camps with their associated authors
- * Returns both camps and expanded queries (if query expansion was used)
+ * Returns camps, expanded queries, and expansion metadata
  */
-export async function getCampsWithAuthors(query?: string, domain?: string): Promise<{ camps: any[], expandedQueries: any[] | null }> {
+export async function getCampsWithAuthors(query?: string, domain?: string): Promise<{
+  camps: any[]
+  expandedQueries: any[] | null
+  expansionMeta?: { method: 'ai' | 'local' | 'none', description: string }
+}> {
   if (!supabase) {
     console.warn('Supabase not configured')
     return { camps: [], expandedQueries: null }
@@ -400,6 +404,7 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
 
     // Apply query filter if provided
     let expandedQueriesResult: any[] | null = null
+    let expansionMetaResult: { method: 'ai' | 'local' | 'none', description: string } | undefined = undefined
     if (query && query.trim()) {
       const queryLower = query.toLowerCase().trim()
       console.log('  Applying query filter:', queryLower)
@@ -409,8 +414,10 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
       console.log('  Detected intent:', intent)
 
       // Use shared expansion logic (n8n + semantic fallback)
-      const { terms: queryWords, expandedQueries } = await expandSearchTermsWithQueries(queryLower)
+      const { terms: queryWords, expandedQueries, expansionMeta } = await expandSearchTermsWithQueries(queryLower)
       expandedQueriesResult = expandedQueries
+      expansionMetaResult = expansionMeta
+      console.log('  Expansion method:', expansionMeta.method, '-', expansionMeta.description)
 
       console.log('  Query words:', queryWords.slice(0, 10), queryWords.length > 10 ? `... (${queryWords.length} total)` : '')
 
@@ -489,7 +496,11 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
     })
 
     console.log('✅ Returning camps:', campsWithFilteredAuthors.length)
-    return { camps: campsWithFilteredAuthors, expandedQueries: expandedQueriesResult }
+    return {
+      camps: campsWithFilteredAuthors,
+      expandedQueries: expandedQueriesResult,
+      expansionMeta: expansionMetaResult
+    }
   } catch (error) {
     console.error('Error in getCampsWithAuthors:', error)
     return { camps: [], expandedQueries: null }

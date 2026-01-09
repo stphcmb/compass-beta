@@ -10,7 +10,7 @@ import EmptyState from '@/components/EmptyState'
 import { AboutThoughtLeadersModal, useAboutThoughtLeadersModal } from '@/components/AboutThoughtLeadersModal'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { getCampsWithAuthors } from '@/lib/api/thought-leaders'
-import { DOMAINS, getDomainConfig } from '@/lib/constants/domains'
+import { DOMAINS, getDomainConfig, DOMAIN_LABEL_STYLES } from '@/lib/constants/domains'
 
 // Layout constants - match Explore page sidebar
 const SIDEBAR_WIDTH = 320
@@ -111,12 +111,21 @@ function AuthorIndexPageContent() {
     }
   }, [authorFromUrl, authors, urlAuthorHandled])
 
-  // Get author's primary domain
+  // Get author's primary domain (for backward compatibility)
   const getAuthorDomain = (authorId: string) => {
     const authorCamps = camps.filter(camp =>
       camp.authors?.some((a: any) => a.id === authorId)
     )
     return authorCamps.length > 0 ? authorCamps[0].domain : null
+  }
+
+  // Get ALL domains an author has positions in
+  const getAuthorDomains = (authorId: string): string[] => {
+    const authorCamps = camps.filter(camp =>
+      camp.authors?.some((a: any) => a.id === authorId)
+    )
+    const domains = [...new Set(authorCamps.map(camp => camp.domain).filter(Boolean))]
+    return domains
   }
 
   // Handle author selection
@@ -509,7 +518,7 @@ function AuthorIndexPageContent() {
                   )
                 })
               ) : groupBy === 'domain' ? (
-                // Domain quick-jump with colored dots
+                // Domain quick-jump with subdued dots
                 availableDomains.map((domain: any) => (
                   <div
                     key={domain.name}
@@ -527,7 +536,7 @@ function AuthorIndexPageContent() {
                         background: 'none',
                         borderRadius: '3px',
                         cursor: 'pointer',
-                        color: domain.text,
+                        color: DOMAIN_LABEL_STYLES.subdued.text,
                         transition: 'all 100ms ease-out',
                         display: 'flex',
                         alignItems: 'center',
@@ -535,7 +544,7 @@ function AuthorIndexPageContent() {
                         width: '100%'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = domain.bgLight
+                        e.currentTarget.style.backgroundColor = DOMAIN_LABEL_STYLES.subdued.bg
                         const tooltip = e.currentTarget.nextElementSibling as HTMLElement
                         if (tooltip) tooltip.style.opacity = '1'
                       }}
@@ -549,7 +558,7 @@ function AuthorIndexPageContent() {
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: domain.text
+                        backgroundColor: DOMAIN_LABEL_STYLES.subdued.text
                       }} />
                     </button>
                     <div style={{
@@ -559,7 +568,7 @@ function AuthorIndexPageContent() {
                       transform: 'translateY(-50%)',
                       marginLeft: '8px',
                       padding: '4px 8px',
-                      backgroundColor: domain.text,
+                      backgroundColor: 'var(--color-charcoal)',
                       color: 'white',
                       fontSize: '11px',
                       fontWeight: 600,
@@ -833,17 +842,13 @@ function AuthorIndexPageContent() {
                         <div style={{
                           display: 'flex', alignItems: 'center', gap: '8px',
                           padding: '8px 12px', borderRadius: '6px',
-                          backgroundColor: domain.bgLight, marginBottom: '6px',
+                          backgroundColor: DOMAIN_LABEL_STYLES.subdued.bg, marginBottom: '6px',
                           position: 'sticky', top: 0, zIndex: 1
                         }}>
-                          <span style={{
-                            width: '8px', height: '8px', borderRadius: '2px',
-                            backgroundColor: domain.text
-                          }} />
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: domain.text }}>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-charcoal)' }}>
                             {domain.name}
                           </span>
-                          <span style={{ fontSize: '12px', color: domain.text, opacity: 0.7 }}>
+                          <span style={{ fontSize: '12px', color: DOMAIN_LABEL_STYLES.subdued.text }}>
                             ({domainAuthors.length})
                           </span>
                         </div>
@@ -857,7 +862,7 @@ function AuthorIndexPageContent() {
                                 style={{
                                   display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
                                   padding: '6px 8px 6px 12px', borderRadius: '4px', border: 'none',
-                                  backgroundColor: isSelected ? domain.bgLight : 'transparent',
+                                  backgroundColor: isSelected ? DOMAIN_LABEL_STYLES.active.bg : 'transparent',
                                   cursor: 'pointer', transition: 'all 60ms ease-out', textAlign: 'left'
                                 }}
                                 onMouseEnter={(e) => {
@@ -868,12 +873,8 @@ function AuthorIndexPageContent() {
                                 }}
                               >
                                 <span style={{
-                                  width: '6px', height: '6px', borderRadius: '50%',
-                                  backgroundColor: domain.text, flexShrink: 0
-                                }} />
-                                <span style={{
                                   fontSize: '13px', fontWeight: isSelected ? 600 : 400,
-                                  color: isSelected ? domain.text : 'var(--color-soft-black)',
+                                  color: isSelected ? DOMAIN_LABEL_STYLES.active.text : 'var(--color-soft-black)',
                                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                                 }}>
                                   {author.name}
@@ -1032,35 +1033,29 @@ function AuthorIndexPageContent() {
                     gap: '6px',
                     padding: '6px 12px',
                     borderRadius: '8px',
-                    border: isActive ? `2px solid ${d.text}` : '1px solid #e5e7eb',
-                    backgroundColor: isActive ? d.bgLight : 'white',
+                    border: isActive ? `2px solid ${DOMAIN_LABEL_STYLES.active.border}` : '1px solid #e5e7eb',
+                    backgroundColor: isActive ? DOMAIN_LABEL_STYLES.active.bg : 'white',
                     cursor: 'pointer',
                     fontSize: '13px',
                     fontWeight: isActive ? 600 : 500,
-                    color: isActive ? d.text : 'var(--color-charcoal)',
+                    color: isActive ? DOMAIN_LABEL_STYLES.active.text : 'var(--color-charcoal)',
                     transition: 'all 150ms ease',
-                    boxShadow: isActive ? `0 0 0 3px ${d.bgLight}` : 'none',
+                    boxShadow: isActive ? `0 0 0 3px ${DOMAIN_LABEL_STYLES.active.bg}` : 'none',
                     whiteSpace: 'nowrap'
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.backgroundColor = d.bgLight
-                      e.currentTarget.style.borderColor = d.border
-                      e.currentTarget.style.color = d.text
+                      e.currentTarget.style.backgroundColor = DOMAIN_LABEL_STYLES.subdued.bg
+                      e.currentTarget.style.borderColor = DOMAIN_LABEL_STYLES.subdued.border
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
                       e.currentTarget.style.backgroundColor = 'white'
                       e.currentTarget.style.borderColor = '#e5e7eb'
-                      e.currentTarget.style.color = 'var(--color-charcoal)'
                     }
                   }}
                 >
-                  <span style={{
-                    width: '8px', height: '8px', borderRadius: '50%',
-                    backgroundColor: d.text
-                  }} />
                   {d.shortName}
                 </button>
               )
@@ -1101,11 +1096,14 @@ function AuthorIndexPageContent() {
               />
             ) : (
               // Welcome state when no author selected
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                padding: '24px 32px'
-              }}>
+              <div
+                className="bg-gradient-to-br from-emerald-50 via-white to-teal-50"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  padding: '24px 32px'
+                }}
+              >
                 {/* Compact header */}
                 <div style={{
                   display: 'flex',
@@ -1179,8 +1177,7 @@ function AuthorIndexPageContent() {
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                         {favoriteAuthors.map((author: any) => {
-                          const domain = getAuthorDomain(author.id)
-                          const domainStyle = getDomainStyle(domain)
+                          const authorDomains = getAuthorDomains(author.id)
                           return (
                             <button
                               key={author.id}
@@ -1195,8 +1192,8 @@ function AuthorIndexPageContent() {
                                 textAlign: 'left'
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = domainStyle.text
-                                e.currentTarget.style.backgroundColor = domainStyle.bg
+                                e.currentTarget.style.borderColor = '#059669'
+                                e.currentTarget.style.backgroundColor = '#f0fdf4'
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.borderColor = 'var(--color-light-gray)'
@@ -1208,18 +1205,7 @@ function AuthorIndexPageContent() {
                                   {author.name}
                                 </span>
                               </div>
-                              <div style={{
-                                fontSize: '10px',
-                                color: domainStyle.text,
-                                fontWeight: 500,
-                                marginBottom: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}>
-                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: domainStyle.text }} />
-                                {domainStyle.short}
-                              </div>
+                              {/* Bio/Notes first - more relevant */}
                               {author.notes && (
                                 <div style={{
                                   fontSize: '11px',
@@ -1228,9 +1214,38 @@ function AuthorIndexPageContent() {
                                   display: '-webkit-box',
                                   WebkitLineClamp: 2,
                                   WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden'
+                                  overflow: 'hidden',
+                                  marginBottom: authorDomains.length > 0 ? '6px' : '0'
                                 }}>
                                   {author.notes}
+                                </div>
+                              )}
+                              {/* Domain labels - at bottom */}
+                              {authorDomains.length > 0 && (
+                                <div style={{
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  gap: '4px'
+                                }}>
+                                  {authorDomains.map(domain => {
+                                    const config = getDomainConfig(domain)
+                                    return (
+                                      <span
+                                        key={domain}
+                                        style={{
+                                          fontSize: '9px',
+                                          fontWeight: 500,
+                                          color: DOMAIN_LABEL_STYLES.subdued.text,
+                                          backgroundColor: DOMAIN_LABEL_STYLES.subdued.bg,
+                                          padding: '2px 6px',
+                                          borderRadius: '4px',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        {config.shortName}
+                                      </span>
+                                    )
+                                  })}
                                 </div>
                               )}
                             </button>
@@ -1286,8 +1301,7 @@ function AuthorIndexPageContent() {
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                         {recentAddedAuthors.map((author: any) => {
-                          const domain = getAuthorDomain(author.id)
-                          const domainStyle = getDomainStyle(domain)
+                          const authorDomains = getAuthorDomains(author.id)
                           return (
                             <button
                               key={author.id}
@@ -1302,8 +1316,8 @@ function AuthorIndexPageContent() {
                                 textAlign: 'left'
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = domainStyle.text
-                                e.currentTarget.style.backgroundColor = domainStyle.bg
+                                e.currentTarget.style.borderColor = '#059669'
+                                e.currentTarget.style.backgroundColor = '#f0fdf4'
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.borderColor = 'var(--color-light-gray)'
@@ -1315,18 +1329,7 @@ function AuthorIndexPageContent() {
                                   {author.name}
                                 </span>
                               </div>
-                              <div style={{
-                                fontSize: '10px',
-                                color: domainStyle.text,
-                                fontWeight: 500,
-                                marginBottom: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}>
-                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: domainStyle.text }} />
-                                {domainStyle.short}
-                              </div>
+                              {/* Bio/Notes first - more relevant */}
                               {author.notes && (
                                 <div style={{
                                   fontSize: '11px',
@@ -1335,9 +1338,38 @@ function AuthorIndexPageContent() {
                                   display: '-webkit-box',
                                   WebkitLineClamp: 2,
                                   WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden'
+                                  overflow: 'hidden',
+                                  marginBottom: authorDomains.length > 0 ? '6px' : '0'
                                 }}>
                                   {author.notes}
+                                </div>
+                              )}
+                              {/* Domain labels - at bottom */}
+                              {authorDomains.length > 0 && (
+                                <div style={{
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  gap: '4px'
+                                }}>
+                                  {authorDomains.map(domain => {
+                                    const config = getDomainConfig(domain)
+                                    return (
+                                      <span
+                                        key={domain}
+                                        style={{
+                                          fontSize: '9px',
+                                          fontWeight: 500,
+                                          color: DOMAIN_LABEL_STYLES.subdued.text,
+                                          backgroundColor: DOMAIN_LABEL_STYLES.subdued.bg,
+                                          padding: '2px 6px',
+                                          borderRadius: '4px',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        {config.shortName}
+                                      </span>
+                                    )
+                                  })}
                                 </div>
                               )}
                             </button>

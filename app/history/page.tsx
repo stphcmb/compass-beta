@@ -150,10 +150,22 @@ export default function HistoryPage() {
     }
     window.addEventListener('helpful-insight-added', handleInsightAdded)
 
+    // Listen for search note updates from SearchResults
+    const handleSearchNoteUpdated = () => {
+      try {
+        const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+        setRecentSearches(recent)
+      } catch {
+        setRecentSearches([])
+      }
+    }
+    window.addEventListener('search-note-updated', handleSearchNoteUpdated)
+
     return () => {
       window.removeEventListener('author-note-updated', handleNoteUpdated as EventListener)
       window.removeEventListener('favorite-author-added', handleFavoriteAdded)
       window.removeEventListener('helpful-insight-added', handleInsightAdded)
+      window.removeEventListener('search-note-updated', handleSearchNoteUpdated)
     }
   }, [])
 
@@ -392,6 +404,12 @@ export default function HistoryPage() {
     setSavedAnalyses(updated)
   }
 
+  const updateRecentSearchNote = (id: string, note: string) => {
+    const updated = recentSearches.map(s => s.id === id ? { ...s, note: note || undefined } : s)
+    localStorage.setItem('recentSearches', JSON.stringify(updated))
+    setRecentSearches(updated)
+  }
+
   const deleteAuthorNote = (name: string) => {
     const removedNote = authorNotes.find(n => n.name === name)
     const filtered = authorNotes.filter(n => n.name !== name)
@@ -555,7 +573,7 @@ export default function HistoryPage() {
 
       {/* Main Content */}
       <main
-        className="flex-1 mt-16 overflow-auto"
+        className="flex-1 mt-16 overflow-auto bg-gradient-to-br from-purple-50/50 via-white to-indigo-50/30"
       >
         <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
           {/* Page Header - Centered like Explore page */}
@@ -780,6 +798,7 @@ export default function HistoryPage() {
                       query={s.query}
                       timestamp={timeAgo(s.timestamp)}
                       isSaved={true}
+                      note={s.note}
                       onClick={() => handleSearchClick(s.query, s.cachedResult)}
                       onDelete={() => deleteSavedSearch(s.id)}
                     />
@@ -832,6 +851,7 @@ export default function HistoryPage() {
                       query={s.query}
                       timestamp={timeAgo(s.timestamp)}
                       isSaved={false}
+                      note={s.note}
                       onClick={() => handleSearchClick(s.query, s.cachedResult)}
                       onDelete={() => deleteRecentSearch(s.id)}
                     />
@@ -1138,7 +1158,7 @@ export default function HistoryPage() {
                 <Section title="Recent Searches" icon={<Clock size={16} style={{ color: '#6b7280' }} />} count={filteredRecentSearches.length} onClear={() => clearAllByType('recent')}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {filteredRecentSearches.map(s => (
-                      <HistoryCard key={s.id} icon={<Search size={16} style={{ color: '#3b82f6' }} />} title={s.query} subtitle={timeAgo(s.timestamp)} onClick={() => handleSearchClick(s.query, s.cachedResult)} onDelete={() => deleteRecentSearch(s.id)} color="#3b82f6" />
+                      <HistoryCard key={s.id} icon={<Search size={16} style={{ color: '#3b82f6' }} />} title={s.query} subtitle={timeAgo(s.timestamp)} note={s.note} onClick={() => handleSearchClick(s.query, s.cachedResult)} onDelete={() => deleteRecentSearch(s.id)} onUpdateNote={(note) => updateRecentSearchNote(s.id, note)} color="#3b82f6" />
                     ))}
                   </div>
                 </Section>
@@ -1897,12 +1917,14 @@ function SearchCard({
   query,
   timestamp,
   isSaved,
+  note,
   onClick,
   onDelete
 }: {
   query: string
   timestamp: string
   isSaved: boolean
+  note?: string
   onClick: () => void
   onDelete: () => void
 }) {
@@ -1912,13 +1934,10 @@ function SearchCard({
       style={{
         padding: '12px 14px',
         borderRadius: '8px',
-        border: '1px solid #f3f4f6',
-        background: '#fafafa',
+        border: note ? '1px solid #fde68a' : '1px solid #f3f4f6',
+        background: note ? '#fffbeb' : '#fafafa',
         cursor: 'pointer',
         transition: 'all 0.15s ease',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
         width: '100%',
         boxSizing: 'border-box'
       }}
@@ -1927,60 +1946,86 @@ function SearchCard({
         e.currentTarget.style.background = 'white'
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#f3f4f6'
-        e.currentTarget.style.background = '#fafafa'
+        e.currentTarget.style.borderColor = note ? '#fde68a' : '#f3f4f6'
+        e.currentTarget.style.background = note ? '#fffbeb' : '#fafafa'
       }}
     >
-      <div style={{
-        width: '28px',
-        height: '28px',
-        borderRadius: '6px',
-        background: isSaved ? '#dbeafe' : '#f3f4f6',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0
-      }}>
-        <Search size={14} style={{ color: isSaved ? '#3b82f6' : '#9ca3af' }} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{
-          fontSize: '13px',
-          fontWeight: 500,
-          color: '#374151',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }}>
-          {query}
-        </div>
-        <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
-          {timestamp}{isSaved && ' · Saved'}
-        </div>
-      </div>
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onDelete()
-        }}
-        style={{
-          padding: '4px',
-          borderRadius: '4px',
-          border: 'none',
-          background: 'transparent',
-          color: '#d1d5db',
-          cursor: 'pointer',
+          width: '28px',
+          height: '28px',
+          borderRadius: '6px',
+          background: isSaved ? '#dbeafe' : '#f3f4f6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           flexShrink: 0
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.color = '#ef4444'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.color = '#d1d5db'
-        }}
-      >
-        <X size={14} />
-      </button>
+        }}>
+          <Search size={14} style={{ color: isSaved ? '#3b82f6' : '#9ca3af' }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: '13px',
+            fontWeight: 500,
+            color: '#374151',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}>
+            {query}
+          </div>
+          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
+            {timestamp}{isSaved && ' · Saved'}
+          </div>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          style={{
+            padding: '4px',
+            borderRadius: '4px',
+            border: 'none',
+            background: 'transparent',
+            color: '#d1d5db',
+            cursor: 'pointer',
+            flexShrink: 0
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#ef4444'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#d1d5db'
+          }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+      {note && (
+        <div style={{
+          marginTop: '8px',
+          paddingLeft: '40px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '6px'
+        }}>
+          <MessageSquare size={12} style={{ color: '#d97706', marginTop: '2px', flexShrink: 0 }} />
+          <p style={{
+            fontSize: '12px',
+            color: '#92400e',
+            margin: 0,
+            lineHeight: 1.4,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical'
+          }}>
+            {note}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

@@ -273,6 +273,63 @@ export const EDITORIAL_QUERY_MAPPINGS: Record<string, {
       supports: ['skeptic', 'realist', 'critical', 'grounding', 'limitation'],
       challenges: ['maximalist', 'optimist', 'scaling', 'progress']
     }
+  },
+
+  // Gender and AI queries
+  'woman|women|female|gender|girl': {
+    intent: {
+      sentiment: 'questioning',
+      topic: 'work',
+      focus: 'societal'
+    },
+    shouldMatch: [
+      'worker', 'human', 'displacement', 'collaboration', 'society', 'benefit', 'job', 'labor'
+    ],
+    shouldNotMatch: [
+      'technical', 'model', 'training', 'architecture', 'governance'
+    ],
+    stanceMap: {
+      supports: ['collaboration', 'augment', 'benefit', 'human', 'opportunity'],
+      challenges: ['displacement', 'replacement', 'threat', 'automat']
+    }
+  },
+
+  // Diversity and inclusion queries
+  'divers|inclus|equit|minority|underrepresent|marginalized': {
+    intent: {
+      sentiment: 'questioning',
+      topic: 'ethics',
+      focus: 'societal'
+    },
+    shouldMatch: [
+      'ethic', 'fair', 'bias', 'human', 'society', 'worker', 'access', 'democratiz'
+    ],
+    shouldNotMatch: [
+      'technical', 'model', 'scaling', 'architecture'
+    ],
+    stanceMap: {
+      supports: ['democratiz', 'access', 'fair', 'human', 'collaboration'],
+      challenges: ['bias', 'discriminat', 'centralize']
+    }
+  },
+
+  // Demographics and age queries
+  'older.*worker|young.*worker|age|generation|senior|demographic': {
+    intent: {
+      sentiment: 'questioning',
+      topic: 'work',
+      focus: 'societal'
+    },
+    shouldMatch: [
+      'worker', 'job', 'displacement', 'collaboration', 'human', 'skill'
+    ],
+    shouldNotMatch: [
+      'technical', 'model', 'governance', 'enterprise'
+    ],
+    stanceMap: {
+      supports: ['collaboration', 'augment', 'human', 'skill'],
+      challenges: ['displacement', 'replacement', 'automat']
+    }
   }
 }
 

@@ -489,13 +489,13 @@ export default function CampAccordion({
                       </div>
                     </button>
 
-                    {/* Authors Section - Scrollable with 1 author visible initially */}
+                    {/* Authors Section - Expanded view with better spacing */}
                     {isExpanded && (
                       <div className="border-t border-gray-100">
-                        {/* Authors List - Scrollable, shows ~1 author height initially */}
+                        {/* Authors List - Larger scroll area with better spacing */}
                         <div
-                          className="p-3 bg-gray-50/50 space-y-2 overflow-y-auto"
-                          style={{ maxHeight: '180px' }}
+                          className="p-4 bg-gray-50/50 space-y-3 overflow-y-auto"
+                          style={{ maxHeight: '400px' }}
                         >
                           {sortedAuthors.map((author: any, index: number) => {
                             const quoteMatches = authorQuoteMatchesSearch(author, query, expandedQueries || [])

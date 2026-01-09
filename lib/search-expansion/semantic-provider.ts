@@ -8,6 +8,92 @@
  * rather than single keywords.
  */
 
+// ============================================================================
+// CONCEPT SYNONYMS - Related terms that should match each other
+// ============================================================================
+
+/**
+ * Synonym groups for concept matching
+ * When any word in a group appears, all related terms are added to search
+ */
+export const CONCEPT_SYNONYMS: Record<string, string[]> = {
+  // Gender-related concepts
+  'woman': ['women', 'female', 'gender', 'feminine', 'she', 'her'],
+  'women': ['woman', 'female', 'gender', 'feminine'],
+  'female': ['woman', 'women', 'gender', 'feminine'],
+  'gender': ['woman', 'women', 'female', 'male', 'men', 'sex', 'diversity'],
+  'man': ['men', 'male', 'masculine', 'he', 'him'],
+  'men': ['man', 'male', 'masculine'],
+  'male': ['man', 'men', 'masculine'],
+
+  // Diversity and inclusion
+  'diversity': ['inclusion', 'equity', 'representation', 'underrepresented', 'minority'],
+  'inclusion': ['diversity', 'equity', 'inclusive', 'belonging'],
+  'equity': ['equality', 'fairness', 'diversity', 'inclusion'],
+  'minority': ['underrepresented', 'marginalized', 'diversity'],
+
+  // Employment concepts
+  'job': ['jobs', 'employment', 'work', 'career', 'occupation', 'labor', 'workforce'],
+  'jobs': ['job', 'employment', 'work', 'careers', 'occupations', 'labor'],
+  'employment': ['job', 'jobs', 'work', 'workforce', 'labor', 'hired', 'hiring'],
+  'unemployment': ['jobless', 'layoff', 'layoffs', 'displacement', 'fired'],
+  'worker': ['workers', 'employee', 'employees', 'staff', 'workforce', 'labor'],
+  'workers': ['worker', 'employees', 'staff', 'workforce', 'labor'],
+
+  // AI terminology
+  'ai': ['artificial intelligence', 'machine learning', 'ml', 'automation', 'algorithm'],
+  'artificial intelligence': ['ai', 'machine learning', 'ml', 'automation'],
+  'machine learning': ['ai', 'ml', 'deep learning', 'neural network'],
+  'automation': ['automate', 'automated', 'automatic', 'robotics', 'ai'],
+
+  // Impact concepts
+  'benefit': ['benefits', 'advantage', 'help', 'improve', 'gain', 'opportunity'],
+  'harm': ['damage', 'hurt', 'negative', 'risk', 'danger', 'threat'],
+  'impact': ['effect', 'affect', 'influence', 'consequence', 'result'],
+  'replace': ['replacement', 'substitute', 'displace', 'eliminate', 'automate'],
+  'displace': ['displacement', 'replace', 'eliminate', 'remove'],
+
+  // Education
+  'education': ['learning', 'school', 'training', 'teaching', 'student', 'academic'],
+  'student': ['students', 'learner', 'pupil', 'education'],
+  'teacher': ['teachers', 'educator', 'professor', 'instructor'],
+
+  // Healthcare
+  'health': ['healthcare', 'medical', 'medicine', 'hospital', 'doctor', 'patient'],
+  'healthcare': ['health', 'medical', 'medicine', 'clinical'],
+  'doctor': ['physician', 'medical', 'healthcare', 'clinician'],
+
+  // Economic terms
+  'economy': ['economic', 'gdp', 'growth', 'recession', 'market'],
+  'economic': ['economy', 'financial', 'fiscal', 'monetary'],
+  'productivity': ['efficiency', 'output', 'performance', 'growth'],
+}
+
+/**
+ * Expand query with synonyms from concept groups
+ */
+export function expandWithSynonyms(query: string): string[] {
+  const words = query.toLowerCase().split(/\s+/)
+  const synonyms: Set<string> = new Set()
+
+  words.forEach(word => {
+    // Check if word matches any concept
+    const conceptSynonyms = CONCEPT_SYNONYMS[word]
+    if (conceptSynonyms) {
+      conceptSynonyms.forEach(syn => synonyms.add(syn))
+    }
+
+    // Also check multi-word concepts
+    Object.entries(CONCEPT_SYNONYMS).forEach(([concept, syns]) => {
+      if (query.toLowerCase().includes(concept)) {
+        syns.forEach(syn => synonyms.add(syn))
+      }
+    })
+  })
+
+  return Array.from(synonyms)
+}
+
 /**
  * Semantic query expansion - maps common phrases/concepts to meaningful semantic phrases
  * This helps users find results and understand the search context
@@ -95,6 +181,48 @@ export function expandQuerySemantics(query: string): string[] {
       'AI economic impact on business',
       'enterprise AI adoption',
       'business transformation through AI'
+    )
+  }
+
+  // Gender and diversity patterns
+  if (q.includes('woman') || q.includes('women') || q.includes('female') || q.includes('gender') ||
+      q.includes('girl') || q.includes('she ') || q.includes('her ')) {
+    expansions.push(
+      'gender and AI impact',
+      'women in technology',
+      'AI benefits across genders',
+      'diversity in AI workforce'
+    )
+  }
+
+  // Diversity and inclusion patterns
+  if (q.includes('divers') || q.includes('inclus') || q.includes('equit') || q.includes('minority') ||
+      q.includes('underrepresent') || q.includes('marginalized')) {
+    expansions.push(
+      'AI and social equity',
+      'inclusive AI development',
+      'representation in technology',
+      'AI accessibility and inclusion'
+    )
+  }
+
+  // Demographics and population patterns
+  if (q.includes('age') || q.includes('older') || q.includes('young') || q.includes('senior') ||
+      q.includes('generation') || q.includes('demographic')) {
+    expansions.push(
+      'AI impact across age groups',
+      'generational technology divide',
+      'AI accessibility for all ages'
+    )
+  }
+
+  // Geographic and global patterns
+  if (q.includes('global') || q.includes('developing') || q.includes('countri') || q.includes('nation') ||
+      q.includes('region') || q.includes('rural') || q.includes('urban')) {
+    expansions.push(
+      'global AI development',
+      'AI in developing economies',
+      'regional technology disparities'
     )
   }
 
