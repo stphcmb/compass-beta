@@ -414,7 +414,9 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
       console.log('  Detected intent:', intent)
 
       // Use shared expansion logic (n8n + semantic fallback)
+      console.log('🔄 Calling expandSearchTermsWithQueries...')
       const { terms: queryWords, expandedQueries, expansionMeta } = await expandSearchTermsWithQueries(queryLower)
+      console.log('✅ expandSearchTermsWithQueries returned:', { termsCount: queryWords.length, queriesCount: expandedQueries?.length, method: expansionMeta.method })
       expandedQueriesResult = expandedQueries
       expansionMetaResult = expansionMeta
       console.log('  Expansion method:', expansionMeta.method, '-', expansionMeta.description)

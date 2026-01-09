@@ -113,7 +113,10 @@ export async function expandSearchTermsWithQueries(query: string): Promise<{
   expandedQueries: any[] | null
   expansionMeta: ExpansionMetadata
 }> {
+  console.log('🔎 expandSearchTermsWithQueries called with:', query)
+
   if (!query || !query.trim()) {
+    console.log('⚠️ Empty query, returning early')
     return {
       terms: [],
       expandedQueries: null,
@@ -126,10 +129,13 @@ export async function expandSearchTermsWithQueries(query: string): Promise<{
 
   // Always get synonyms for the query (used in both paths)
   const synonymTerms = expandWithSynonyms(queryLower)
+  console.log('📝 Synonym terms:', synonymTerms.length)
 
   // Try n8n expansion (AI-powered)
+  console.log('🚀 About to call n8n expandQuery...')
   try {
     const expandedQueries = await expandQuery(queryLower)
+    console.log('📬 n8n expandQuery returned:', expandedQueries?.length || 'null')
 
     if (expandedQueries && expandedQueries.length > 0) {
       expandedQueriesResult = expandedQueries
