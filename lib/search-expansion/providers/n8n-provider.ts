@@ -35,12 +35,15 @@ export class N8NQueryExpansionProvider implements QueryExpansionProvider {
   async expand(query: string): Promise<ExpandedQuery[] | null> {
     const webhookUrl = getWebhookUrl()
 
+    console.log('🔍 N8N expand called, webhook URL:', webhookUrl ? 'configured' : 'NOT SET')
+
     if (!webhookUrl) {
       console.log('⚠️  N8N webhook URL not configured, skipping')
       return null
     }
 
     const config = getConfig()
+    console.log('⏱️  N8N timeout:', config.timeoutMs, 'ms')
 
     // Log which mode we're in
     if (isTestMode()) {
@@ -53,6 +56,7 @@ export class N8NQueryExpansionProvider implements QueryExpansionProvider {
       const sanitizedQuery = query.trim().replace(/\s+/g, ' ')
 
       console.log('🔄 Calling N8N for query expansion:', sanitizedQuery)
+      console.log('🌐 Webhook URL:', webhookUrl)
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
@@ -67,6 +71,8 @@ export class N8NQueryExpansionProvider implements QueryExpansionProvider {
         signal: AbortSignal.timeout(config.timeoutMs),
       })
 
+      console.log('📡 N8N response status:', response.status, response.statusText)
+
       if (!response.ok) {
         console.error(
           `❌ N8N webhook error: ${response.status} ${response.statusText}`
@@ -75,18 +81,22 @@ export class N8NQueryExpansionProvider implements QueryExpansionProvider {
       }
 
       const data = await this.parseResponse(response)
+      console.log('📦 N8N parsed data:', JSON.stringify(data)?.substring(0, 200))
+
       if (!data) {
+        console.log('❌ N8N data is null after parsing')
         return null
       }
 
       const queries = this.extractQueries(data)
+      console.log('📋 Extracted queries count:', queries.length)
 
       if (queries.length === 0) {
         console.log('ℹ️  N8N returned no expanded queries')
         return null
       }
 
-      console.log(`✅ N8N returned ${queries.length} expanded queries`)
+      console.log(`✅ N8N returned ${queries.length} expanded queries:`, queries.map(q => q.query).join(', '))
       return queries
 
     } catch (error) {
