@@ -2,9 +2,17 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { UserButton } from '@clerk/nextjs'
-import { Compass, Users, Home, History, Sparkles } from 'lucide-react'
+import { UserButton, useUser } from '@clerk/nextjs'
+import { Compass, Users, Home, History, Sparkles, Shield } from 'lucide-react'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
+
+// Admin email whitelist
+const ADMIN_EMAILS = process.env.NEXT_PUBLIC_ADMIN_EMAILS
+  ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase())
+  : [
+    'huongnguyen@anduintransact.com',
+    'ngthaohuong@gmail.com',
+  ]
 
 interface HeaderProps {
   sidebarCollapsed?: boolean
@@ -12,6 +20,12 @@ interface HeaderProps {
 
 export default function Header({ sidebarCollapsed = false }: HeaderProps) {
   const pathname = usePathname()
+  const { user, isLoaded } = useUser()
+
+  // Check if current user is an admin
+  const isAdmin = isLoaded && user?.emailAddresses?.some(
+    email => ADMIN_EMAILS.includes(email.emailAddress.toLowerCase())
+  )
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home, tooltip: 'Go to homepage' },
@@ -19,6 +33,8 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
     { href: '/explore', label: TERMINOLOGY.search, icon: Compass, tooltip: `Browse ${TERMINOLOGY.camps.toLowerCase()} and positions on AI discourse` },
     { href: '/authors', label: TERMINOLOGY.authors, icon: Users, tooltip: 'Browse thought leaders and their viewpoints' },
     { href: '/history', label: 'History', icon: History, tooltip: 'View your search history, saved analyses, and favorite authors' },
+    // Admin link - only added to array if user is admin
+    ...(isAdmin ? [{ href: '/admin', label: 'Admin', icon: Shield, tooltip: 'Admin dashboard' }] : []),
   ]
 
   return (
@@ -62,7 +78,8 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
             const isActive = pathname === item.href ||
                   (item.href === '/authors' && pathname.startsWith('/authors/')) ||
                   (item.href === '/explore' && pathname === '/results') ||
-                  (item.href === '/history' && pathname.startsWith('/history'))
+                  (item.href === '/history' && pathname.startsWith('/history')) ||
+                  (item.href === '/admin' && pathname.startsWith('/admin'))
             return (
               <Link
                 key={item.href}

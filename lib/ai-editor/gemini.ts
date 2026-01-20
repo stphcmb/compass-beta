@@ -11,18 +11,60 @@ import {
   GeminiAnalysisResult,
   CampWithAuthors,
 } from './types'
+import { createHash } from 'crypto'
 
-const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+// Model options for cost/speed tradeoff
+export type GeminiModel = 'flash' | 'pro'
+
+const GEMINI_MODELS = {
+  flash: 'gemini-2.0-flash',          // Fast, cheap - good for triage/simple tasks (second generation)
+  pro: 'gemini-2.5-pro'               // Advanced thinking for complex analysis
+}
+
+// In-memory cache with TTL (7 days)
+interface CacheEntry {
+  response: string
+  timestamp: number
+}
+
+const responseCache = new Map<string, CacheEntry>()
+const CACHE_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+
+/**
+ * Generate cache key from prompt and model
+ */
+function getCacheKey(prompt: string, model: GeminiModel): string {
+  return createHash('sha256')
+    .update(`${model}:${prompt}`)
+    .digest('hex')
+}
+
+/**
+ * Clean expired cache entries
+ */
+function cleanExpiredCache() {
+  const now = Date.now()
+  for (const [key, entry] of responseCache.entries()) {
+    if (now - entry.timestamp > CACHE_TTL) {
+      responseCache.delete(key)
+    }
+  }
+}
 
 /**
  * Call Gemini API with a prompt
  *
  * @param prompt - The prompt to send to Gemini
+ * @param model - Model to use: 'flash' (fast/cheap) or 'pro' (powerful)
+ * @param useCache - Whether to use caching (default: true)
  * @returns The text response from Gemini
  * @throws Error if API call fails or API key is missing
  */
-export async function callGemini(prompt: string): Promise<string> {
+export async function callGemini(
+  prompt: string,
+  model: GeminiModel = 'flash',
+  useCache: boolean = true
+): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY
 
   if (!apiKey) {
@@ -30,6 +72,24 @@ export async function callGemini(prompt: string): Promise<string> {
       'GEMINI_API_KEY environment variable is not set. Please configure it in .env.local'
     )
   }
+
+  // Check cache first
+  if (useCache) {
+    const cacheKey = getCacheKey(prompt, model)
+    const cached = responseCache.get(cacheKey)
+
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.response
+    }
+
+    // Clean expired entries periodically (10% chance)
+    if (Math.random() < 0.1) {
+      cleanExpiredCache()
+    }
+  }
+
+  const modelName = GEMINI_MODELS[model]
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`
 
   const requestBody: GeminiRequest = {
     contents: [
@@ -44,7 +104,7 @@ export async function callGemini(prompt: string): Promise<string> {
   }
 
   try {
-    const response = await fetch(GEMINI_API_URL, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -67,6 +127,16 @@ export async function callGemini(prompt: string): Promise<string> {
     }
 
     const textResponse = data.candidates[0].content.parts[0].text
+
+    // Store in cache
+    if (useCache) {
+      const cacheKey = getCacheKey(prompt, model)
+      responseCache.set(cacheKey, {
+        response: textResponse,
+        timestamp: Date.now()
+      })
+    }
+
     return textResponse
   } catch (error) {
     if (error instanceof Error) {
