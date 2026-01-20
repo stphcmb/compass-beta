@@ -16,6 +16,11 @@ interface GenericSource {
 async function main() {
   console.log('=== ANALYZING GENERIC SOURCES ===\n')
 
+  if (!supabase) {
+    console.error('❌ Database not configured')
+    process.exit(1)
+  }
+
   const { data: authors, error } = await supabase
     .from('authors')
     .select('id, name, sources')

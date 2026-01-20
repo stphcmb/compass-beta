@@ -381,7 +381,7 @@ aligned = summaries are fundamentally accurate. shiftDetected = notable change. 
       return {
         authorId,
         authorName,
-        currentSummary: currentPositionSummary,
+        currentSummary: currentPositionSummaries,
         analysis: {
           aligned: true,
           shiftDetected: false,

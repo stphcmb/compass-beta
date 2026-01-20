@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -1318,9 +1318,11 @@ function CurationQueueDashboard() {
           newResults.set(authorResult.authorId, {
             authorId: authorResult.authorId,
             authorName: authorResult.authorName,
+            success: true,
+            checkType: 'batch',
             result: {
               positionVerification: authorResult.result,
-              sourceDiscovery: null // Batch check only runs position verification
+              sourceDiscovery: undefined // Batch check only runs position verification
             }
           })
           // Auto-expand results
@@ -1926,7 +1928,7 @@ function CurationQueueDashboard() {
   )
 }
 
-export default function AdminPage() {
+function AdminPageContent() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -2054,5 +2056,20 @@ export default function AdminPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-4" />
+          <p className="text-gray-600">Loading admin dashboard...</p>
+        </div>
+      </div>
+    }>
+      <AdminPageContent />
+    </Suspense>
   )
 }

@@ -51,7 +51,7 @@ export async function GET() {
     // Fetch all sources with published_date
     const { data: sources, error: sourcesError } = await supabase
       .from('sources')
-      .select('id, author_id, published_date, title')
+      .select('id, author_id, published_date, title, url')
 
     // Sources table might not exist or be empty - handle gracefully
     const allSources = sources || []

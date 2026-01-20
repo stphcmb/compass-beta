@@ -148,7 +148,7 @@ export async function POST() {
 
           // Update author in database
           if (enrichedCount > 0) {
-            const { error: updateError } = await supabase
+            const { error: updateError } = await supabase!
               .from('authors')
               .update({ sources: updatedSources })
               .eq('id', author.id)
