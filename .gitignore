@@ -36,3 +36,17 @@ yarn-error.log*
 next-env.d.ts
 
 .env.local
+
+# script outputs (data enrichment, audits, etc.)
+*-enrichment*.json
+*-enrichment*.log
+*-results.json
+*-audit*.json
+*-fix*.json
+*-fix*.log
+*-matching*.json
+*-matching*.txt
+*-applied.json
+*-preview.json
+nohup.log
+check-progress.sh
