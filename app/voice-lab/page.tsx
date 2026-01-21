@@ -16,9 +16,6 @@ import {
   Wand2,
   Eye,
   Zap,
-  Upload,
-  File,
-  X,
 } from 'lucide-react'
 import type { VoiceProfile } from '@/lib/voice-lab'
 
@@ -63,12 +60,6 @@ export default function VoiceLabPage() {
   // Copy state
   const [copied, setCopied] = useState(false)
 
-  // PDF upload state
-  const [uploadingPdf, setUploadingPdf] = useState(false)
-  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; text: string }[]>([])
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [dragActive, setDragActive] = useState(false)
-
   // Load existing profiles
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -104,91 +95,6 @@ export default function VoiceLabPage() {
     const newSamples = [...samples]
     newSamples[index] = value
     setSamples(newSamples)
-  }
-
-  // Handle PDF file upload
-  const handlePdfUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return
-
-    setUploadingPdf(true)
-    setUploadError(null)
-
-    const newUploadedFiles: { name: string; text: string }[] = []
-
-    for (const file of Array.from(files)) {
-      if (!file.name.toLowerCase().endsWith('.pdf')) {
-        setUploadError('Please upload PDF files only')
-        continue
-      }
-
-      try {
-        const formData = new FormData()
-        formData.append('file', file)
-
-        const res = await fetch('/api/voice-lab/extract-pdf', {
-          method: 'POST',
-          body: formData,
-        })
-
-        const data = await res.json()
-
-        if (!res.ok) {
-          setUploadError(data.error || 'Failed to extract text from PDF')
-          continue
-        }
-
-        newUploadedFiles.push({
-          name: file.name,
-          text: data.text,
-        })
-      } catch (error) {
-        setUploadError('Failed to upload PDF')
-        console.error('PDF upload error:', error)
-      }
-    }
-
-    if (newUploadedFiles.length > 0) {
-      setUploadedFiles([...uploadedFiles, ...newUploadedFiles])
-      // Add extracted text as samples
-      const newSamples = [...samples]
-      // If the first sample is empty, replace it
-      if (newSamples.length === 1 && newSamples[0].trim() === '') {
-        newSamples[0] = newUploadedFiles[0].text
-        newUploadedFiles.slice(1).forEach((f) => newSamples.push(f.text))
-      } else {
-        newUploadedFiles.forEach((f) => newSamples.push(f.text))
-      }
-      setSamples(newSamples)
-    }
-
-    setUploadingPdf(false)
-  }
-
-  // Handle drag events
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
-    }
-  }
-
-  // Handle drop
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    handlePdfUpload(e.dataTransfer.files)
-  }
-
-  // Remove an uploaded file
-  const removeUploadedFile = (index: number) => {
-    const fileToRemove = uploadedFiles[index]
-    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index))
-    // Also remove the corresponding sample
-    setSamples(samples.filter((s) => s !== fileToRemove.text))
   }
 
   // Step 1: Analyze writing samples
@@ -427,94 +333,8 @@ export default function VoiceLabPage() {
                 Analyze Writing Sample
               </h2>
               <p className="text-sm text-gray-500 mb-6">
-                Upload PDFs or paste writing samples to analyze their style patterns. You can then optionally save it as a voice profile.
+                Paste writing samples to analyze their style patterns. You can then optionally save it as a voice profile.
               </p>
-
-              {/* PDF Upload Zone */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Upload PDF Files
-                </label>
-                <div
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                  className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                    dragActive
-                      ? 'border-violet-500 bg-violet-50'
-                      : 'border-gray-300 hover:border-violet-400'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    multiple
-                    onChange={(e) => handlePdfUpload(e.target.files)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    disabled={uploadingPdf}
-                  />
-                  <div className="flex flex-col items-center gap-2">
-                    {uploadingPdf ? (
-                      <>
-                        <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-                        <p className="text-sm text-gray-600">Extracting text from PDF...</p>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-8 h-8 text-gray-400" />
-                        <p className="text-sm text-gray-600">
-                          <span className="text-violet-600 font-medium">Click to upload</span> or drag and drop
-                        </p>
-                        <p className="text-xs text-gray-400">PDF files up to 10MB</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Uploaded Files List */}
-                {uploadedFiles.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {uploadedFiles.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <File className="w-4 h-4 text-violet-500 flex-shrink-0" />
-                          <span className="text-sm text-gray-700 truncate">{file.name}</span>
-                          <span className="text-xs text-gray-400 flex-shrink-0">
-                            ({file.text.length.toLocaleString()} chars)
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => removeUploadedFile(index)}
-                          className="p-1 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Upload Error */}
-                {uploadError && (
-                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-                    {uploadError}
-                  </div>
-                )}
-              </div>
-
-              {/* Divider */}
-              <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200"></div>
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="px-3 bg-white text-sm text-gray-500">or paste text directly</span>
-                </div>
-              </div>
 
               {/* Samples */}
               <div className="space-y-4">
