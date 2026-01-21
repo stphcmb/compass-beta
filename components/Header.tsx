@@ -30,6 +30,8 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
   const navItems = [
     { href: '/', label: 'Home', icon: Home, tooltip: 'Go to homepage' },
     { href: '/ai-editor', label: 'AI Editor', icon: Sparkles, tooltip: 'Refine your writing with AI-powered insights' },
+    // Voice Lab temporarily hidden - access via /voice-lab directly
+    // { href: '/voice-lab', label: 'Voice Lab', icon: Mic, tooltip: 'Capture and apply writing styles' },
     { href: '/explore', label: TERMINOLOGY.search, icon: Compass, tooltip: `Browse ${TERMINOLOGY.camps.toLowerCase()} and positions on AI discourse` },
     { href: '/authors', label: TERMINOLOGY.authors, icon: Users, tooltip: 'Browse thought leaders and their viewpoints' },
     { href: '/history', label: 'History', icon: History, tooltip: 'View your search history, saved analyses, and favorite authors' },

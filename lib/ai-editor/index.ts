@@ -21,5 +21,27 @@ export type {
   AIEditorEditorialSuggestions,
 } from './types'
 
+// Editor Memory (preference learning)
+export {
+  getEditorMemories,
+  getEditorMemoriesByType,
+  createEditorMemory,
+  createEditorMemories,
+  updateEditorMemory,
+  deleteEditorMemory,
+  deleteAllEditorMemories,
+  buildEditorContext,
+  getEditorContextForUser,
+  hasEditorMemories,
+  getEditorMemoryStats,
+} from './editor-memory'
+
+export type {
+  EditorMemory,
+  EditorMemoryType,
+  CreateEditorMemoryInput,
+  UpdateEditorMemoryInput,
+} from './editor-memory'
+
 // Internal utilities (exported for testing, but not part of public API)
 export { extractKeywords } from './query'

@@ -191,11 +191,15 @@ Return format: ["keyword1", "keyword2", ...]`
  *
  * @param text - User's text to analyze
  * @param candidateCamps - Camps that potentially match (from keyword search)
+ * @param editorContext - Optional personalized context from editor memory
+ * @param voiceProfileContext - Optional voice profile style guide context
  * @returns Structured analysis result
  */
 export async function analyzeWithGemini(
   text: string,
-  candidateCamps: CampWithAuthors[]
+  candidateCamps: CampWithAuthors[],
+  editorContext?: string,
+  voiceProfileContext?: string
 ): Promise<GeminiAnalysisResult> {
   // Helper to sanitize quotes for safe JSON output
   const sanitizeForJson = (str: string): string => {
@@ -239,8 +243,12 @@ ${authorsText}`
     })
     .join('\n\n---\n\n')
 
-  const prompt = `You are a sharp, experienced editor helping a product marketing writer refine their content. Analyze their draft and provide specific, actionable feedback grounded in thought leaders from our canon.
+  // Build the prompt with optional editor context and voice profile
+  const editorMemorySection = editorContext ? editorContext : ''
+  const voiceProfileSection = voiceProfileContext ? voiceProfileContext : ''
 
+  const prompt = `You are a sharp, experienced editor helping a product marketing writer refine their content. Analyze their draft and provide specific, actionable feedback grounded in thought leaders from our canon.
+${voiceProfileSection}${editorMemorySection}
 USER'S DRAFT:
 ${text}
 

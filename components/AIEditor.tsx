@@ -6,7 +6,8 @@ import { AIEditorAnalyzeResponse } from '@/lib/ai-editor'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
-import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Plus, Share2 } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Plus, Share2, Mic } from 'lucide-react'
+import VoiceLabControls from '@/components/voice-lab/VoiceLabControls'
 
 // Loading phase messages for progressive feedback
 const LOADING_PHASES = [
@@ -40,6 +41,7 @@ export default function AIEditor({ showTitle = false, initialAnalysisId }: AIEdi
   const [urlCopied, setUrlCopied] = useState(false)
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null)
   const [analysisNotFound, setAnalysisNotFound] = useState(false)
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
   const { showToast } = useToast()
 
   const suggestionsRef = useRef<HTMLDivElement>(null)
@@ -408,7 +410,10 @@ export default function AIEditor({ showTitle = false, initialAnalysisId }: AIEdi
       const response = await fetch('/api/brain/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textToAnalyze }),
+        body: JSON.stringify({
+          text: textToAnalyze,
+          ...(selectedProfileId && { profileId: selectedProfileId }),
+        }),
       })
 
       const data = await response.json()
@@ -1158,7 +1163,14 @@ export default function AIEditor({ showTitle = false, initialAnalysisId }: AIEdi
                   borderTop: '1px solid #e2e8f0',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {/* Voice Profile Selector */}
+                  <VoiceLabControls
+                    selectedProfileId={selectedProfileId}
+                    onProfileChange={setSelectedProfileId}
+                    disabled={loading}
+                  />
+                  <span style={{ color: '#cbd5e1' }}>|</span>
                   <span style={{ fontSize: '12px', color: text.length > 4000 ? '#ef4444' : '#64748b', fontWeight: 500 }}>
                     {text.length > 0 ? `${text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
                   </span>

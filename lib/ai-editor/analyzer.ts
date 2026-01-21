@@ -34,9 +34,11 @@ export async function analyzeText(
   options: {
     maxCamps?: number
     includeDebugInfo?: boolean
+    editorContext?: string  // Personalized context from editor memory
+    voiceProfileContext?: string  // Voice profile style guide context
   } = {}
 ): Promise<AIEditorAnalyzeResponse> {
-  const { maxCamps = 10, includeDebugInfo = false } = options
+  const { maxCamps = 10, includeDebugInfo = false, editorContext, voiceProfileContext } = options
 
   // Validate input
   if (!text || text.trim().length === 0) {
@@ -84,7 +86,9 @@ export async function analyzeText(
     // Step 3: Use Gemini to analyze and rank camps
     const geminiAnalysis = await analyzeWithGemini(
       truncatedText,
-      candidateCamps
+      candidateCamps,
+      editorContext,
+      voiceProfileContext
     )
 
     if (includeDebugInfo) {
