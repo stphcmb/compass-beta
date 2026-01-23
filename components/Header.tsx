@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { UserButton, useUser } from '@clerk/nextjs'
-import { Compass, Users, Home, History, Sparkles, Shield, PenTool } from 'lucide-react'
+import { Compass, Users, Home, History, Search, Shield, PenTool } from 'lucide-react'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
 import { isICPStudioEnabled } from '@/lib/feature-flags'
 
@@ -32,7 +32,7 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
     { href: '/', label: 'Home', icon: Home, tooltip: 'Go to homepage' },
     // Studio (Beta) - gated by FF_ICP_STUDIO feature flag
     ...(isICPStudioEnabled() ? [{ href: '/studio', label: 'Studio', icon: PenTool, tooltip: 'Create voice-constrained content from briefs', badge: 'Beta' }] : []),
-    { href: '/ai-editor', label: 'AI Editor', icon: Sparkles, tooltip: 'Refine your writing with AI-powered insights' },
+    { href: '/research-assistant', label: 'Research', icon: Search, tooltip: 'Find supporting experts and perspectives' },
     // Voice Lab temporarily hidden - access via /voice-lab directly
     // { href: '/voice-lab', label: 'Voice Lab', icon: Mic, tooltip: 'Capture and apply writing styles' },
     { href: '/explore', label: TERMINOLOGY.search, icon: Compass, tooltip: `Browse ${TERMINOLOGY.camps.toLowerCase()} and positions on AI discourse` },

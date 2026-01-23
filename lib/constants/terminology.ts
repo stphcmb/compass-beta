@@ -15,7 +15,7 @@ export const TERMINOLOGY = {
   // Features
   search: 'Explore',
   searchFull: 'Explore Perspectives',
-  aiEditor: 'AI Editor',
+  researchAssistant: 'Research Assistant',
   authors: 'Authors',
 
   // UI labels
@@ -32,9 +32,9 @@ export const TERMINOLOGY = {
  * Feature hint messages shown on first visit
  */
 export const FEATURE_HINTS = {
-  'ai-editor': {
-    message: 'Paste 1-3 paragraphs to see how your writing connects to existing perspectives.',
-    storageKey: 'hasSeenHint_ai-editor',
+  'research-assistant': {
+    message: 'Paste 1-3 paragraphs to find supporting experts and perspectives.',
+    storageKey: 'hasSeenHint_research-assistant',
   },
   'explore': {
     message: 'Perspectives are grouped by position. See who agrees—and who challenges each stance.',

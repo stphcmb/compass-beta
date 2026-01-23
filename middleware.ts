@@ -6,7 +6,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/content-helper(.*)',
   '/api/camps(.*)',
-  '/api/brain(.*)',  // AI Editor API - temporarily public for testing
+  '/api/brain(.*)',  // Research Assistant API - temporarily public for testing
   '/api/memory(.*)', // Editor memory API - temporarily public for testing
   '/api/voice-lab(.*)', // Voice Lab API - temporarily public for testing
   '/api/admin(.*)',  // Temporarily public for testing

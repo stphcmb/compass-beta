@@ -140,7 +140,7 @@ export default function HistoryPage() {
     }
     window.addEventListener('favorite-author-added', handleFavoriteAdded)
 
-    // Listen for helpful insights added from AI Editor
+    // Listen for helpful insights added from Research Assistant
     const handleInsightAdded = () => {
       try {
         const insights = JSON.parse(localStorage.getItem('helpfulInsights') || '[]')
@@ -309,12 +309,12 @@ export default function HistoryPage() {
   const handleAnalysisClick = (id: string, text: string, cachedResult?: any) => {
     if (cachedResult) {
       // Navigate directly to results page
-      router.push(`/ai-editor/results/${id}`)
+      router.push(`/research-assistant/results/${id}`)
     } else {
       // No cached result - go to editor and load text
-      router.push('/ai-editor')
+      router.push('/research-assistant')
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('load-ai-editor-text', {
+        window.dispatchEvent(new CustomEvent('load-research-assistant-text', {
           detail: { text, autoAnalyze: true }
         }))
       }, 100)
@@ -1064,10 +1064,10 @@ export default function HistoryPage() {
                 </>
               ) : (
                 <EmptySection
-                  message={timeFilter !== 'all' ? 'No analyses in this time period' : 'Analyze content in the AI Editor to save analyses here'}
-                  actionLabel="Try AI Editor"
+                  message={timeFilter !== 'all' ? 'No analyses in this time period' : 'Analyze content in the Research Assistant to save analyses here'}
+                  actionLabel="Try Research Assistant"
                   actionIcon={<Sparkles size={14} />}
-                  onAction={() => router.push('/ai-editor')}
+                  onAction={() => router.push('/research-assistant')}
                 />
               )}
             </CollapsibleSection>
@@ -1108,16 +1108,16 @@ export default function HistoryPage() {
                             const params = new URLSearchParams()
                             params.set('section', insight.type)
                             if (insight.campLabel) params.set('label', insight.campLabel)
-                            router.push(`/ai-editor/results/${insight.analysisId}?${params.toString()}`)
+                            router.push(`/research-assistant/results/${insight.analysisId}?${params.toString()}`)
                           } else if (insight.fullText) {
-                            router.push('/ai-editor')
+                            router.push('/research-assistant')
                             setTimeout(() => {
-                              window.dispatchEvent(new CustomEvent('load-ai-editor-text', {
+                              window.dispatchEvent(new CustomEvent('load-research-assistant-text', {
                                 detail: { text: insight.fullText, autoAnalyze: true }
                               }))
                             }, 100)
                           } else {
-                            router.push('/ai-editor')
+                            router.push('/research-assistant')
                           }
                         }}
                         onDelete={() => {
@@ -1136,10 +1136,10 @@ export default function HistoryPage() {
                 </>
               ) : (
                 <EmptySection
-                  message={timeFilter !== 'all' ? 'No insights in this time period' : 'Mark summaries or perspectives as helpful in the AI Editor'}
-                  actionLabel="Try AI Editor"
+                  message={timeFilter !== 'all' ? 'No insights in this time period' : 'Mark summaries or perspectives as helpful in the Research Assistant'}
+                  actionLabel="Try Research Assistant"
                   actionIcon={<ThumbsUp size={14} />}
-                  onAction={() => router.push('/ai-editor')}
+                  onAction={() => router.push('/research-assistant')}
                 />
               )}
             </CollapsibleSection>
@@ -1337,16 +1337,16 @@ export default function HistoryPage() {
                         const params = new URLSearchParams()
                         params.set('section', insight.type)
                         if (insight.campLabel) params.set('label', insight.campLabel)
-                        router.push(`/ai-editor/results/${insight.analysisId}?${params.toString()}`)
+                        router.push(`/research-assistant/results/${insight.analysisId}?${params.toString()}`)
                       } else if (insight.fullText) {
-                        router.push('/ai-editor')
+                        router.push('/research-assistant')
                         setTimeout(() => {
-                          window.dispatchEvent(new CustomEvent('load-ai-editor-text', {
+                          window.dispatchEvent(new CustomEvent('load-research-assistant-text', {
                             detail: { text: insight.fullText, autoAnalyze: true }
                           }))
                         }, 100)
                       } else {
-                        router.push('/ai-editor')
+                        router.push('/research-assistant')
                       }
                     }}
                   >
@@ -1552,10 +1552,10 @@ export default function HistoryPage() {
               iconBgFrom="#f3e8ff"
               iconBgTo="#e9d5ff"
               title="No saved analyses yet"
-              description="Use the AI Editor to analyze text and save your analyses here for future reference."
+              description="Use the Research Assistant to analyze text and save your analyses here for future reference."
               action={{
-                label: "Try AI Editor",
-                onClick: () => router.push('/ai-editor'),
+                label: "Try Research Assistant",
+                onClick: () => router.push('/research-assistant'),
                 icon: Sparkles
               }}
             />
@@ -1568,10 +1568,10 @@ export default function HistoryPage() {
               iconBgFrom="#d1fae5"
               iconBgTo="#a7f3d0"
               title="No helpful insights yet"
-              description="When you find summaries or perspectives helpful in the AI Editor, mark them with a thumbs up to save them here."
+              description="When you find summaries or perspectives helpful in the Research Assistant, mark them with a thumbs up to save them here."
               action={{
-                label: "Try AI Editor",
-                onClick: () => router.push('/ai-editor'),
+                label: "Try Research Assistant",
+                onClick: () => router.push('/research-assistant'),
                 icon: Sparkles
               }}
             />

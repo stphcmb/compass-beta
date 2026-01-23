@@ -11,20 +11,20 @@ export default function Home() {
   const [text, setText] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Handle analyze - redirect to AI Editor with text
+  // Handle analyze - redirect to Research Assistant with text
   const handleAnalyze = () => {
     if (!text.trim() || text.length > 4000) return
     setIsSubmitting(true)
 
-    // Store in sessionStorage so AI Editor can pick it up immediately on mount
+    // Store in sessionStorage so Research Assistant can pick it up immediately on mount
     sessionStorage.setItem('pendingAnalysis', JSON.stringify({
       text: text.trim(),
       autoAnalyze: true,
       timestamp: Date.now()
     }))
 
-    // Navigate to AI Editor
-    router.push('/ai-editor')
+    // Navigate to Research Assistant
+    router.push('/research-assistant')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

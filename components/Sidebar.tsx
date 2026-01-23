@@ -133,7 +133,7 @@ export default function Sidebar() {
     }
 
     // Listen for new AI editor saved events
-    const onAIEditorSaved = (e: Event) => {
+    const onResearchAssistantSaved = (e: Event) => {
       const ev = e as CustomEvent<{ text: string; preview?: string; timestamp?: string }>
       if (ev?.detail?.text) {
         fetchSavedAIEditorAnalyses() // Refresh from localStorage
@@ -141,10 +141,10 @@ export default function Sidebar() {
     }
 
     window.addEventListener('saved-search-created', onSaved as EventListener)
-    window.addEventListener('ai-editor-saved', onAIEditorSaved as EventListener)
+    window.addEventListener('research-assistant-saved', onResearchAssistantSaved as EventListener)
     return () => {
       window.removeEventListener('saved-search-created', onSaved as EventListener)
-      window.removeEventListener('ai-editor-saved', onAIEditorSaved as EventListener)
+      window.removeEventListener('research-assistant-saved', onResearchAssistantSaved as EventListener)
     }
   }, [mounted])
 
@@ -155,11 +155,11 @@ export default function Sidebar() {
   }, [currentQuery, mounted])
 
   const handleSearchClick = (query: string, type?: string, fullText?: string, cachedResult?: any) => {
-    if (type === 'ai-editor') {
+    if (type === 'research-assistant') {
       // Navigate to AI editor page and load the full text with cached result
-      router.push('/ai-editor')
+      router.push('/research-assistant')
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('load-ai-editor-text', {
+        window.dispatchEvent(new CustomEvent('load-research-assistant-text', {
           detail: {
             text: fullText || query,
             cachedResult: cachedResult
@@ -224,10 +224,10 @@ export default function Sidebar() {
 
   const handleAIEditorAnalysisClick = (text: string, cachedResult?: any) => {
     // Navigate to AI editor page and dispatch event with text and cached result
-    router.push('/ai-editor')
+    router.push('/research-assistant')
     // Use setTimeout to ensure navigation completes before dispatching event
     setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('load-ai-editor-text', { detail: { text, cachedResult } }))
+      window.dispatchEvent(new CustomEvent('load-research-assistant-text', { detail: { text, cachedResult } }))
     }, 100)
   }
 

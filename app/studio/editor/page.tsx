@@ -25,6 +25,8 @@ import type {
   BriefCoverageResult,
   CanonCheckResult,
 } from '@/lib/studio/types'
+import FindExpertsPanel from '@/components/studio/FindExpertsPanel'
+import SourcesPanel, { type Citation } from '@/components/studio/SourcesPanel'
 
 function EditorPageContent() {
   const router = useRouter()
@@ -50,6 +52,9 @@ function EditorPageContent() {
 
   // Copy state
   const [copied, setCopied] = useState(false)
+
+  // Citations state
+  const [citations, setCitations] = useState<Citation[]>([])
 
   // Load project
   useEffect(() => {
@@ -189,6 +194,20 @@ function EditorPageContent() {
     // Copy to clipboard
     await copyContent()
     alert('Content copied to clipboard and project marked as complete!')
+  }
+
+  // Citation handlers
+  const handleAddCitation = (citation: Omit<Citation, 'id' | 'addedAt'>) => {
+    const newCitation: Citation = {
+      ...citation,
+      id: `cite-${Date.now()}`,
+      addedAt: new Date(),
+    }
+    setCitations(prev => [...prev, newCitation])
+  }
+
+  const handleRemoveCitation = (id: string) => {
+    setCitations(prev => prev.filter(c => c.id !== id))
   }
 
   // Word count
@@ -366,7 +385,20 @@ function EditorPageContent() {
               onRunCheck={() => runAnalysis({ canon: true })}
               analyzing={analyzing}
             />
+
+            {/* Find Experts */}
+            <FindExpertsPanel
+              content={content}
+              citations={citations}
+              onAddCitation={handleAddCitation}
+            />
           </div>
+
+          {/* Sources Panel */}
+          <SourcesPanel
+            citations={citations}
+            onRemoveCitation={handleRemoveCitation}
+          />
 
           {/* Brief Summary */}
           {project.key_points && project.key_points.length > 0 && (
