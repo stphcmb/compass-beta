@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import {
   PenTool,
   Loader2,
   Save,
   Check,
   AlertCircle,
-  Mic,
   CheckCircle,
   XCircle,
   ChevronDown,
@@ -17,7 +17,13 @@ import {
   Copy,
   Download,
   Clock,
-  Sparkles,
+  Users,
+  FileText,
+  Target,
+  Plus,
+  Trash2,
+  ExternalLink,
+  BookOpen,
 } from 'lucide-react'
 import type {
   Project,
@@ -25,8 +31,19 @@ import type {
   BriefCoverageResult,
   CanonCheckResult,
 } from '@/lib/studio/types'
-import FindExpertsPanel from '@/components/studio/FindExpertsPanel'
-import SourcesPanel, { type Citation } from '@/components/studio/SourcesPanel'
+
+// Citation type
+interface Citation {
+  id: string
+  authorName: string
+  authorSlug?: string
+  quote: string
+  position?: string
+  addedAt: Date
+}
+
+// Workflow stages
+type WorkflowStage = 'write' | 'check' | 'cite' | 'export'
 
 function EditorPageContent() {
   const router = useRouter()
@@ -55,6 +72,9 @@ function EditorPageContent() {
 
   // Citations state
   const [citations, setCitations] = useState<Citation[]>([])
+
+  // UI state
+  const [briefExpanded, setBriefExpanded] = useState(true)
 
   // Load project
   useEffect(() => {
@@ -163,9 +183,9 @@ function EditorPageContent() {
     }
   }
 
-  // Run all automatic checks
-  const runAutoChecks = () => {
-    runAnalysis({ voice: true, brief_coverage: true })
+  // Run all checks
+  const runAllChecks = () => {
+    runAnalysis({ voice: true, brief_coverage: true, canon: true })
   }
 
   // Copy to clipboard
@@ -179,28 +199,32 @@ function EditorPageContent() {
   const handleExport = async () => {
     if (!projectId) return
 
-    // Save first
     if (hasChanges) {
       await handleSave(true)
     }
 
-    // Mark as complete
     await fetch(`/api/studio/projects/${projectId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'complete' }),
     })
 
-    // Copy to clipboard
     await copyContent()
     alert('Content copied to clipboard and project marked as complete!')
   }
 
   // Citation handlers
-  const handleAddCitation = (citation: Omit<Citation, 'id' | 'addedAt'>) => {
+  const handleAddCitation = (authorName: string, authorSlug?: string, quote?: string, position?: string) => {
+    // Check if already cited
+    if (citations.some(c => c.authorName.toLowerCase() === authorName.toLowerCase())) {
+      return
+    }
     const newCitation: Citation = {
-      ...citation,
       id: `cite-${Date.now()}`,
+      authorName,
+      authorSlug,
+      quote: quote || '',
+      position,
       addedAt: new Date(),
     }
     setCitations(prev => [...prev, newCitation])
@@ -212,6 +236,35 @@ function EditorPageContent() {
 
   // Word count
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length
+
+  // Calculate workflow stage
+  const getWorkflowStage = (): WorkflowStage => {
+    if (project?.status === 'complete') return 'export'
+    if (citations.length > 0) return 'cite'
+    if (voiceCheck || briefCoverage || canonCheck) return 'check'
+    return 'write'
+  }
+
+  // Calculate health score
+  const getHealthScore = () => {
+    let total = 0
+    let count = 0
+
+    if (voiceCheck) {
+      total += voiceCheck.score
+      count++
+    }
+    if (briefCoverage && project?.key_points?.length) {
+      const briefScore = (briefCoverage.covered.length / project.key_points.length) * 100
+      total += briefScore
+      count++
+    }
+
+    return count > 0 ? Math.round(total / count) : null
+  }
+
+  const currentStage = getWorkflowStage()
+  const healthScore = getHealthScore()
 
   if (loading) {
     return (
@@ -255,16 +308,16 @@ function EditorPageContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
+    <div className="max-w-7xl mx-auto px-4 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 mb-1">
+          <h1 className="text-xl font-semibold text-gray-900">
             {project.title || 'Untitled Project'}
           </h1>
-          <div className="flex items-center gap-4 text-sm text-gray-500">
+          <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
             {project.format && (
-              <span className="capitalize">{project.format}</span>
+              <span className="capitalize bg-gray-100 px-2 py-0.5 rounded">{project.format}</span>
             )}
             <span>{wordCount} words</span>
             {lastSaved && (
@@ -276,39 +329,30 @@ function EditorPageContent() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => handleSave(true)}
             disabled={!hasChanges || saving}
-            className={`
-              flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
-              ${hasChanges
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              hasChanges
                 ? 'bg-violet-600 text-white hover:bg-violet-700'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              }
-            `}
+            }`}
           >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : hasChanges ? (
-              <Save className="w-4 h-4" />
-            ) : (
-              <Check className="w-4 h-4" />
-            )}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : hasChanges ? <Save className="w-4 h-4" /> : <Check className="w-4 h-4" />}
             {saving ? 'Saving...' : hasChanges ? 'Save' : 'Saved'}
           </button>
 
           <button
             onClick={copyContent}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            {copied ? 'Copied!' : 'Copy'}
           </button>
 
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
           >
             <Download className="w-4 h-4" />
             Export
@@ -316,360 +360,334 @@ function EditorPageContent() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Editor */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <PenTool className="w-4 h-4" />
-                <span>Editor</span>
-              </div>
-              {project.voice_profile_id && (
-                <div className="flex items-center gap-1 text-xs text-violet-600 bg-violet-50 px-2 py-1 rounded-full">
-                  <Mic className="w-3 h-3" />
-                  Voice Applied
-                </div>
-              )}
+      {/* Brief Section (Collapsible, at top) */}
+      {project.key_points && project.key_points.length > 0 && (
+        <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-xl mb-4 overflow-hidden">
+          <button
+            onClick={() => setBriefExpanded(!briefExpanded)}
+            className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-violet-100/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-violet-600" />
+              <span className="font-medium text-gray-900">Your Brief</span>
+              <span className="text-xs text-violet-600 bg-violet-100 px-2 py-0.5 rounded-full">
+                {project.key_points.length} key points
+              </span>
             </div>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onBlur={handleBlur}
-              placeholder="Start writing or generate content..."
-              className="w-full min-h-[500px] p-6 text-gray-900 leading-relaxed resize-none focus:outline-none"
-              style={{ fontSize: '1.05rem' }}
-            />
-          </div>
-        </div>
-
-        {/* Intelligence Panel */}
-        <div className="space-y-4">
-          {/* Analysis Controls */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-900">Intelligence Panel</h3>
-              <button
-                onClick={runAutoChecks}
-                disabled={analyzing}
-                className="flex items-center gap-1 text-sm text-violet-600 hover:text-violet-700"
-              >
-                {analyzing ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
+            {briefExpanded ? (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </button>
+          {briefExpanded && (
+            <div className="px-4 pb-4">
+              <div className="flex flex-wrap gap-2 mb-2">
+                {project.format && (
+                  <span className="text-xs bg-white border border-violet-200 text-violet-700 px-2 py-1 rounded">
+                    {project.format}
+                  </span>
                 )}
-                Run Checks
-              </button>
-            </div>
-
-            {/* Voice Check */}
-            <VoiceCheckPanel
-              result={voiceCheck}
-              onRunCheck={() => runAnalysis({ voice: true })}
-              analyzing={analyzing}
-            />
-
-            {/* Brief Coverage */}
-            <BriefCoveragePanel
-              result={briefCoverage}
-              keyPoints={project.key_points || []}
-              onRunCheck={() => runAnalysis({ brief_coverage: true })}
-              analyzing={analyzing}
-            />
-
-            {/* Canon Check */}
-            <CanonCheckPanel
-              result={canonCheck}
-              onRunCheck={() => runAnalysis({ canon: true })}
-              analyzing={analyzing}
-            />
-
-            {/* Find Experts */}
-            <FindExpertsPanel
-              content={content}
-              citations={citations}
-              onAddCitation={handleAddCitation}
-            />
-          </div>
-
-          {/* Sources Panel */}
-          <SourcesPanel
-            citations={citations}
-            onRemoveCitation={handleRemoveCitation}
-          />
-
-          {/* Brief Summary */}
-          {project.key_points && project.key_points.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <h3 className="font-medium text-gray-900 mb-3">Brief</h3>
-              <ul className="space-y-2">
+                {project.audience && (
+                  <span className="text-xs bg-white border border-violet-200 text-violet-700 px-2 py-1 rounded">
+                    Audience: {project.audience}
+                  </span>
+                )}
+                {project.voice_profile_id && (
+                  <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded">
+                    Voice profile applied
+                  </span>
+                )}
+              </div>
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {project.key_points.map((point, i) => (
-                  <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                    <span className="text-violet-500 mt-0.5">•</span>
-                    {point}
+                  <li key={i} className="text-sm text-gray-700 flex items-start gap-2 bg-white rounded-lg px-3 py-2 border border-violet-100">
+                    <Target className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0" />
+                    <span>{point}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
         </div>
-      </div>
-    </div>
-  )
-}
+      )}
 
-// Voice Check Panel Component
-function VoiceCheckPanel({
-  result,
-  onRunCheck,
-  analyzing,
-}: {
-  result: VoiceCheckResult | null
-  onRunCheck: () => void
-  analyzing: boolean
-}) {
-  const [expanded, setExpanded] = useState(false)
-
-  return (
-    <div className="border-b border-gray-100 pb-4 mb-4">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between text-left"
-      >
-        <div className="flex items-center gap-2">
-          <Mic className="w-4 h-4 text-violet-500" />
-          <span className="text-sm font-medium text-gray-900">Voice Check</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {result ? (
-            <span className={`text-sm font-medium ${
-              result.score >= 80 ? 'text-green-600' :
-              result.score >= 60 ? 'text-amber-600' : 'text-red-600'
-            }`}>
-              {result.score}%
-            </span>
-          ) : (
-            <span className="text-xs text-gray-400">Not run</span>
-          )}
-          {expanded ? (
-            <ChevronUp className="w-4 h-4 text-gray-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
-          )}
-        </div>
-      </button>
-
-      {expanded && (
-        <div className="mt-3 space-y-3">
-          {result ? (
-            <>
-              {/* Score Bar */}
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all ${
-                    result.score >= 80 ? 'bg-green-500' :
-                    result.score >= 60 ? 'bg-amber-500' : 'bg-red-500'
-                  }`}
-                  style={{ width: `${result.score}%` }}
-                />
+      {/* Progress Bar */}
+      <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-4">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-500">Progress:</span>
+          <div className="flex items-center gap-1">
+            {(['write', 'check', 'cite', 'export'] as WorkflowStage[]).map((stage, i) => (
+              <div key={stage} className="flex items-center">
+                <div className={`flex items-center gap-1 px-2 py-1 rounded ${
+                  currentStage === stage
+                    ? 'bg-violet-100 text-violet-700 font-medium'
+                    : i < ['write', 'check', 'cite', 'export'].indexOf(currentStage)
+                      ? 'text-green-600'
+                      : 'text-gray-400'
+                }`}>
+                  {i < ['write', 'check', 'cite', 'export'].indexOf(currentStage) ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : currentStage === stage ? (
+                    <div className="w-2 h-2 bg-violet-500 rounded-full" />
+                  ) : (
+                    <div className="w-2 h-2 bg-gray-300 rounded-full" />
+                  )}
+                  <span className="capitalize">{stage}</span>
+                </div>
+                {i < 3 && <div className="w-4 h-px bg-gray-200 mx-1" />}
               </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
-              {/* Suggestions */}
-              {result.suggestions.length > 0 && (
-                <div className="space-y-2">
-                  {result.suggestions.slice(0, 3).map((suggestion, i) => (
-                    <div key={i} className="bg-gray-50 rounded-lg p-3 text-sm">
-                      <p className="text-gray-500 text-xs mb-1">{suggestion.location}</p>
-                      <p className="text-gray-700 mb-2">{suggestion.issue}</p>
-                      <div className="flex items-start gap-2">
-                        <span className="text-red-500 line-through text-xs">{suggestion.original}</span>
-                        <span className="text-green-600 text-xs">→ {suggestion.suggested}</span>
-                      </div>
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Editor - Takes more space */}
+        <div className="lg:col-span-3">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden h-full">
+            <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <PenTool className="w-4 h-4" />
+                <span className="font-medium">Draft</span>
+              </div>
+            </div>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onBlur={handleBlur}
+              placeholder="Start writing your content here..."
+              className="w-full min-h-[550px] p-6 text-gray-900 leading-relaxed resize-none focus:outline-none"
+              style={{ fontSize: '1.05rem' }}
+            />
+          </div>
+        </div>
+
+        {/* Feedback Panel - Compact */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Health & Checks */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <h3 className="font-medium text-gray-900">Feedback</h3>
+                {healthScore !== null && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all ${
+                          healthScore >= 80 ? 'bg-green-500' :
+                          healthScore >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${healthScore}%` }}
+                      />
+                    </div>
+                    <span className={`text-sm font-medium ${
+                      healthScore >= 80 ? 'text-green-600' :
+                      healthScore >= 60 ? 'text-amber-600' : 'text-red-600'
+                    }`}>
+                      {healthScore}%
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={runAllChecks}
+                disabled={analyzing || wordCount < 20}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-violet-600 rounded-lg hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                {analyzing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                {analyzing ? 'Checking...' : 'Run Checks'}
+              </button>
+            </div>
+
+            {wordCount < 20 && (
+              <p className="text-sm text-gray-500 mb-4 bg-gray-50 rounded-lg p-3">
+                Add at least 20 words to run checks on your content.
+              </p>
+            )}
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <PenTool className="w-4 h-4 text-violet-500" />
+                  <span className="text-xs text-gray-500">Voice</span>
+                </div>
+                <span className={`text-lg font-semibold ${
+                  voiceCheck
+                    ? voiceCheck.score >= 80 ? 'text-green-600' : voiceCheck.score >= 60 ? 'text-amber-600' : 'text-red-600'
+                    : 'text-gray-400'
+                }`}>
+                  {voiceCheck ? `${voiceCheck.score}%` : '—'}
+                </span>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Target className="w-4 h-4 text-green-500" />
+                  <span className="text-xs text-gray-500">Brief</span>
+                </div>
+                <span className={`text-lg font-semibold ${
+                  briefCoverage
+                    ? briefCoverage.covered.length === project.key_points?.length ? 'text-green-600' : 'text-amber-600'
+                    : 'text-gray-400'
+                }`}>
+                  {briefCoverage ? `${briefCoverage.covered.length}/${project.key_points?.length || 0}` : '—'}
+                </span>
+              </div>
+            </div>
+
+            {/* Voice Suggestions */}
+            {voiceCheck && voiceCheck.suggestions.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-medium text-gray-500 mb-2">Voice suggestions:</p>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {voiceCheck.suggestions.slice(0, 2).map((s, i) => (
+                    <div key={i} className="bg-amber-50 border border-amber-100 rounded-lg p-2 text-xs">
+                      <p className="text-amber-800 mb-1">{s.issue}</p>
+                      <p className="text-amber-600">
+                        <span className="line-through">{s.original}</span>
+                        <span className="text-green-600 ml-2">→ {s.suggested}</span>
+                      </p>
                     </div>
                   ))}
                 </div>
-              )}
-            </>
-          ) : (
-            <button
-              onClick={onRunCheck}
-              disabled={analyzing}
-              className="w-full py-2 text-sm text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
-            >
-              Run Voice Check
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
+              </div>
+            )}
 
-// Brief Coverage Panel Component
-function BriefCoveragePanel({
-  result,
-  keyPoints,
-  onRunCheck,
-  analyzing,
-}: {
-  result: BriefCoverageResult | null
-  keyPoints: string[]
-  onRunCheck: () => void
-  analyzing: boolean
-}) {
-  const [expanded, setExpanded] = useState(false)
-
-  const coveredCount = result?.covered.length || 0
-  const totalCount = keyPoints.length
-
-  return (
-    <div className="border-b border-gray-100 pb-4 mb-4">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between text-left"
-      >
-        <div className="flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-green-500" />
-          <span className="text-sm font-medium text-gray-900">Brief Coverage</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {result ? (
-            <span className={`text-sm font-medium ${
-              coveredCount === totalCount ? 'text-green-600' :
-              coveredCount > 0 ? 'text-amber-600' : 'text-red-600'
-            }`}>
-              {coveredCount}/{totalCount}
-            </span>
-          ) : (
-            <span className="text-xs text-gray-400">Not run</span>
-          )}
-          {expanded ? (
-            <ChevronUp className="w-4 h-4 text-gray-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
-          )}
-        </div>
-      </button>
-
-      {expanded && (
-        <div className="mt-3 space-y-2">
-          {result ? (
-            <>
-              {result.covered.map((point, i) => (
-                <div key={i} className="flex items-start gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600">{point}</span>
-                </div>
-              ))}
-              {result.missing.map((point, i) => (
-                <div key={i} className="flex items-start gap-2 text-sm">
-                  <XCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600">{point}</span>
-                </div>
-              ))}
-            </>
-          ) : keyPoints.length > 0 ? (
-            <button
-              onClick={onRunCheck}
-              disabled={analyzing}
-              className="w-full py-2 text-sm text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
-            >
-              Check Coverage
-            </button>
-          ) : (
-            <p className="text-sm text-gray-400">No key points in brief</p>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Canon Check Panel Component
-function CanonCheckPanel({
-  result,
-  onRunCheck,
-  analyzing,
-}: {
-  result: CanonCheckResult | null
-  onRunCheck: () => void
-  analyzing: boolean
-}) {
-  const [expanded, setExpanded] = useState(false)
-
-  return (
-    <div>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between text-left"
-      >
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-indigo-500" />
-          <span className="text-sm font-medium text-gray-900">Positioning</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {result ? (
-            <span className="text-sm text-indigo-600">
-              {result.matched_camps.length} camps
-            </span>
-          ) : (
-            <span className="text-xs text-gray-400">Optional</span>
-          )}
-          {expanded ? (
-            <ChevronUp className="w-4 h-4 text-gray-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
-          )}
-        </div>
-      </button>
-
-      {expanded && (
-        <div className="mt-3">
-          {result ? (
-            <div className="space-y-2">
-              {result.matched_camps.map((camp, i) => (
-                <div key={i} className="bg-indigo-50 rounded-lg p-3">
-                  <p className="text-sm font-medium text-indigo-900">{camp.camp}</p>
-                  <p className="text-xs text-indigo-600 mt-1">
-                    {camp.authors.slice(0, 3).join(', ')}
-                    {camp.authors.length > 3 && ` +${camp.authors.length - 3} more`}
-                  </p>
-                </div>
-              ))}
-              {result.missing_perspectives.length > 0 && (
-                <div className="bg-amber-50 rounded-lg p-3">
-                  <p className="text-xs font-medium text-amber-700 mb-1">Missing perspectives:</p>
-                  {result.missing_perspectives.slice(0, 2).map((p, i) => (
-                    <p key={i} className="text-xs text-amber-600">{p.reason}</p>
+            {/* Brief Missing Points */}
+            {briefCoverage && briefCoverage.missing.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-medium text-gray-500 mb-2">Missing from brief:</p>
+                <div className="space-y-1">
+                  {briefCoverage.missing.map((point, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs text-red-600 bg-red-50 rounded-lg p-2">
+                      <XCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <span>{point}</span>
+                    </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Perspectives & Citations (Consolidated) */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-indigo-500" />
+                <h3 className="font-medium text-gray-900">Perspectives</h3>
+              </div>
+              {!canonCheck && (
+                <button
+                  onClick={() => runAnalysis({ canon: true })}
+                  disabled={analyzing || wordCount < 20}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  Find experts
+                </button>
               )}
             </div>
-          ) : (
-            <div className="text-center py-3">
-              <p className="text-xs text-gray-500 mb-2">
-                Validate against 200+ thought leaders
-              </p>
-              <button
-                onClick={onRunCheck}
-                disabled={analyzing}
-                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-300"
-              >
-                {analyzing ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Analyzing...
-                  </span>
-                ) : (
-                  'Run Canon Check'
+
+            {canonCheck ? (
+              <div className="space-y-3">
+                {/* Matched camps with cite buttons */}
+                {canonCheck.matched_camps.map((camp, i) => (
+                  <div key={i} className="bg-indigo-50 rounded-lg p-3">
+                    <p className="text-sm font-medium text-indigo-900 mb-2">{camp.camp}</p>
+                    <div className="space-y-1">
+                      {camp.authors.slice(0, 3).map((author, j) => {
+                        const isCited = citations.some(c => c.authorName.toLowerCase() === author.toLowerCase())
+                        return (
+                          <div key={j} className="flex items-center justify-between bg-white rounded px-2 py-1">
+                            <span className="text-xs text-gray-700">{author}</span>
+                            {isCited ? (
+                              <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">Cited</span>
+                            ) : (
+                              <button
+                                onClick={() => handleAddCitation(author)}
+                                className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Cite
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Missing perspectives */}
+                {canonCheck.missing_perspectives.length > 0 && (
+                  <div className="bg-amber-50 rounded-lg p-3">
+                    <p className="text-xs font-medium text-amber-700 mb-2">Consider adding:</p>
+                    {canonCheck.missing_perspectives.slice(0, 2).map((p, i) => (
+                      <p key={i} className="text-xs text-amber-600 mb-1">{p.reason}</p>
+                    ))}
+                  </div>
                 )}
-              </button>
+
+                <button
+                  onClick={() => runAnalysis({ canon: true })}
+                  disabled={analyzing}
+                  className="w-full text-xs text-indigo-600 hover:bg-indigo-50 py-2 rounded-lg transition-colors"
+                >
+                  {analyzing ? 'Searching...' : 'Search again'}
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Run checks to find thought leaders who support your key points.
+              </p>
+            )}
+          </div>
+
+          {/* Sources Panel */}
+          {citations.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen className="w-4 h-4 text-emerald-500" />
+                <h3 className="font-medium text-gray-900">Sources</h3>
+                <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  {citations.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {citations.map((citation) => (
+                  <div key={citation.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-2 group">
+                    <div className="flex items-center gap-2">
+                      {citation.authorSlug ? (
+                        <Link
+                          href={`/authors/${citation.authorSlug}`}
+                          target="_blank"
+                          className="text-sm font-medium text-gray-900 hover:text-emerald-600 flex items-center gap-1"
+                        >
+                          {citation.authorName}
+                          <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      ) : (
+                        <span className="text-sm font-medium text-gray-900">{citation.authorName}</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleRemoveCitation(citation.id)}
+                      className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
