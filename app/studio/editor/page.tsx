@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -24,22 +24,30 @@ import {
   Trash2,
   ExternalLink,
   BookOpen,
+  Sparkles,
+  Wand2,
+  History,
+  RotateCcw,
+  Edit3,
+  X,
+  Keyboard,
 } from 'lucide-react'
+import { useToast } from '@/components/Toast'
 import type {
   Project,
+  ProjectDraft,
   VoiceCheckResult,
   BriefCoverageResult,
   CanonCheckResult,
+  Citation,
 } from '@/lib/studio/types'
 
-// Citation type
-interface Citation {
-  id: string
-  authorName: string
-  authorSlug?: string
-  quote: string
-  position?: string
-  addedAt: Date
+// Word count targets by format
+const FORMAT_WORD_TARGETS: Record<string, { min: number; max: number }> = {
+  blog: { min: 800, max: 1200 },
+  linkedin: { min: 150, max: 300 },
+  memo: { min: 300, max: 500 },
+  byline: { min: 600, max: 900 },
 }
 
 // Workflow stages
@@ -49,6 +57,7 @@ function EditorPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const projectId = searchParams.get('project')
+  const { showToast } = useToast()
 
   // Project state
   const [project, setProject] = useState<Project | null>(null)
@@ -70,11 +79,32 @@ function EditorPageContent() {
   // Copy state
   const [copied, setCopied] = useState(false)
 
-  // Citations state
+  // Citations state (persisted to DB)
   const [citations, setCitations] = useState<Citation[]>([])
+  const [citationsChanged, setCitationsChanged] = useState(false)
+
+  // Regenerate state
+  const [regenerating, setRegenerating] = useState(false)
+  const [showRegenerateInput, setShowRegenerateInput] = useState(false)
+  const [regenerateFeedback, setRegenerateFeedback] = useState('')
+
+  // Version history state
+  const [drafts, setDrafts] = useState<ProjectDraft[]>([])
+  const [showVersionHistory, setShowVersionHistory] = useState(false)
+  const [loadingDrafts, setLoadingDrafts] = useState(false)
+  const [restoringVersion, setRestoringVersion] = useState<number | null>(null)
+
+  // Edit brief modal state
+  const [showEditBrief, setShowEditBrief] = useState(false)
+  const [editingKeyPoints, setEditingKeyPoints] = useState<string[]>([])
+  const [editingAudience, setEditingAudience] = useState('')
+  const [savingBrief, setSavingBrief] = useState(false)
 
   // UI state
-  const [briefExpanded, setBriefExpanded] = useState(true)
+  const [briefExpanded, setBriefExpanded] = useState(false) // Default collapsed
+
+  // Debounced word count
+  const wordCountRef = useRef<number>(0)
 
   // Load project
   useEffect(() => {
@@ -99,6 +129,11 @@ function EditorPageContent() {
         if (data.project.last_voice_check) setVoiceCheck(data.project.last_voice_check)
         if (data.project.last_brief_coverage) setBriefCoverage(data.project.last_brief_coverage)
         if (data.project.last_canon_check) setCanonCheck(data.project.last_canon_check)
+
+        // Load citations
+        if (data.project.citations && Array.isArray(data.project.citations)) {
+          setCitations(data.project.citations)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load project')
       } finally {
@@ -115,9 +150,110 @@ function EditorPageContent() {
     }
   }, [content, project])
 
-  // Save content
+  // Debounced word count calculation
+  const wordCount = useMemo(() => {
+    return content.trim().split(/\s+/).filter(Boolean).length
+  }, [content])
+
+  // Fetch version history
+  const fetchDrafts = async () => {
+    if (!projectId) return
+    setLoadingDrafts(true)
+    try {
+      const res = await fetch(`/api/studio/projects/${projectId}/drafts`)
+      if (res.ok) {
+        const data = await res.json()
+        setDrafts(data.drafts || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch drafts:', err)
+    } finally {
+      setLoadingDrafts(false)
+    }
+  }
+
+  // Restore a specific version
+  const restoreVersion = async (version: number) => {
+    if (!projectId) return
+    setRestoringVersion(version)
+    try {
+      const draft = drafts.find(d => d.version === version)
+      if (!draft) throw new Error('Draft not found')
+
+      // Update content and save as new version
+      setContent(draft.content)
+
+      const res = await fetch(`/api/studio/projects/${projectId}?create_version=true&change_source=user_edit`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_draft: draft.content,
+          status: 'editing',
+        }),
+      })
+
+      if (!res.ok) throw new Error('Failed to restore version')
+
+      const data = await res.json()
+      setProject(data.project)
+      setHasChanges(false)
+      setShowVersionHistory(false)
+      showToast(`Restored version ${version}`, 'success')
+
+      // Clear checks since content changed
+      setVoiceCheck(null)
+      setBriefCoverage(null)
+      setCanonCheck(null)
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to restore version', 'error')
+    } finally {
+      setRestoringVersion(null)
+    }
+  }
+
+  // Open edit brief modal
+  const openEditBrief = () => {
+    if (project) {
+      setEditingKeyPoints(project.key_points || [''])
+      setEditingAudience(project.audience || '')
+      setShowEditBrief(true)
+    }
+  }
+
+  // Save brief changes
+  const saveBriefChanges = async () => {
+    if (!projectId) return
+    setSavingBrief(true)
+    try {
+      const validKeyPoints = editingKeyPoints.filter(p => p.trim())
+      const res = await fetch(`/api/studio/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key_points: validKeyPoints,
+          audience: editingAudience.trim() || null,
+        }),
+      })
+
+      if (!res.ok) throw new Error('Failed to update brief')
+
+      const data = await res.json()
+      setProject(data.project)
+      setShowEditBrief(false)
+      showToast('Brief updated', 'success')
+
+      // Clear brief coverage check since brief changed
+      setBriefCoverage(null)
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to update brief', 'error')
+    } finally {
+      setSavingBrief(false)
+    }
+  }
+
+  // Save content and citations
   const handleSave = useCallback(async (createVersion = true) => {
-    if (!projectId || !hasChanges) return
+    if (!projectId || (!hasChanges && !citationsChanged)) return
 
     setSaving(true)
     try {
@@ -125,13 +261,20 @@ function EditorPageContent() {
         ? `/api/studio/projects/${projectId}?create_version=true&change_source=user_edit`
         : `/api/studio/projects/${projectId}`
 
+      const body: Record<string, unknown> = {
+        status: 'editing',
+      }
+      if (hasChanges) {
+        body.current_draft = content
+      }
+      if (citationsChanged) {
+        body.citations = citations
+      }
+
       const res = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          current_draft: content,
-          status: 'editing',
-        }),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) throw new Error('Failed to save')
@@ -139,20 +282,43 @@ function EditorPageContent() {
       const data = await res.json()
       setProject(data.project)
       setHasChanges(false)
+      setCitationsChanged(false)
       setLastSaved(new Date())
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to save')
+      showToast(err instanceof Error ? err.message : 'Failed to save', 'error')
     } finally {
       setSaving(false)
     }
-  }, [projectId, content, hasChanges])
+  }, [projectId, content, hasChanges, citations, citationsChanged, showToast])
 
   // Auto-save on blur (without creating version)
   const handleBlur = useCallback(() => {
-    if (hasChanges) {
+    if (hasChanges || citationsChanged) {
       handleSave(false)
     }
-  }, [hasChanges, handleSave])
+  }, [hasChanges, citationsChanged, handleSave])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + S to save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        if (hasChanges || citationsChanged) {
+          handleSave(true)
+        }
+      }
+      // Escape to close modals
+      if (e.key === 'Escape') {
+        if (showVersionHistory) setShowVersionHistory(false)
+        if (showEditBrief) setShowEditBrief(false)
+        if (showRegenerateInput) setShowRegenerateInput(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [hasChanges, citationsChanged, handleSave, showVersionHistory, showEditBrief, showRegenerateInput])
 
   // Run analysis
   const runAnalysis = async (checks: { voice?: boolean; brief_coverage?: boolean; canon?: boolean }) => {
@@ -199,7 +365,7 @@ function EditorPageContent() {
   const handleExport = async () => {
     if (!projectId) return
 
-    if (hasChanges) {
+    if (hasChanges || citationsChanged) {
       await handleSave(true)
     }
 
@@ -210,7 +376,73 @@ function EditorPageContent() {
     })
 
     await copyContent()
-    alert('Content copied to clipboard and project marked as complete!')
+    showToast('Content copied to clipboard and project marked as complete!', 'success')
+  }
+
+  // Regenerate content with feedback
+  const handleRegenerate = async () => {
+    if (!projectId || !project || !regenerateFeedback.trim()) return
+
+    setRegenerating(true)
+    try {
+      const feedbackParam = encodeURIComponent(regenerateFeedback)
+      const res = await fetch(`/api/studio/content/generate?regenerate=true&feedback=${feedbackParam}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_id: projectId,
+          brief: {
+            title: project.title || '',
+            format: project.format || 'blog',
+            audience: project.audience || '',
+            key_points: project.key_points || [],
+            additional_context: project.additional_context,
+            content_domain: project.content_domain || 'ai_discourse',
+          },
+          voice_profile_id: project.voice_profile_id,
+          skip_voice: !project.voice_profile_id,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to regenerate')
+      }
+
+      // Fetch updated project
+      const projectRes = await fetch(`/api/studio/projects/${projectId}`)
+      if (projectRes.ok) {
+        const projectData = await projectRes.json()
+        setProject(projectData.project)
+        setContent(projectData.project.current_draft || '')
+        setHasChanges(false)
+
+        // Clear checks since content changed
+        setVoiceCheck(null)
+        setBriefCoverage(null)
+        setCanonCheck(null)
+      }
+
+      setShowRegenerateInput(false)
+      setRegenerateFeedback('')
+      showToast('Content regenerated successfully!', 'success')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to regenerate', 'error')
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  // Apply voice suggestion
+  const applySuggestion = (original: string, suggested: string) => {
+    const newContent = content.replace(original, suggested)
+    if (newContent !== content) {
+      setContent(newContent)
+      setHasChanges(true)
+      showToast('Suggestion applied', 'success')
+    } else {
+      showToast('Could not find exact text to replace', 'error')
+    }
   }
 
   // Citation handlers
@@ -225,17 +457,27 @@ function EditorPageContent() {
       authorSlug,
       quote: quote || '',
       position,
-      addedAt: new Date(),
+      addedAt: new Date().toISOString(),
     }
     setCitations(prev => [...prev, newCitation])
+    setCitationsChanged(true)
+    showToast(`Added citation from ${authorName}`, 'success')
   }
 
   const handleRemoveCitation = (id: string) => {
     setCitations(prev => prev.filter(c => c.id !== id))
+    setCitationsChanged(true)
   }
 
-  // Word count
-  const wordCount = content.trim().split(/\s+/).filter(Boolean).length
+  // Word count target
+  const wordTarget = project?.format ? FORMAT_WORD_TARGETS[project.format] : null
+  const wordCountStatus = wordTarget
+    ? wordCount < wordTarget.min
+      ? 'below'
+      : wordCount > wordTarget.max
+        ? 'above'
+        : 'on-target'
+    : null
 
   // Calculate workflow stage
   const getWorkflowStage = (): WorkflowStage => {
@@ -319,7 +561,14 @@ function EditorPageContent() {
             {project.format && (
               <span className="capitalize bg-gray-100 px-2 py-0.5 rounded">{project.format}</span>
             )}
-            <span>{wordCount} words</span>
+            <span className={`flex items-center gap-1 ${
+              wordCountStatus === 'on-target' ? 'text-green-600' :
+              wordCountStatus === 'below' ? 'text-amber-600' :
+              wordCountStatus === 'above' ? 'text-red-600' : ''
+            }`}>
+              {wordCount}{wordTarget && ` / ${wordTarget.min}-${wordTarget.max}`} words
+              {wordCountStatus === 'on-target' && <CheckCircle className="w-3.5 h-3.5" />}
+            </span>
             {lastSaved && (
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
@@ -332,27 +581,42 @@ function EditorPageContent() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleSave(true)}
-            disabled={!hasChanges || saving}
+            disabled={(!hasChanges && !citationsChanged) || saving}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              hasChanges
+              hasChanges || citationsChanged
                 ? 'bg-violet-600 text-white hover:bg-violet-700'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : hasChanges ? <Save className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-            {saving ? 'Saving...' : hasChanges ? 'Save' : 'Saved'}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (hasChanges || citationsChanged) ? <Save className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+            {saving ? 'Saving...' : (hasChanges || citationsChanged) ? 'Save' : 'Saved'}
           </button>
 
           <button
             onClick={copyContent}
             className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+            title="Copy to clipboard"
+            aria-label="Copy content to clipboard"
           >
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           </button>
 
           <button
+            onClick={() => {
+              setShowVersionHistory(true)
+              fetchDrafts()
+            }}
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+            title="Version history"
+            aria-label="View version history"
+          >
+            <History className="w-4 h-4" />
+          </button>
+
+          <button
             onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+            aria-label="Export and mark complete"
           >
             <Download className="w-4 h-4" />
             Export
@@ -360,26 +624,48 @@ function EditorPageContent() {
         </div>
       </div>
 
+      {/* Keyboard shortcuts hint */}
+      <div className="flex items-center gap-4 text-xs text-gray-400 mb-2">
+        <span className="flex items-center gap-1">
+          <Keyboard className="w-3 h-3" />
+          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">⌘S</kbd> Save
+        </span>
+        <span>
+          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Esc</kbd> Close panels
+        </span>
+      </div>
+
       {/* Brief Section (Collapsible, at top) */}
       {project.key_points && project.key_points.length > 0 && (
         <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-xl mb-4 overflow-hidden">
-          <button
-            onClick={() => setBriefExpanded(!briefExpanded)}
-            className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-violet-100/50 transition-colors"
-          >
-            <div className="flex items-center gap-2">
+          <div className="px-4 py-3 flex items-center justify-between">
+            <button
+              onClick={() => setBriefExpanded(!briefExpanded)}
+              className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
+            >
               <FileText className="w-4 h-4 text-violet-600" />
               <span className="font-medium text-gray-900">Your Brief</span>
               <span className="text-xs text-violet-600 bg-violet-100 px-2 py-0.5 rounded-full">
                 {project.key_points.length} key points
               </span>
-            </div>
-            {briefExpanded ? (
-              <ChevronUp className="w-4 h-4 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-gray-400" />
-            )}
-          </button>
+              {briefExpanded ? (
+                <ChevronUp className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                openEditBrief()
+              }}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-violet-600 hover:bg-violet-100 rounded transition-colors"
+              aria-label="Edit brief"
+            >
+              <Edit3 className="w-3 h-3" />
+              Edit
+            </button>
+          </div>
           {briefExpanded && (
             <div className="px-4 pb-4">
               <div className="flex flex-wrap gap-2 mb-2">
@@ -446,20 +732,67 @@ function EditorPageContent() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Editor - Takes more space */}
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden h-full">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden h-full flex flex-col">
             <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <PenTool className="w-4 h-4" />
                 <span className="font-medium">Draft</span>
               </div>
+              <button
+                onClick={() => setShowRegenerateInput(!showRegenerateInput)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-100 hover:bg-violet-200 rounded-lg transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Regenerate
+              </button>
             </div>
+
+            {/* Regenerate Input */}
+            {showRegenerateInput && (
+              <div className="border-b border-gray-200 px-4 py-3 bg-violet-50">
+                <p className="text-xs text-gray-600 mb-2">What would you like to change?</p>
+                <textarea
+                  value={regenerateFeedback}
+                  onChange={(e) => setRegenerateFeedback(e.target.value)}
+                  placeholder="e.g., Make it more conversational, add more examples, shorten the intro..."
+                  className="w-full px-3 py-2 text-sm border border-violet-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none resize-none"
+                  rows={2}
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    onClick={handleRegenerate}
+                    disabled={regenerating || !regenerateFeedback.trim()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-violet-600 hover:bg-violet-700 disabled:bg-gray-300 rounded-lg transition-colors"
+                  >
+                    {regenerating ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
+                    {regenerating ? 'Regenerating...' : 'Regenerate'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowRegenerateInput(false)
+                      setRegenerateFeedback('')
+                    }}
+                    className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               onBlur={handleBlur}
               placeholder="Start writing your content here..."
-              className="w-full min-h-[550px] p-6 text-gray-900 leading-relaxed resize-none focus:outline-none"
+              className="w-full flex-1 min-h-[500px] p-6 text-gray-900 leading-relaxed resize-none focus:outline-none"
               style={{ fontSize: '1.05rem' }}
+              aria-label="Content editor"
+              aria-describedby="word-count-info"
             />
           </div>
         </div>
@@ -495,13 +828,14 @@ function EditorPageContent() {
                 onClick={runAllChecks}
                 disabled={analyzing || wordCount < 20}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-violet-600 rounded-lg hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                aria-label="Run all content checks"
               >
                 {analyzing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <RefreshCw className="w-4 h-4" />
                 )}
-                {analyzing ? 'Checking...' : 'Run Checks'}
+                {analyzing ? 'Analyzing content...' : 'Run Checks'}
               </button>
             </div>
 
@@ -544,15 +878,24 @@ function EditorPageContent() {
             {/* Voice Suggestions */}
             {voiceCheck && voiceCheck.suggestions.length > 0 && (
               <div className="mb-4">
-                <p className="text-xs font-medium text-gray-500 mb-2">Voice suggestions:</p>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {voiceCheck.suggestions.slice(0, 2).map((s, i) => (
+                <p className="text-xs font-medium text-gray-500 mb-2">
+                  Voice suggestions ({voiceCheck.suggestions.length}):
+                </p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {voiceCheck.suggestions.map((s, i) => (
                     <div key={i} className="bg-amber-50 border border-amber-100 rounded-lg p-2 text-xs">
                       <p className="text-amber-800 mb-1">{s.issue}</p>
-                      <p className="text-amber-600">
+                      <p className="text-amber-600 mb-2">
                         <span className="line-through">{s.original}</span>
                         <span className="text-green-600 ml-2">→ {s.suggested}</span>
                       </p>
+                      <button
+                        onClick={() => applySuggestion(s.original, s.suggested)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-violet-700 bg-violet-100 hover:bg-violet-200 rounded transition-colors"
+                      >
+                        <Wand2 className="w-3 h-3" />
+                        Apply
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -677,7 +1020,8 @@ function EditorPageContent() {
                     </div>
                     <button
                       onClick={() => handleRemoveCitation(citation.id)}
-                      className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1 text-gray-400 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                      aria-label={`Remove citation from ${citation.authorName}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -688,6 +1032,188 @@ function EditorPageContent() {
           )}
         </div>
       </div>
+
+      {/* Version History Modal */}
+      {showVersionHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowVersionHistory(false)}>
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col"
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="version-history-title"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h2 id="version-history-title" className="font-semibold text-gray-900 flex items-center gap-2">
+                <History className="w-5 h-5 text-violet-500" />
+                Version History
+              </h2>
+              <button
+                onClick={() => setShowVersionHistory(false)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                aria-label="Close version history"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingDrafts ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 text-violet-500 animate-spin" />
+                </div>
+              ) : drafts.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">No version history yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {drafts.map((draft) => (
+                    <div
+                      key={draft.id}
+                      className={`p-3 rounded-lg border transition-colors ${
+                        draft.version === project?.current_version
+                          ? 'border-violet-300 bg-violet-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-gray-900">
+                          Version {draft.version}
+                          {draft.version === project?.current_version && (
+                            <span className="ml-2 text-xs text-violet-600 bg-violet-100 px-2 py-0.5 rounded">
+                              Current
+                            </span>
+                          )}
+                        </span>
+                        {draft.version !== project?.current_version && (
+                          <button
+                            onClick={() => restoreVersion(draft.version)}
+                            disabled={restoringVersion !== null}
+                            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-violet-600 hover:bg-violet-100 rounded transition-colors disabled:opacity-50"
+                          >
+                            {restoringVersion === draft.version ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-3 h-3" />
+                            )}
+                            Restore
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        <span>{draft.word_count || 0} words</span>
+                        <span className="capitalize">{draft.change_source?.replace('_', ' ') || 'unknown'}</span>
+                        <span>{new Date(draft.created_at).toLocaleString()}</span>
+                      </div>
+                      {draft.change_summary && (
+                        <p className="text-xs text-gray-600 mt-1">{draft.change_summary}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Brief Modal */}
+      {showEditBrief && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowEditBrief(false)}>
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col"
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="edit-brief-title"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h2 id="edit-brief-title" className="font-semibold text-gray-900 flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-violet-500" />
+                Edit Brief
+              </h2>
+              <button
+                onClick={() => setShowEditBrief(false)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                aria-label="Close edit brief"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Audience */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Target Audience
+                </label>
+                <input
+                  type="text"
+                  value={editingAudience}
+                  onChange={(e) => setEditingAudience(e.target.value)}
+                  placeholder="e.g., Tech executives, Fund managers"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none"
+                />
+              </div>
+
+              {/* Key Points */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Key Points
+                </label>
+                <div className="space-y-2">
+                  {editingKeyPoints.map((point, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={point}
+                        onChange={(e) => {
+                          const updated = [...editingKeyPoints]
+                          updated[i] = e.target.value
+                          setEditingKeyPoints(updated)
+                        }}
+                        placeholder={`Key point ${i + 1}...`}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none"
+                      />
+                      {editingKeyPoints.length > 1 && (
+                        <button
+                          onClick={() => setEditingKeyPoints(editingKeyPoints.filter((_, idx) => idx !== i))}
+                          className="p-2 text-gray-400 hover:text-red-500"
+                          aria-label="Remove key point"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setEditingKeyPoints([...editingKeyPoints, ''])}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add key point
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t bg-gray-50">
+              <button
+                onClick={() => setShowEditBrief(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveBriefChanges}
+                disabled={savingBrief}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 disabled:bg-gray-300 rounded-lg transition-colors"
+              >
+                {savingBrief ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -30,6 +30,18 @@ export type ProjectStatus = 'brief' | 'draft' | 'editing' | 'complete'
 export type ChangeSource = 'generated' | 'user_edit' | 'regenerated' | 'ai_suggestion'
 
 /**
+ * Citation added to content
+ */
+export interface Citation {
+  id: string
+  authorName: string
+  authorSlug?: string
+  quote: string
+  position?: string
+  addedAt: string
+}
+
+/**
  * A project tracking content from brief to export
  */
 export interface Project {
@@ -56,6 +68,9 @@ export interface Project {
   last_voice_check: VoiceCheckResult | null
   last_canon_check: CanonCheckResult | null
   last_brief_coverage: BriefCoverageResult | null
+
+  // Citations
+  citations: Citation[] | null
 
   // Status
   status: ProjectStatus
@@ -191,6 +206,7 @@ export interface UpdateProjectRequest {
   last_voice_check?: VoiceCheckResult
   last_canon_check?: CanonCheckResult
   last_brief_coverage?: BriefCoverageResult
+  citations?: Citation[]
 }
 
 /**

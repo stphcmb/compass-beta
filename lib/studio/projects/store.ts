@@ -169,6 +169,7 @@ export async function updateProject(
   if (input.last_voice_check !== undefined) updateData.last_voice_check = input.last_voice_check
   if (input.last_canon_check !== undefined) updateData.last_canon_check = input.last_canon_check
   if (input.last_brief_coverage !== undefined) updateData.last_brief_coverage = input.last_brief_coverage
+  if (input.citations !== undefined) updateData.citations = input.citations
 
   // Calculate word count if draft changed
   if (input.current_draft !== undefined) {
