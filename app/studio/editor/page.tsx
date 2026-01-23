@@ -31,6 +31,8 @@ import {
   Edit3,
   X,
   Keyboard,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import type {
@@ -102,9 +104,23 @@ function EditorPageContent() {
 
   // UI state
   const [briefExpanded, setBriefExpanded] = useState(false) // Default collapsed
+  const [showMarkdownPreview, setShowMarkdownPreview] = useState(false)
+  const [autoSaving, setAutoSaving] = useState(false)
 
-  // Debounced word count
-  const wordCountRef = useRef<number>(0)
+  // Load brief expanded state from localStorage
+  useEffect(() => {
+    const savedState = localStorage.getItem('studio-brief-expanded')
+    if (savedState !== null) {
+      setBriefExpanded(savedState === 'true')
+    }
+  }, [])
+
+  // Save brief expanded state to localStorage
+  const toggleBriefExpanded = () => {
+    const newState = !briefExpanded
+    setBriefExpanded(newState)
+    localStorage.setItem('studio-brief-expanded', String(newState))
+  }
 
   // Load project
   useEffect(() => {
@@ -292,9 +308,11 @@ function EditorPageContent() {
   }, [projectId, content, hasChanges, citations, citationsChanged, showToast])
 
   // Auto-save on blur (without creating version)
-  const handleBlur = useCallback(() => {
+  const handleBlur = useCallback(async () => {
     if (hasChanges || citationsChanged) {
-      handleSave(false)
+      setAutoSaving(true)
+      await handleSave(false)
+      setAutoSaving(false)
     }
   }, [hasChanges, citationsChanged, handleSave])
 
@@ -569,12 +587,17 @@ function EditorPageContent() {
               {wordCount}{wordTarget && ` / ${wordTarget.min}-${wordTarget.max}`} words
               {wordCountStatus === 'on-target' && <CheckCircle className="w-3.5 h-3.5" />}
             </span>
-            {lastSaved && (
+            {autoSaving ? (
+              <span className="flex items-center gap-1 text-violet-600">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Saving...
+              </span>
+            ) : lastSaved ? (
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 Saved {lastSaved.toLocaleTimeString()}
               </span>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -640,7 +663,7 @@ function EditorPageContent() {
         <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-xl mb-4 overflow-hidden">
           <div className="px-4 py-3 flex items-center justify-between">
             <button
-              onClick={() => setBriefExpanded(!briefExpanded)}
+              onClick={toggleBriefExpanded}
               className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
             >
               <FileText className="w-4 h-4 text-violet-600" />
@@ -738,13 +761,28 @@ function EditorPageContent() {
                 <PenTool className="w-4 h-4" />
                 <span className="font-medium">Draft</span>
               </div>
-              <button
-                onClick={() => setShowRegenerateInput(!showRegenerateInput)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-100 hover:bg-violet-200 rounded-lg transition-colors"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Regenerate
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowMarkdownPreview(!showMarkdownPreview)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                    showMarkdownPreview
+                      ? 'text-violet-700 bg-violet-100 hover:bg-violet-200'
+                      : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                  }`}
+                  title={showMarkdownPreview ? 'Hide preview' : 'Show preview'}
+                  aria-label={showMarkdownPreview ? 'Hide markdown preview' : 'Show markdown preview'}
+                >
+                  {showMarkdownPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  Preview
+                </button>
+                <button
+                  onClick={() => setShowRegenerateInput(!showRegenerateInput)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-100 hover:bg-violet-200 rounded-lg transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Regenerate
+                </button>
+              </div>
             </div>
 
             {/* Regenerate Input */}
@@ -784,16 +822,53 @@ function EditorPageContent() {
               </div>
             )}
 
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onBlur={handleBlur}
-              placeholder="Start writing your content here..."
-              className="w-full flex-1 min-h-[500px] p-6 text-gray-900 leading-relaxed resize-none focus:outline-none"
-              style={{ fontSize: '1.05rem' }}
-              aria-label="Content editor"
-              aria-describedby="word-count-info"
-            />
+            {showMarkdownPreview ? (
+              <div
+                className="w-full flex-1 min-h-[500px] p-6 text-gray-900 leading-relaxed overflow-y-auto prose prose-violet max-w-none"
+                style={{ fontSize: '1.05rem' }}
+                aria-label="Content preview"
+              >
+                {content ? (
+                  content.split('\n').map((paragraph, i) => {
+                    const trimmed = paragraph.trim()
+                    if (!trimmed) return <br key={i} />
+                    // Simple heading detection
+                    if (trimmed.startsWith('# ')) {
+                      return <h1 key={i} className="text-2xl font-bold mt-4 mb-2">{trimmed.slice(2)}</h1>
+                    }
+                    if (trimmed.startsWith('## ')) {
+                      return <h2 key={i} className="text-xl font-bold mt-3 mb-2">{trimmed.slice(3)}</h2>
+                    }
+                    if (trimmed.startsWith('### ')) {
+                      return <h3 key={i} className="text-lg font-semibold mt-2 mb-1">{trimmed.slice(4)}</h3>
+                    }
+                    // List items
+                    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                      return <li key={i} className="ml-4">{trimmed.slice(2)}</li>
+                    }
+                    // Regular paragraph with basic formatting
+                    const formattedText = trimmed
+                      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                      .replace(/_(.+?)_/g, '<em>$1</em>')
+                    return <p key={i} className="mb-3" dangerouslySetInnerHTML={{ __html: formattedText }} />
+                  })
+                ) : (
+                  <p className="text-gray-400 italic">No content to preview...</p>
+                )}
+              </div>
+            ) : (
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onBlur={handleBlur}
+                placeholder="Start writing your content here..."
+                className="w-full flex-1 min-h-[500px] p-6 text-gray-900 leading-relaxed resize-none focus:outline-none"
+                style={{ fontSize: '1.05rem' }}
+                aria-label="Content editor"
+                aria-describedby="word-count-info"
+              />
+            )}
           </div>
         </div>
 
