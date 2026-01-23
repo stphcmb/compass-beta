@@ -74,24 +74,58 @@ const DOMAIN_INSTRUCTIONS: Record<ContentDomain, string> = {
 }
 
 /**
+ * Default style guide for when no voice profile is selected
+ */
+const DEFAULT_STYLE_GUIDE = `# Default Professional Style
+
+## Voice Characteristics
+- Clear, direct communication
+- Professional but approachable tone
+- Active voice preferred
+- Confident assertions backed by reasoning
+
+## Sentence Structure
+- Vary sentence length for rhythm
+- Lead with the main point
+- Use transitions to connect ideas
+
+## Word Choice
+- Prefer concrete over abstract words
+- Avoid jargon unless audience-appropriate
+- Be specific and precise
+
+## Overall Tone
+- Authoritative but not condescending
+- Engaging but not casual
+- Thoughtful and well-reasoned`
+
+/**
  * Generate voice-constrained content from a brief
  */
 export async function generateContent(
   brief: BriefInput,
-  voiceProfileId: string
+  voiceProfileId?: string | null
 ): Promise<{
   content: string
   wordCount: number
   voiceMatch: { score: number; notes: string[] }
 }> {
-  // Fetch the voice profile
-  const voiceProfile = await getVoiceProfile(voiceProfileId)
-  if (!voiceProfile) {
-    throw new Error('Voice profile not found')
-  }
+  let styleGuide: string
 
-  if (!voiceProfile.style_guide) {
-    throw new Error('Voice profile has no style guide')
+  if (voiceProfileId) {
+    // Fetch the voice profile
+    const voiceProfile = await getVoiceProfile(voiceProfileId)
+    if (!voiceProfile) {
+      throw new Error('Voice profile not found')
+    }
+
+    if (!voiceProfile.style_guide) {
+      throw new Error('Voice profile has no style guide')
+    }
+    styleGuide = voiceProfile.style_guide
+  } else {
+    // Use default style when no profile specified
+    styleGuide = DEFAULT_STYLE_GUIDE
   }
 
   // Build the generation prompt
@@ -113,7 +147,7 @@ ${keyPointsList}
 ${brief.additional_context ? `## ADDITIONAL CONTEXT\n${brief.additional_context}\n` : ''}
 
 ## VOICE PROFILE
-${voiceProfile.style_guide}
+${styleGuide}
 
 ## CONTENT DOMAIN
 ${DOMAIN_INSTRUCTIONS[brief.content_domain]}
@@ -141,7 +175,7 @@ Write the full ${brief.format}. Return ONLY the content itself - no preamble, no
   const wordCount = cleanedContent.split(/\s+/).filter(Boolean).length
 
   // Quick voice match assessment
-  const voiceMatch = await assessVoiceMatch(cleanedContent, voiceProfile.style_guide)
+  const voiceMatch = await assessVoiceMatch(cleanedContent, styleGuide)
 
   return {
     content: cleanedContent,
@@ -203,15 +237,22 @@ export async function regenerateContent(
   currentContent: string,
   feedback: string,
   brief: BriefInput,
-  voiceProfileId: string
+  voiceProfileId?: string | null
 ): Promise<{
   content: string
   wordCount: number
   voiceMatch: { score: number; notes: string[] }
 }> {
-  const voiceProfile = await getVoiceProfile(voiceProfileId)
-  if (!voiceProfile || !voiceProfile.style_guide) {
-    throw new Error('Voice profile not found or has no style guide')
+  let styleGuide: string
+
+  if (voiceProfileId) {
+    const voiceProfile = await getVoiceProfile(voiceProfileId)
+    if (!voiceProfile || !voiceProfile.style_guide) {
+      throw new Error('Voice profile not found or has no style guide')
+    }
+    styleGuide = voiceProfile.style_guide
+  } else {
+    styleGuide = DEFAULT_STYLE_GUIDE
   }
 
   const prompt = `You are revising content based on specific feedback. Maintain the voice profile while addressing the feedback.
@@ -229,7 +270,7 @@ Audience: ${brief.audience}
 Key Points: ${brief.key_points.join(', ')}
 
 ## VOICE PROFILE
-${voiceProfile.style_guide}
+${styleGuide}
 
 ## TASK
 Revise the content to address the feedback while:
@@ -242,7 +283,7 @@ Return ONLY the revised content - no explanations or meta-commentary.`
   const content = await callGemini(prompt, 'pro', false)
   const cleanedContent = content.trim()
   const wordCount = cleanedContent.split(/\s+/).filter(Boolean).length
-  const voiceMatch = await assessVoiceMatch(cleanedContent, voiceProfile.style_guide)
+  const voiceMatch = await assessVoiceMatch(cleanedContent, styleGuide)
 
   return {
     content: cleanedContent,

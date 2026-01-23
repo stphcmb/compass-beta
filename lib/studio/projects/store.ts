@@ -4,7 +4,10 @@
  * CRUD operations for ICP projects stored in Supabase.
  */
 
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+
+// Use admin client to bypass RLS (we filter by clerk_user_id in application code)
+const supabase = supabaseAdmin
 import {
   Project,
   ProjectDraft,

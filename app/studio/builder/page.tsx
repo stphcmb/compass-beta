@@ -2,18 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   FileText,
   Mic,
   Loader2,
   Sparkles,
   ChevronDown,
+  ChevronLeft,
   Plus,
   Trash2,
   ArrowRight,
+  Zap,
 } from 'lucide-react'
 import type { VoiceProfile } from '@/lib/voice-lab'
 import type { ContentFormat, ContentDomain } from '@/lib/studio/types'
+import InlineVoiceCreator from '@/components/studio/InlineVoiceCreator'
 
 const FORMAT_OPTIONS: { value: ContentFormat; label: string; description: string }[] = [
   { value: 'blog', label: 'Blog Post', description: '800-1200 words, structured with sections' },
@@ -43,6 +47,8 @@ export default function ContentBuilderPage() {
   // Voice profiles
   const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfile[]>([])
   const [loadingProfiles, setLoadingProfiles] = useState(true)
+  const [showInlineCreator, setShowInlineCreator] = useState(false)
+  const [skipVoice, setSkipVoice] = useState(false)
 
   // Generation state
   const [generating, setGenerating] = useState(false)
@@ -94,8 +100,8 @@ export default function ContentBuilderPage() {
       setError('Please enter a topic/title')
       return
     }
-    if (!voiceProfileId) {
-      setError('Please select a voice profile')
+    if (!skipVoice && !voiceProfileId) {
+      setError('Please select a voice profile or choose to skip')
       return
     }
     const validKeyPoints = keyPoints.filter(p => p.trim())
@@ -120,7 +126,8 @@ export default function ContentBuilderPage() {
             additional_context: additionalContext.trim() || undefined,
             content_domain: contentDomain,
           },
-          voice_profile_id: voiceProfileId,
+          voice_profile_id: skipVoice ? null : voiceProfileId,
+          skip_voice: skipVoice,
         }),
       })
 
@@ -142,6 +149,15 @@ export default function ContentBuilderPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4">
+      {/* Back link */}
+      <Link
+        href="/studio"
+        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-violet-600 mb-4 transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        Back to Studio
+      </Link>
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -297,7 +313,7 @@ export default function ContentBuilderPage() {
           {/* Voice Profile */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Voice Profile *
+              Voice Profile
             </label>
             <p className="text-sm text-gray-500 mb-4">
               The writing style to apply
@@ -307,27 +323,57 @@ export default function ContentBuilderPage() {
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 text-violet-500 animate-spin" />
               </div>
-            ) : voiceProfiles.length === 0 ? (
-              <div className="text-center py-6">
-                <Mic className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 mb-3">No voice profiles yet</p>
-                <a
-                  href="/voice-lab"
-                  target="_blank"
-                  className="text-sm text-violet-600 hover:text-violet-700"
-                >
-                  Create one in Voice Lab →
-                </a>
-              </div>
+            ) : showInlineCreator ? (
+              <InlineVoiceCreator
+                onProfileCreated={(profile) => {
+                  setVoiceProfiles([...voiceProfiles, profile as VoiceProfile])
+                  setVoiceProfileId(profile.id)
+                  setShowInlineCreator(false)
+                  setSkipVoice(false)
+                }}
+                onCancel={() => setShowInlineCreator(false)}
+              />
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
+                {/* Skip option */}
+                <button
+                  onClick={() => {
+                    setSkipVoice(true)
+                    setVoiceProfileId('')
+                  }}
+                  className={`
+                    w-full p-3 rounded-lg border-2 text-left transition-all
+                    ${skipVoice
+                      ? 'border-gray-500 bg-gray-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                    }
+                  `}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`
+                      w-8 h-8 rounded-lg flex items-center justify-center
+                      ${skipVoice ? 'bg-gray-200' : 'bg-gray-100'}
+                    `}>
+                      <Zap className={`w-4 h-4 ${skipVoice ? 'text-gray-600' : 'text-gray-500'}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900">Default Style</p>
+                      <p className="text-xs text-gray-500">Professional, neutral tone</p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Existing profiles */}
                 {voiceProfiles.map((profile) => (
                   <button
                     key={profile.id}
-                    onClick={() => setVoiceProfileId(profile.id)}
+                    onClick={() => {
+                      setVoiceProfileId(profile.id)
+                      setSkipVoice(false)
+                    }}
                     className={`
                       w-full p-3 rounded-lg border-2 text-left transition-all
-                      ${voiceProfileId === profile.id
+                      ${voiceProfileId === profile.id && !skipVoice
                         ? 'border-violet-500 bg-violet-50'
                         : 'border-gray-200 hover:border-gray-300'
                       }
@@ -336,9 +382,9 @@ export default function ContentBuilderPage() {
                     <div className="flex items-center gap-3">
                       <div className={`
                         w-8 h-8 rounded-lg flex items-center justify-center
-                        ${voiceProfileId === profile.id ? 'bg-violet-200' : 'bg-gray-100'}
+                        ${voiceProfileId === profile.id && !skipVoice ? 'bg-violet-200' : 'bg-gray-100'}
                       `}>
-                        <Mic className={`w-4 h-4 ${voiceProfileId === profile.id ? 'text-violet-600' : 'text-gray-500'}`} />
+                        <Mic className={`w-4 h-4 ${voiceProfileId === profile.id && !skipVoice ? 'text-violet-600' : 'text-gray-500'}`} />
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{profile.name}</p>
@@ -349,6 +395,22 @@ export default function ContentBuilderPage() {
                     </div>
                   </button>
                 ))}
+
+                {/* Create new option */}
+                <button
+                  onClick={() => setShowInlineCreator(true)}
+                  className="w-full p-3 rounded-lg border-2 border-dashed border-gray-300 text-left hover:border-violet-400 hover:bg-violet-50/50 transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-violet-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-violet-600">Create New Voice</p>
+                      <p className="text-xs text-gray-500">From your writing samples</p>
+                    </div>
+                  </div>
+                </button>
               </div>
             )}
           </div>
@@ -363,7 +425,7 @@ export default function ContentBuilderPage() {
 
             <button
               onClick={handleGenerate}
-              disabled={generating || !title.trim() || !voiceProfileId}
+              disabled={generating || !title.trim() || (!skipVoice && !voiceProfileId)}
               className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
             >
               {generating ? (

@@ -75,9 +75,11 @@ export async function POST(
       )
     }
 
-    if (!body.voice_profile_id) {
+    // Voice profile is optional if skip_voice is true
+    const skipVoice = body.skip_voice === true
+    if (!skipVoice && !body.voice_profile_id) {
       return NextResponse.json(
-        { error: 'Voice profile ID is required' },
+        { error: 'Voice profile ID is required (or set skip_voice to true)' },
         { status: 400 }
       )
     }
@@ -102,11 +104,11 @@ export async function POST(
         existingProject.current_draft,
         feedback || 'Improve the content while maintaining the voice profile',
         body.brief,
-        body.voice_profile_id
+        skipVoice ? null : body.voice_profile_id
       )
     } else {
       // Initial generation
-      result = await generateContent(body.brief, body.voice_profile_id)
+      result = await generateContent(body.brief, skipVoice ? null : body.voice_profile_id)
     }
 
     // Create or update project

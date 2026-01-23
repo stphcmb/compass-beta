@@ -199,7 +199,8 @@ export interface UpdateProjectRequest {
 export interface GenerateContentRequest {
   project_id?: string
   brief: BriefInput
-  voice_profile_id: string
+  voice_profile_id?: string
+  skip_voice?: boolean
 }
 
 /**

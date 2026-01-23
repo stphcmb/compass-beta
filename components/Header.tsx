@@ -31,7 +31,7 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
   const navItems = [
     { href: '/', label: 'Home', icon: Home, tooltip: 'Go to homepage' },
     // Studio (Beta) - gated by FF_ICP_STUDIO feature flag
-    ...(isICPStudioEnabled() ? [{ href: '/studio/projects', label: 'Studio', icon: PenTool, tooltip: 'Create voice-constrained content from briefs', badge: 'Beta' }] : []),
+    ...(isICPStudioEnabled() ? [{ href: '/studio', label: 'Studio', icon: PenTool, tooltip: 'Create voice-constrained content from briefs', badge: 'Beta' }] : []),
     { href: '/ai-editor', label: 'AI Editor', icon: Sparkles, tooltip: 'Refine your writing with AI-powered insights' },
     // Voice Lab temporarily hidden - access via /voice-lab directly
     // { href: '/voice-lab', label: 'Voice Lab', icon: Mic, tooltip: 'Capture and apply writing styles' },
@@ -86,7 +86,7 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
                   (item.href === '/explore' && pathname === '/results') ||
                   (item.href === '/history' && pathname.startsWith('/history')) ||
                   (item.href === '/admin' && pathname.startsWith('/admin')) ||
-                  (item.href === '/studio/projects' && pathname.startsWith('/studio'))
+                  (item.href === '/studio' && pathname.startsWith('/studio'))
             return (
               <Link
                 key={item.href}
