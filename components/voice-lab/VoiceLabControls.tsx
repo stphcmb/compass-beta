@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronDown, Mic, Plus, Check, Loader2 } from 'lucide-react'
+import { ChevronDown, PenTool, Plus, Check, Loader2 } from 'lucide-react'
 import type { VoiceProfile } from '@/lib/voice-lab'
 
 interface VoiceLabControlsProps {
@@ -85,7 +85,7 @@ export default function VoiceLabControls({
             transition-colors
           `}
         >
-          <Mic className="w-4 h-4" />
+          <PenTool className="w-4 h-4" />
           {loading ? (
             <span className="text-gray-400">Loading...</span>
           ) : selectedProfile ? (

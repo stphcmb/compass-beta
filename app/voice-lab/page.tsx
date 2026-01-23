@@ -1,13 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import Header from '@/components/Header'
+import PageHeader from '@/components/PageHeader'
 import {
-  Mic,
+  PenTool,
   Sparkles,
   FileText,
   Check,
   Loader2,
   ChevronRight,
+  ChevronLeft,
   RefreshCw,
   Copy,
   Trash2,
@@ -257,23 +261,26 @@ export default function VoiceLabPage() {
   const totalChars = samples.reduce((sum, s) => sum + s.length, 0)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50">
-      {/* Header */}
-      <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
-              <Mic className="w-5 h-5 text-violet-600" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Voice Lab</h1>
-              <p className="text-sm text-gray-500">Analyze and capture writing styles</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
+      <Header sidebarCollapsed={true} />
+      <main className="flex-1 mt-16 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          {/* Back link */}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 text-sm mb-6 transition-colors text-gray-500 hover:text-violet-600"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back to Home
+          </Link>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+          {/* Page Header */}
+          <PageHeader
+            icon={<PenTool size={24} />}
+            title="Voice Lab"
+            subtitle="Analyze and capture writing styles"
+            iconVariant="purple"
+          />
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <StepIndicator
@@ -309,7 +316,7 @@ export default function VoiceLabPage() {
                     >
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-violet-200 transition-colors">
-                          <Mic className="w-4 h-4 text-violet-600" />
+                          <PenTool className="w-4 h-4 text-violet-600" />
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-gray-900 truncate">{profile.name}</p>
@@ -615,7 +622,7 @@ export default function VoiceLabPage() {
             {/* Active Profile Badge */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-100 text-violet-700 rounded-full text-sm">
-                <Mic className="w-4 h-4" />
+                <PenTool className="w-4 h-4" />
                 <span className="font-medium">{profileName || generatedProfile?.name}</span>
               </div>
               <button
@@ -730,7 +737,8 @@ export default function VoiceLabPage() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </main>
     </div>
   )
 }

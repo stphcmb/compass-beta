@@ -304,11 +304,11 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Key Benefits Section - Glassmorphism */}
+        {/* Why Compass / Key Benefits Section - HIDDEN FOR NOW, can enable later */}
+        {/*
         <div className="w-full relative" style={{
           background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
         }}>
-          {/* Decorative gradient orbs */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
             <div
               className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30"
@@ -321,7 +321,6 @@ export default function Home() {
           </div>
 
           <div className="max-w-4xl mx-auto relative z-10" style={{ padding: '16px 24px 20px' }}>
-            {/* Section Header */}
             <div className="text-center mb-4">
               <span
                 style={{
@@ -350,7 +349,6 @@ export default function Home() {
               </h2>
             </div>
 
-            {/* Glassmorphic Benefits Container */}
             <div style={{
               background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 255, 0.85) 100%)',
               backdropFilter: 'blur(20px)',
@@ -399,6 +397,7 @@ export default function Home() {
             </div>
           </div>
         </div>
+        */}
 
         {/* Features Grid - Visual First */}
         <div className="w-full relative overflow-hidden" style={{

@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Header from '@/components/Header'
+import PageHeader from '@/components/PageHeader'
 import {
   FileText,
-  Mic,
+  PenTool,
   Loader2,
   Sparkles,
   ChevronDown,
@@ -158,30 +160,28 @@ export default function ContentBuilderPage() {
   const selectedProfile = voiceProfiles.find(p => p.id === voiceProfileId)
 
   return (
-    <div className="max-w-4xl mx-auto px-4">
-      {/* Back link */}
-      <Link
-        href="/studio"
-        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-violet-600 mb-4 transition-colors"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        Back to Studio
-      </Link>
+    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
+      <Header sidebarCollapsed={true} />
+      <main className="flex-1 mt-16 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          {/* Back link */}
+          <Link
+            href="/studio"
+            className="inline-flex items-center gap-1 text-sm mb-6 transition-colors text-gray-500 hover:text-violet-600"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back to Studio
+          </Link>
 
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
-            <FileText className="w-5 h-5 text-violet-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Content Builder</h1>
-            <p className="text-sm text-gray-500">Create voice-constrained content from a brief</p>
-          </div>
-        </div>
-      </div>
+          {/* Page Header */}
+          <PageHeader
+            icon={<FileText size={24} />}
+            title="Content Builder"
+            subtitle="Create voice-constrained content from a brief"
+            iconVariant="purple"
+          />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Form */}
         <div className="lg:col-span-2 space-y-6">
           {/* Topic */}
@@ -394,7 +394,7 @@ export default function ContentBuilderPage() {
                         w-8 h-8 rounded-lg flex items-center justify-center
                         ${voiceProfileId === profile.id && !skipVoice ? 'bg-violet-200' : 'bg-gray-100'}
                       `}>
-                        <Mic className={`w-4 h-4 ${voiceProfileId === profile.id && !skipVoice ? 'text-violet-600' : 'text-gray-500'}`} />
+                        <PenTool className={`w-4 h-4 ${voiceProfileId === profile.id && !skipVoice ? 'text-violet-600' : 'text-gray-500'}`} />
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{profile.name}</p>
@@ -457,7 +457,9 @@ export default function ContentBuilderPage() {
             </p>
           </div>
         </div>
-      </div>
+        </div>
+        </div>
+      </main>
     </div>
   )
 }
