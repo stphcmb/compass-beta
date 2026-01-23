@@ -5,6 +5,18 @@
  * Flags are controlled via environment variables.
  */
 
+/**
+ * Studio Beta Whitelist
+ * Only these email addresses can access Studio while in beta
+ * Can be overridden via NEXT_PUBLIC_STUDIO_BETA_EMAILS env var
+ */
+export const STUDIO_BETA_EMAILS = process.env.NEXT_PUBLIC_STUDIO_BETA_EMAILS
+  ? process.env.NEXT_PUBLIC_STUDIO_BETA_EMAILS.split(',').map(e => e.trim().toLowerCase())
+  : [
+      'huongnguyen@anduintransact.com',
+      'ngthaohuong@gmail.com',
+    ];
+
 export const FEATURES = {
   /**
    * Content Helper (Editorial Analysis Mode)

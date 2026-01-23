@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { UserButton, useUser } from '@clerk/nextjs'
 import { Compass, Users, Home, History, Search, Shield, PenTool } from 'lucide-react'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
-import { isICPStudioEnabled } from '@/lib/feature-flags'
+import { isICPStudioEnabled, STUDIO_BETA_EMAILS } from '@/lib/feature-flags'
 
 // Admin email whitelist
 const ADMIN_EMAILS = process.env.NEXT_PUBLIC_ADMIN_EMAILS
@@ -28,10 +28,15 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
     email => ADMIN_EMAILS.includes(email.emailAddress.toLowerCase())
   )
 
+  // Check if current user has access to Studio beta
+  const hasStudioAccess = isLoaded && user?.emailAddresses?.some(
+    email => STUDIO_BETA_EMAILS.includes(email.emailAddress.toLowerCase())
+  )
+
   const navItems = [
     { href: '/', label: 'Home', icon: Home, tooltip: 'Go to homepage' },
-    // Studio (Beta) - gated by FF_ICP_STUDIO feature flag
-    ...(isICPStudioEnabled() ? [{ href: '/studio', label: 'Studio', icon: PenTool, tooltip: 'Create voice-constrained content from briefs', badge: 'Beta' }] : []),
+    // Studio (Beta) - gated by FF_ICP_STUDIO feature flag AND user whitelist
+    ...(isICPStudioEnabled() && hasStudioAccess ? [{ href: '/studio', label: 'Studio', icon: PenTool, tooltip: 'Create voice-constrained content from briefs', badge: 'Beta' }] : []),
     { href: '/research-assistant', label: 'Research', icon: Search, tooltip: 'Find supporting experts and perspectives' },
     // Voice Lab temporarily hidden - access via /voice-lab directly
     // { href: '/voice-lab', label: 'Voice Lab', icon: Mic, tooltip: 'Capture and apply writing styles' },
