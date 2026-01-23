@@ -38,20 +38,20 @@ export default function ContentHelperPage() {
             className="inline-flex items-center gap-2 mb-4"
             style={{
               padding: '6px 16px',
-              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.15) 100%)',
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(109, 40, 217, 0.15) 100%)',
               borderRadius: '100px',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
+              border: '1px solid rgba(124, 58, 237, 0.3)',
             }}
           >
-            <Sparkles size={14} style={{ color: '#f59e0b' }} />
+            <Sparkles size={14} style={{ color: '#7c3aed' }} />
             <span style={{
               fontSize: '11px',
               fontWeight: '600',
-              color: '#d97706',
+              color: '#6d28d9',
               textTransform: 'uppercase',
               letterSpacing: '0.05em'
             }}>
-              Coming Soon
+              Now Available
             </span>
           </div>
 
@@ -64,7 +64,7 @@ export default function ContentHelperPage() {
             lineHeight: '1.1',
             marginBottom: '16px'
           }}>
-            Content Opportunities
+            Meet Content Studio
           </h1>
 
           {/* Description */}
@@ -76,17 +76,17 @@ export default function ContentHelperPage() {
             maxWidth: '500px',
             margin: '0 auto 32px'
           }}>
-            We're building a powerful tool to help you discover underexplored perspectives and unique content angles. This feature is currently in development.
+            This feature has evolved into <strong>Content Studio</strong> — a unified workflow for creating voice-consistent content from briefs. Try the new Studio experience!
           </p>
 
           {/* CTA */}
           <Link
-            href="/"
+            href="/studio"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              background: 'linear-gradient(135deg, #0033FF 0%, #0028CC 100%)',
+              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
               color: 'white',
               padding: '14px 28px',
               borderRadius: '10px',
@@ -95,19 +95,19 @@ export default function ContentHelperPage() {
               border: 'none',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              boxShadow: '0 4px 20px rgba(0, 51, 255, 0.5)',
+              boxShadow: '0 4px 20px rgba(124, 58, 237, 0.5)',
               textDecoration: 'none'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 51, 255, 0.6)'
+              e.currentTarget.style.boxShadow = '0 8px 30px rgba(124, 58, 237, 0.6)'
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 51, 255, 0.5)'
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(124, 58, 237, 0.5)'
             }}
           >
-            Explore Other Features
+            Open Content Studio
           </Link>
 
           {/* Features you can use now */}
@@ -120,7 +120,7 @@ export default function ContentHelperPage() {
               letterSpacing: '0.1em',
               marginBottom: '16px'
             }}>
-              Available Now
+              Other Features
             </p>
             <div style={{
               display: 'flex',
@@ -142,8 +142,8 @@ export default function ContentHelperPage() {
                   transition: 'all 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#0033FF'
-                  e.currentTarget.style.color = '#0033FF'
+                  e.currentTarget.style.borderColor = '#7c3aed'
+                  e.currentTarget.style.color = '#7c3aed'
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = '#e2e8f0'

@@ -11,11 +11,11 @@ import {
   Mic,
   ArrowRight,
   Sparkles,
-  Edit3,
-  Eye,
   ChevronRight,
-  Zap,
   PenTool,
+  X,
+  Lightbulb,
+  CheckCircle2,
 } from 'lucide-react'
 import type { Project, ProjectStatus } from '@/lib/studio/types'
 
@@ -63,10 +63,43 @@ const FORMAT_LABELS: Record<string, string> = {
   byline: 'Byline',
 }
 
+// Onboarding steps for first-time users
+const ONBOARDING_STEPS = [
+  {
+    icon: FileText,
+    title: 'Create a Brief',
+    description: 'Start with your topic, key points, and target audience',
+  },
+  {
+    icon: Mic,
+    title: 'Choose Your Voice',
+    description: 'Select a voice profile or use the default professional style',
+  },
+  {
+    icon: Sparkles,
+    title: 'Generate & Refine',
+    description: 'AI creates a draft, then you polish it with intelligent suggestions',
+  },
+]
+
 export default function StudioDashboard() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showOnboarding, setShowOnboarding] = useState(true)
+
+  // Check localStorage for dismissed state
+  useEffect(() => {
+    const dismissed = localStorage.getItem('studio-onboarding-dismissed')
+    if (dismissed === 'true') {
+      setShowOnboarding(false)
+    }
+  }, [])
+
+  const dismissOnboarding = () => {
+    setShowOnboarding(false)
+    localStorage.setItem('studio-onboarding-dismissed', 'true')
+  }
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -126,6 +159,57 @@ export default function StudioDashboard() {
           <ArrowRight className="w-5 h-5" />
         </Link>
       </div>
+
+      {/* Onboarding Card - Show for first-time users or when no projects */}
+      {showOnboarding && !loading && projects.length === 0 && (
+        <div className="mb-8 bg-gradient-to-br from-violet-50 to-indigo-50 rounded-xl border border-violet-200 p-6 relative">
+          <button
+            onClick={dismissOnboarding}
+            className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600 rounded"
+            title="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          <div className="flex items-center gap-2 mb-4">
+            <Lightbulb className="w-5 h-5 text-violet-600" />
+            <h3 className="font-semibold text-gray-900">How Studio Works</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {ONBOARDING_STEPS.map((step, index) => {
+              const Icon = step.icon
+              return (
+                <div key={index} className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white border border-violet-200 flex items-center justify-center">
+                    <Icon className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-violet-600">Step {index + 1}</span>
+                    </div>
+                    <p className="font-medium text-gray-900 text-sm">{step.title}</p>
+                    <p className="text-xs text-gray-500">{step.description}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-violet-200 flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              Voice profiles are optional — you can start creating right away!
+            </p>
+            <Link
+              href="/studio/builder"
+              className="text-sm font-medium text-violet-600 hover:text-violet-700 flex items-center gap-1"
+            >
+              Get Started
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Quick Stats */}
       {!loading && !error && projects.length > 0 && (

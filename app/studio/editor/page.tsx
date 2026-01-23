@@ -203,19 +203,33 @@ function EditorPageContent() {
   }
 
   if (error || !project) {
+    const isNotFound = error === 'Project not found' || error === 'No project specified'
     return (
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-lg font-medium text-red-900 mb-2">
-            {error || 'Project not found'}
+      <div className="max-w-2xl mx-auto px-4 pt-8">
+        <div className={`${isNotFound ? 'bg-gray-50 border-gray-200' : 'bg-red-50 border-red-200'} border rounded-xl p-8 text-center`}>
+          <AlertCircle className={`w-12 h-12 mx-auto mb-4 ${isNotFound ? 'text-gray-400' : 'text-red-400'}`} />
+          <h2 className={`text-lg font-medium mb-2 ${isNotFound ? 'text-gray-900' : 'text-red-900'}`}>
+            {error === 'No project specified' ? 'No Project Selected' : error || 'Project not found'}
           </h2>
-          <button
-            onClick={() => router.push('/studio/projects')}
-            className="text-red-600 hover:text-red-700 underline"
-          >
-            Back to Projects
-          </button>
+          <p className="text-sm text-gray-500 mb-4">
+            {isNotFound
+              ? 'Select a project from your list or create new content to get started.'
+              : 'There was a problem loading your project. Please try again.'}
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => router.push('/studio/projects')}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              View Projects
+            </button>
+            <button
+              onClick={() => router.push('/studio/builder')}
+              className="px-4 py-2 text-sm font-medium text-white bg-violet-600 rounded-lg hover:bg-violet-700"
+            >
+              Create New Content
+            </button>
+          </div>
         </div>
       </div>
     )

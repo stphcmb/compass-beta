@@ -140,7 +140,17 @@ export default function ContentBuilderPage() {
       // Navigate to editor with the new project
       router.push(`/studio/editor?project=${data.project_id}`)
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Generation failed')
+      const message = error instanceof Error ? error.message : 'Generation failed'
+      // Provide more helpful error messages
+      if (message.includes('Voice profile not found')) {
+        setError('The selected voice profile could not be found. Please select another or use Default Style.')
+      } else if (message.includes('network') || message.includes('fetch')) {
+        setError('Network error. Please check your connection and try again.')
+      } else if (message.includes('rate limit') || message.includes('429')) {
+        setError('Too many requests. Please wait a moment and try again.')
+      } else {
+        setError(message)
+      }
       setGenerating(false)
     }
   }
