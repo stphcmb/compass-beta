@@ -3,8 +3,9 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { UserButton, useUser } from '@clerk/nextjs'
-import { Compass, Users, Home, History, Sparkles, Shield } from 'lucide-react'
+import { Compass, Users, Home, History, Sparkles, Shield, PenTool } from 'lucide-react'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
+import { isICPStudioEnabled } from '@/lib/feature-flags'
 
 // Admin email whitelist
 const ADMIN_EMAILS = process.env.NEXT_PUBLIC_ADMIN_EMAILS
@@ -29,6 +30,8 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home, tooltip: 'Go to homepage' },
+    // Studio (Beta) - gated by FF_ICP_STUDIO feature flag
+    ...(isICPStudioEnabled() ? [{ href: '/studio/projects', label: 'Studio', icon: PenTool, tooltip: 'Create voice-constrained content from briefs', badge: 'Beta' }] : []),
     { href: '/ai-editor', label: 'AI Editor', icon: Sparkles, tooltip: 'Refine your writing with AI-powered insights' },
     // Voice Lab temporarily hidden - access via /voice-lab directly
     // { href: '/voice-lab', label: 'Voice Lab', icon: Mic, tooltip: 'Capture and apply writing styles' },
@@ -77,11 +80,13 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
         <nav className="flex items-center gap-1">
           {navItems.map((item) => {
             const Icon = item.icon
+            const badge = 'badge' in item ? item.badge : undefined
             const isActive = pathname === item.href ||
                   (item.href === '/authors' && pathname.startsWith('/authors/')) ||
                   (item.href === '/explore' && pathname === '/results') ||
                   (item.href === '/history' && pathname.startsWith('/history')) ||
-                  (item.href === '/admin' && pathname.startsWith('/admin'))
+                  (item.href === '/admin' && pathname.startsWith('/admin')) ||
+                  (item.href === '/studio/projects' && pathname.startsWith('/studio'))
             return (
               <Link
                 key={item.href}
@@ -110,6 +115,11 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
               >
                 <Icon className="w-4 h-4" />
                 {item.label}
+                {badge && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-medium">
+                    {badge}
+                  </span>
+                )}
               </Link>
             )
           })}

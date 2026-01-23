@@ -13,6 +13,15 @@ export const FEATURES = {
    * Environment variable: NEXT_PUBLIC_FF_CONTENT_HELPER
    */
   CONTENT_HELPER: process.env.NEXT_PUBLIC_FF_CONTENT_HELPER === 'true',
+
+  /**
+   * ICP Studio (Integrated Content Platform)
+   * Toggle for the new Studio workflow: Brief → Generate → Validate → Edit → Export
+   * Part of Compass v1 / ICP rollout
+   *
+   * Environment variable: NEXT_PUBLIC_FF_ICP_STUDIO
+   */
+  ICP_STUDIO: process.env.NEXT_PUBLIC_FF_ICP_STUDIO === 'true',
 } as const;
 
 /**
@@ -39,4 +48,13 @@ export function isDevelopment(): boolean {
  */
 export function isContentHelperEnabled(): boolean {
   return FEATURES.CONTENT_HELPER || isDevelopment();
+}
+
+/**
+ * Check if ICP Studio should be available
+ * Enabled only by explicit flag (not auto-enabled in dev)
+ * This allows controlled rollout in Phase 3
+ */
+export function isICPStudioEnabled(): boolean {
+  return FEATURES.ICP_STUDIO;
 }
