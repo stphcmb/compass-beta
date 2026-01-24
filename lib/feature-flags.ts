@@ -17,6 +17,17 @@ export const STUDIO_BETA_EMAILS = process.env.NEXT_PUBLIC_STUDIO_BETA_EMAILS
       'ngthaohuong@gmail.com',
     ];
 
+/**
+ * Voice Lab Beta Whitelist
+ * Only these email addresses can access Voice Lab while in beta
+ * Can be overridden via NEXT_PUBLIC_VOICE_LAB_BETA_EMAILS env var
+ */
+export const VOICE_LAB_BETA_EMAILS = process.env.NEXT_PUBLIC_VOICE_LAB_BETA_EMAILS
+  ? process.env.NEXT_PUBLIC_VOICE_LAB_BETA_EMAILS.split(',').map(e => e.trim().toLowerCase())
+  : [
+      'huongnguyen@anduintransact.com',
+    ];
+
 export const FEATURES = {
   /**
    * Content Helper (Editorial Analysis Mode)
