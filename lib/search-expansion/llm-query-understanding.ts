@@ -11,7 +11,7 @@
  */
 
 const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
 // 3-second timeout for query understanding
 const TIMEOUT_MS = 3000

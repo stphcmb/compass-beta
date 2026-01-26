@@ -17,7 +17,7 @@ import { createHash } from 'crypto'
 export type GeminiModel = 'flash' | 'pro'
 
 const GEMINI_MODELS = {
-  flash: 'gemini-2.0-flash',          // Fast, cheap - good for triage/simple tasks (second generation)
+  flash: 'gemini-2.5-flash',          // Fast, cost-effective - good for triage/simple tasks
   pro: 'gemini-2.5-pro'               // Advanced thinking for complex analysis
 }
 
