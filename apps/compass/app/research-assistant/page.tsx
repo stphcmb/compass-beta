@@ -27,7 +27,7 @@ function ResearchAssistantPageContent() {
           <PageHeader
             icon={<Search size={24} />}
             iconVariant="navy"
-            title="Research Assistant"
+            title="AI Editor"
             subtitle="Find supporting experts and perspectives from 200+ thought leaders."
             helpButton={{
               label: 'How it works',
@@ -38,7 +38,7 @@ function ResearchAssistantPageContent() {
           {/* How it works Modal */}
           <HowResearchAssistantWorksModal isOpen={isModalOpen} onClose={closeModal} />
 
-          {/* Research Assistant Component */}
+          {/* AI Editor Component */}
           <ResearchAssistant showTitle={false} initialAnalysisId={analysisId} />
         </div>
         <BackToTop containerRef={mainRef} />
