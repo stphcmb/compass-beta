@@ -1,0 +1,18 @@
+{
+  "name": "@compass/config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tailwind": "./src/tailwind.config.ts",
+    "./tsconfig": "./src/tsconfig.base.json",
+    "./tokens.css": "./src/tokens.css"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.4.3"
+  }
+}
