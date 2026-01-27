@@ -1,6 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm --filter @compass/app build",
-  "installCommand": "pnpm install",
-  "outputDirectory": "apps/compass/.next"
-}
