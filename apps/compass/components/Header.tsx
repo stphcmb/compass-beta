@@ -1,10 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { UserButton, useUser } from '@clerk/nextjs'
-import { Compass, Users, Home, History, Search, Shield } from 'lucide-react'
-import { TERMINOLOGY } from '@/lib/constants/terminology'
+import { Compass, Users, Home, BookMarked, Search, Shield } from 'lucide-react'
+import { NAVIGATION_ITEMS, ADMIN_NAV_ITEM, type NavItem } from '@/lib/constants/terminology'
 
 // Admin email whitelist
 const ADMIN_EMAILS = process.env.NEXT_PUBLIC_ADMIN_EMAILS
@@ -14,6 +15,16 @@ const ADMIN_EMAILS = process.env.NEXT_PUBLIC_ADMIN_EMAILS
     'ngthaohuong@gmail.com',
   ]
 
+// Map icon names to components
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Home,
+  Search,
+  Compass,
+  BookMarked,
+  Users,
+  Shield,
+}
+
 interface HeaderProps {
   sidebarCollapsed?: boolean
 }
@@ -21,21 +32,41 @@ interface HeaderProps {
 export default function Header({ sidebarCollapsed = false }: HeaderProps) {
   const pathname = usePathname()
   const { user, isLoaded } = useUser()
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
 
   // Check if current user is an admin
   const isAdmin = isLoaded && user?.emailAddresses?.some(
     email => ADMIN_EMAILS.includes(email.emailAddress.toLowerCase())
   )
 
-  const navItems = [
-    { href: '/', label: 'Home', icon: Home, tooltip: 'Go to homepage' },
-    { href: '/research-assistant', label: 'AI Editor', icon: Search, tooltip: 'Find supporting experts and perspectives' },
-    { href: '/explore', label: TERMINOLOGY.search, icon: Compass, tooltip: `Browse ${TERMINOLOGY.camps.toLowerCase()} and positions on AI discourse` },
-    { href: '/authors', label: TERMINOLOGY.authors, icon: Users, tooltip: 'Browse thought leaders and their viewpoints' },
-    { href: '/history', label: 'History', icon: History, tooltip: 'View your search history, saved analyses, and favorite authors' },
-    // Admin link - only added to array if user is admin
-    ...(isAdmin ? [{ href: '/admin', label: 'Admin', icon: Shield, tooltip: 'Admin dashboard' }] : []),
+  // Build nav items array, including admin if applicable
+  const navItems: NavItem[] = [
+    ...NAVIGATION_ITEMS,
+    ...(isAdmin ? [ADMIN_NAV_ITEM] : []),
   ]
+
+  // Check if a nav item is active
+  const isActive = (item: NavItem): boolean => {
+    if (item.href === '/') {
+      return pathname === '/'
+    }
+    if (item.href === '/authors') {
+      return pathname === '/authors' || pathname.startsWith('/authors/')
+    }
+    if (item.href === '/explore') {
+      return pathname === '/explore' || pathname === '/results'
+    }
+    if (item.href === '/history') {
+      return pathname === '/history' || pathname.startsWith('/history')
+    }
+    if (item.href === '/admin') {
+      return pathname === '/admin' || pathname.startsWith('/admin')
+    }
+    if (item.href === '/research-assistant') {
+      return pathname === '/research-assistant' || pathname.startsWith('/research-assistant')
+    }
+    return pathname === item.href
+  }
 
   return (
     <header
@@ -74,41 +105,97 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
         {/* Navigation */}
         <nav className="flex items-center gap-1">
           {navItems.map((item) => {
-            const Icon = item.icon
-            const isActive = pathname === item.href ||
-                  (item.href === '/authors' && pathname.startsWith('/authors/')) ||
-                  (item.href === '/explore' && pathname === '/results') ||
-                  (item.href === '/history' && pathname.startsWith('/history')) ||
-                  (item.href === '/admin' && pathname.startsWith('/admin'))
+            const Icon = iconMap[item.icon] || Home
+            const active = isActive(item)
+            const isHovered = hoveredItem === item.href
+            const showTooltip = isHovered && !active
+
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                style={{
-                  background: isActive
-                    ? 'linear-gradient(135deg, rgba(0, 51, 255, 0.2) 0%, rgba(0, 40, 204, 0.15) 100%)'
-                    : 'transparent',
-                  color: isActive ? '#a5b4fc' : '#94a3b8',
-                  border: isActive ? '1px solid rgba(0, 51, 255, 0.3)' : '1px solid transparent',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                    e.currentTarget.style.color = '#d1d9ff'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color = '#94a3b8'
-                  }
-                }}
-                title={item.tooltip}
-              >
-                <Icon className="w-4 h-4" />
-                {item.label}
-              </Link>
+              <div key={item.href} className="relative">
+                <Link
+                  href={item.href}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                  style={{
+                    background: active
+                      ? item.featured
+                        ? 'linear-gradient(135deg, rgba(0, 51, 255, 0.25) 0%, rgba(59, 95, 255, 0.2) 100%)'
+                        : 'linear-gradient(135deg, rgba(0, 51, 255, 0.2) 0%, rgba(0, 40, 204, 0.15) 100%)'
+                      : item.featured && !isHovered
+                        ? 'rgba(0, 51, 255, 0.1)'
+                        : 'transparent',
+                    color: active
+                      ? '#a5b4fc'
+                      : item.featured
+                        ? '#c7d2fe'
+                        : '#94a3b8',
+                    border: active
+                      ? '1px solid rgba(0, 51, 255, 0.3)'
+                      : item.featured
+                        ? '1px solid rgba(0, 51, 255, 0.2)'
+                        : '1px solid transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    setHoveredItem(item.href)
+                    if (!active) {
+                      e.currentTarget.style.background = item.featured
+                        ? 'rgba(0, 51, 255, 0.15)'
+                        : 'rgba(255, 255, 255, 0.05)'
+                      e.currentTarget.style.color = '#d1d9ff'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    setHoveredItem(null)
+                    if (!active) {
+                      e.currentTarget.style.background = item.featured
+                        ? 'rgba(0, 51, 255, 0.1)'
+                        : 'transparent'
+                      e.currentTarget.style.color = item.featured ? '#c7d2fe' : '#94a3b8'
+                    }
+                  }}
+                  aria-label={item.tooltip}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                  {/* Badge for featured items */}
+                  {item.badge && (
+                    <span
+                      className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full"
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+
+                {/* Tooltip on hover */}
+                {showTooltip && (
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-3 py-2 rounded-lg shadow-lg z-50 whitespace-nowrap pointer-events-none"
+                    style={{
+                      background: 'rgba(15, 23, 42, 0.95)',
+                      border: '1px solid rgba(51, 65, 85, 0.5)',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    <div className="text-xs font-medium text-white mb-0.5">{item.description}</div>
+                    <div className="text-[10px] text-slate-400">{item.tooltip}</div>
+                    {/* Tooltip arrow */}
+                    <div
+                      className="absolute left-1/2 -translate-x-1/2 -top-1.5 w-3 h-3 rotate-45"
+                      style={{
+                        background: 'rgba(15, 23, 42, 0.95)',
+                        borderTop: '1px solid rgba(51, 65, 85, 0.5)',
+                        borderLeft: '1px solid rgba(51, 65, 85, 0.5)',
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             )
           })}
         </nav>

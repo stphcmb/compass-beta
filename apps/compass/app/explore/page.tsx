@@ -107,8 +107,8 @@ function ExplorePageContent() {
           <PageHeader
             icon={<Compass size={24} />}
             iconVariant="blue"
-            title={TERMINOLOGY.searchFull}
-            subtitle={`Browse the definitive collection of ${TERMINOLOGY.camps.toLowerCase()} shaping AI discourse`}
+            title={TERMINOLOGY.search}
+            subtitle={`Explore the definitive collection of ${TERMINOLOGY.camps.toLowerCase()} shaping AI discourse`}
             helpButton={{
               label: 'How it works',
               onClick: openModal

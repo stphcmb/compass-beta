@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  BookMarked,
   History,
   Search,
   Sparkles,
@@ -30,6 +31,7 @@ import EmptyStateComponent from '@/components/EmptyState'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 import { useToast } from '@/components/Toast'
 import { supabase } from '@/lib/supabase'
+import { TERMINOLOGY } from '@/lib/constants/terminology'
 
 interface SearchItem {
   id: string
@@ -665,10 +667,10 @@ export default function HistoryPage() {
         <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
           {/* Page Header - Centered like Explore page */}
           <PageHeader
-            icon={<History size={24} />}
+            icon={<BookMarked size={24} />}
             iconVariant="purple"
-            title="Your History"
-            subtitle="Your research journey, all in one place."
+            title={TERMINOLOGY.history}
+            subtitle="Your saved analyses, favorite authors, and research insights."
             helpButton={{
               label: 'How it works',
               onClick: () => setShowAboutModal(true)

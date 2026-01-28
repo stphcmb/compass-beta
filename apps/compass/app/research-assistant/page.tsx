@@ -8,6 +8,7 @@ import ResearchAssistant from '@/components/ResearchAssistant'
 import BackToTop from '@/components/BackToTop'
 import { HowResearchAssistantWorksModal, useHowResearchAssistantWorksModal } from '@/components/HowResearchAssistantWorksModal'
 import { Search } from 'lucide-react'
+import { TERMINOLOGY } from '@/lib/constants/terminology'
 
 function ResearchAssistantPageContent() {
   const mainRef = useRef<HTMLElement>(null)
@@ -27,8 +28,8 @@ function ResearchAssistantPageContent() {
           <PageHeader
             icon={<Search size={24} />}
             iconVariant="navy"
-            title="AI Editor"
-            subtitle="Find supporting experts and perspectives from 200+ thought leaders."
+            title={TERMINOLOGY.researchAssistant}
+            subtitle="Validate your writing against 200+ thought leaders. Find supporting experts and discover gaps."
             helpButton={{
               label: 'How it works',
               onClick: openModal

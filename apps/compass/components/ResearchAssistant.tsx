@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useTransition } from 'react'
 import Link from 'next/link'
 import { ResearchAssistantAnalyzeResponse } from '@/lib/research-assistant'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Plus, Share2 } from 'lucide-react'
+import { LoadingPhaseIndicator } from '@/components/research-assistant/LoadingPhaseIndicator'
 
 // Loading phase messages for progressive feedback
 const LOADING_PHASES = [
@@ -42,6 +43,9 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
   const [analysisNotFound, setAnalysisNotFound] = useState(false)
   const { showToast } = useToast()
 
+  // Use React 19 useTransition for non-blocking state updates
+  const [isPending, startTransition] = useTransition()
+
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const authorsRef = useRef<HTMLDivElement>(null)
   const summaryRef = useRef<HTMLDivElement>(null)
@@ -69,7 +73,12 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
             const advancePhase = () => {
               if (currentPhase < LOADING_PHASES.length - 1) {
                 currentPhase++
-                setLoadingPhase(currentPhase)
+                // Use requestAnimationFrame for smooth 60fps updates
+                requestAnimationFrame(() => {
+                  startTransition(() => {
+                    setLoadingPhase(currentPhase)
+                  })
+                })
                 const nextDuration = LOADING_PHASES[currentPhase].duration
                 if (nextDuration > 0) {
                   phaseTimers.push(setTimeout(advancePhase, nextDuration))
@@ -91,21 +100,28 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
               const data = await res.json()
 
               if (!res.ok) {
-                setError(data.error || data.message || 'Analysis failed')
                 phaseTimers.forEach(timer => clearTimeout(timer))
-                setLoading(false)
-                setLoadingPhase(0)
-                setPendingFromHome(false)
+                startTransition(() => {
+                  setError(data.error || data.message || 'Analysis failed')
+                  setLoading(false)
+                  setLoadingPhase(0)
+                  setPendingFromHome(false)
+                })
               } else {
                 // Save and show results inline
                 const analysisId = addToRecentSearches(pendingText, data)
                 updateSavedAnalysisCache(pendingText, data)
                 phaseTimers.forEach(timer => clearTimeout(timer))
-                setLoading(false)
-                setLoadingPhase(0)
-                setResult(data)
-                setSavedOnce(true)
-                setPendingFromHome(false)
+
+                // Batch all state updates in a single transition
+                startTransition(() => {
+                  setLoading(false)
+                  setLoadingPhase(0)
+                  setResult(data)
+                  setSavedOnce(true)
+                  setPendingFromHome(false)
+                })
+
                 // Update URL with analysis ID for sharing
                 const url = new URL(window.location.href)
                 url.searchParams.set('analysis', analysisId)
@@ -113,11 +129,13 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                 setCurrentAnalysisId(analysisId)
               }
             } catch (err) {
-              setError(err instanceof Error ? err.message : 'Network error')
               phaseTimers.forEach(timer => clearTimeout(timer))
-              setLoading(false)
-              setLoadingPhase(0)
-              setPendingFromHome(false)
+              startTransition(() => {
+                setError(err instanceof Error ? err.message : 'Network error')
+                setLoading(false)
+                setLoadingPhase(0)
+                setPendingFromHome(false)
+              })
             }
             return
           }
@@ -380,10 +398,13 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
       return
     }
 
-    setLoading(true)
-    setLoadingPhase(0)
-    setError(null)
-    setResult(null)
+    // Use transition for smooth state updates - prevents UI blocking
+    startTransition(() => {
+      setLoading(true)
+      setLoadingPhase(0)
+      setError(null)
+      setResult(null)
+    })
 
     // Start cycling through loading phases
     const phaseTimers: NodeJS.Timeout[] = []
@@ -392,7 +413,12 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     const advancePhase = () => {
       if (currentPhase < LOADING_PHASES.length - 1) {
         currentPhase++
-        setLoadingPhase(currentPhase)
+        // Use requestAnimationFrame for smooth 60fps updates
+        requestAnimationFrame(() => {
+          startTransition(() => {
+            setLoadingPhase(currentPhase)
+          })
+        })
         const nextDuration = LOADING_PHASES[currentPhase].duration
         if (nextDuration > 0) {
           phaseTimers.push(setTimeout(advancePhase, nextDuration))
@@ -416,26 +442,34 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || data.message || 'Analysis failed')
-        phaseTimers.forEach(timer => clearTimeout(timer))
-        setLoading(false)
-        setLoadingPhase(0)
+        startTransition(() => {
+          setError(data.error || data.message || 'Analysis failed')
+          phaseTimers.forEach(timer => clearTimeout(timer))
+          setLoading(false)
+          setLoadingPhase(0)
+        })
       } else {
         // Save and show results inline
         const analysisId = addToRecentSearches(textToAnalyze, data)
         updateSavedAnalysisCache(textToAnalyze, data)
         phaseTimers.forEach(timer => clearTimeout(timer))
-        setLoading(false)
-        setLoadingPhase(0)
-        setResult(data)
-        setSavedOnce(true)
+
+        // Batch all state updates in a single transition
+        startTransition(() => {
+          setLoading(false)
+          setLoadingPhase(0)
+          setResult(data)
+          setSavedOnce(true)
+        })
         updateUrlWithAnalysisId(analysisId)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error')
-      phaseTimers.forEach(timer => clearTimeout(timer))
-      setLoading(false)
-      setLoadingPhase(0)
+      startTransition(() => {
+        setError(err instanceof Error ? err.message : 'Network error')
+        phaseTimers.forEach(timer => clearTimeout(timer))
+        setLoading(false)
+        setLoadingPhase(0)
+      })
     }
   }
 
@@ -1369,50 +1403,9 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
         </div>
       )}
 
-      {/* Loading Progress Indicator */}
+      {/* Loading Progress Indicator - Memoized for smooth performance */}
       {loading && (
-        <div style={{
-          backgroundColor: '#DCF2FA',
-          border: '1px solid #AADAF9',
-          borderRadius: '12px',
-          padding: 'var(--space-4)',
-          marginBottom: 'var(--space-6)'
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-            {LOADING_PHASES.map((phase, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  opacity: idx <= loadingPhase ? 1 : 0.4,
-                  transition: 'opacity 0.3s ease'
-                }}
-              >
-                {idx < loadingPhase ? (
-                  <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
-                ) : idx === loadingPhase ? (
-                  <Loader2 style={{ width: '16px', height: '16px', color: '#1075DC' }} className="animate-spin" />
-                ) : (
-                  <div style={{
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    border: '2px solid #AADAF9'
-                  }} />
-                )}
-                <span style={{
-                  fontSize: 'var(--text-small)',
-                  color: idx <= loadingPhase ? '#162950' : '#64748b',
-                  fontWeight: idx === loadingPhase ? 'var(--weight-medium)' : 'var(--weight-normal)'
-                }}>
-                  {phase.message.replace('...', '')}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <LoadingPhaseIndicator phases={LOADING_PHASES} currentPhase={loadingPhase} />
       )}
 
       {/* Error Display */}

@@ -12,11 +12,14 @@ export const TERMINOLOGY = {
   domain: 'Topic',
   domains: 'Topics',
 
-  // Features
-  search: 'Explore',
-  searchFull: 'Explore Perspectives',
-  researchAssistant: 'Research Assistant',
+  // Features - Navigation labels (WS1 updates)
+  search: 'Browse Topics',
+  searchFull: 'Browse Topics',
+  researchAssistant: 'Check Draft',
+  researchAssistantFull: 'Check Draft',
   authors: 'Authors',
+  history: 'My Library',
+  historyFull: 'My Library',
 
   // UI labels
   positioningSnapshot: 'Match Summary',
@@ -27,6 +30,76 @@ export const TERMINOLOGY = {
   campDescription: 'A shared viewpoint or school of thought',
   domainDescription: 'A topic area within AI discourse',
 } as const
+
+/**
+ * Navigation item configuration
+ * Defines the structure for main navigation with visual hierarchy
+ */
+export interface NavItem {
+  href: string
+  label: string
+  icon: string // Icon name from lucide-react
+  description: string
+  tooltip: string
+  badge?: string
+  featured?: boolean
+}
+
+export const NAVIGATION_ITEMS: NavItem[] = [
+  {
+    href: '/',
+    label: 'Home',
+    icon: 'Home',
+    description: 'Dashboard and quick actions',
+    tooltip: 'Go to homepage',
+    featured: false,
+  },
+  {
+    href: '/research-assistant',
+    label: 'Check Draft',
+    icon: 'Search',
+    description: 'Validate your writing',
+    tooltip: 'Find supporting experts and perspectives for your draft',
+    badge: 'Start here',
+    featured: true,
+  },
+  {
+    href: '/explore',
+    label: 'Browse Topics',
+    icon: 'Compass',
+    description: 'Explore perspectives',
+    tooltip: 'Browse perspectives and positions on AI discourse',
+    featured: false,
+  },
+  {
+    href: '/history',
+    label: 'My Library',
+    icon: 'BookMarked',
+    description: 'Saved analyses',
+    tooltip: 'View your saved analyses and favorite authors',
+    featured: false,
+  },
+  {
+    href: '/authors',
+    label: 'Authors',
+    icon: 'Users',
+    description: 'Browse experts',
+    tooltip: 'Browse thought leaders and their viewpoints',
+    featured: false,
+  },
+]
+
+/**
+ * Admin navigation item (shown only to admins)
+ */
+export const ADMIN_NAV_ITEM: NavItem = {
+  href: '/admin',
+  label: 'Admin',
+  icon: 'Shield',
+  description: 'Admin dashboard',
+  tooltip: 'Admin dashboard',
+  featured: false,
+}
 
 /**
  * Feature hint messages shown on first visit

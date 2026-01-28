@@ -1,17 +1,41 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { ResearchAssistantAnalyzeResponse } from '@/lib/research-assistant'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 import {
-  Sparkles, AlertCircle, CheckCircle, ThumbsUp, ThumbsDown, Minus,
-  Quote, ExternalLink, Lightbulb, Users, Bookmark, Copy, FileDown,
-  ArrowLeft, Plus, Share2, Clock, ChevronDown, ChevronUp
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import {
+  EnhancedAuthorCard,
+  AllAuthorsSection,
+  useAuthorComparison,
+} from '@/components/research-assistant'
+import {
+  Sparkles,
+  AlertCircle,
+  CheckCircle,
+  ThumbsUp,
+  Quote,
+  ExternalLink,
+  Lightbulb,
+  Users,
+  Bookmark,
+  Copy,
+  FileDown,
+  Plus,
+  Share2,
+  Clock,
+  ChevronDown,
+  BookOpen,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface ResearchAssistantResultsProps {
   text: string
@@ -22,10 +46,19 @@ interface ResearchAssistantResultsProps {
   highlightLabel?: string | null
 }
 
-export default function ResearchAssistantResults({ text, result, analysisId, timestamp, highlightSection, highlightLabel }: ResearchAssistantResultsProps) {
-  const router = useRouter()
+export default function ResearchAssistantResults({
+  text,
+  result,
+  analysisId,
+  timestamp,
+  highlightSection,
+  highlightLabel,
+}: ResearchAssistantResultsProps) {
   const { openPanel } = useAuthorPanel()
   const { showToast } = useToast()
+
+  // Comparison functionality
+  const { comparisonAuthors, toggleAuthorComparison } = useAuthorComparison()
 
   const [allAuthors, setAllAuthors] = useState<Array<{ id: string; name: string }>>([])
   const [copying, setCopying] = useState(false)
@@ -34,26 +67,34 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
   const [likedCamps, setLikedCamps] = useState<Set<number>>(new Set())
   const [urlCopied, setUrlCopied] = useState(false)
   const [analysisSaved, setAnalysisSaved] = useState(false)
-  // Track expanded state for each camp - all open by default
-  const [expandedCamps, setExpandedCamps] = useState<Set<number>>(() =>
-    new Set(result.matchedCamps.map((_, idx) => idx))
+  // Track expanded state for each camp's nested collapsible
+  const [expandedCamps, setExpandedCamps] = useState<Set<number>>(
+    () => new Set(result.matchedCamps.map((_, idx) => idx))
   )
   // Track if full analyzed text is expanded
   const [textExpanded, setTextExpanded] = useState(false)
 
+  // Accordion state - default to suggestions and camps expanded
+  const [accordionValue, setAccordionValue] = useState<string[]>([
+    'suggestions',
+    'camps',
+  ])
+
   // Check if this analysis is already saved on mount
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('savedResearchAssistantAnalyses') || '[]')
-      const exists = saved.some((s: any) => s.id === analysisId)
+      const saved = JSON.parse(
+        localStorage.getItem('savedResearchAssistantAnalyses') || '[]'
+      )
+      const exists = saved.some((s: { id: string }) => s.id === analysisId)
       setAnalysisSaved(exists)
     } catch (e) {
       console.error('Error checking saved analyses:', e)
     }
   }, [analysisId])
 
-  const suggestionsRef = useRef<HTMLDivElement>(null)
-  const authorsRef = useRef<HTMLDivElement>(null)
+  const suggestionsRef = useRef<HTMLButtonElement>(null)
+  const authorsRef = useRef<HTMLButtonElement>(null)
   const summaryRef = useRef<HTMLDivElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
 
@@ -62,7 +103,7 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
     const fetchAuthors = async () => {
       try {
         const authors = await getThoughtLeaders()
-        setAllAuthors(authors.map(a => ({ id: a.id, name: a.name })))
+        setAllAuthors(authors.map((a) => ({ id: a.id, name: a.name })))
       } catch (error) {
         console.error('Error fetching authors for linkification:', error)
       }
@@ -70,7 +111,7 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
     fetchAuthors()
   }, [])
 
-  const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
+  const scrollToSection = (ref: React.RefObject<HTMLElement | null>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -81,8 +122,8 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
     const timer = setTimeout(() => {
       if (highlightSection === 'summary' && summaryRef.current) {
         summaryRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        // Add a temporary highlight effect
-        summaryRef.current.style.boxShadow = '0 0 0 3px #10b981, 0 4px 24px rgba(16, 185, 129, 0.2)'
+        summaryRef.current.style.boxShadow =
+          '0 0 0 3px #10b981, 0 4px 24px rgba(16, 185, 129, 0.2)'
         setTimeout(() => {
           if (summaryRef.current) {
             summaryRef.current.style.boxShadow = '0 4px 24px rgba(22, 41, 80, 0.08)'
@@ -90,18 +131,26 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
         }, 2000)
       } else if (highlightSection === 'camp' && highlightLabel) {
         // Find the camp index by label
-        const campIdx = result.matchedCamps.findIndex(c => c.campLabel === highlightLabel)
+        const campIdx = result.matchedCamps.findIndex(
+          (c) => c.campLabel === highlightLabel
+        )
         if (campIdx !== -1) {
+          // Ensure camps accordion is expanded
+          setAccordionValue((prev) =>
+            prev.includes('camps') ? prev : [...prev, 'camps']
+          )
           // Ensure this camp is expanded
-          setExpandedCamps(prev => new Set([...prev, campIdx]))
+          setExpandedCamps((prev) => new Set([...prev, campIdx]))
           // Find the camp element by data attribute
           setTimeout(() => {
-            const campElement = document.querySelector(`[data-camp-label="${highlightLabel}"]`)
+            const campElement = document.querySelector(
+              `[data-camp-label="${highlightLabel}"]`
+            )
             if (campElement) {
               campElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-              // Add highlight effect
               const el = campElement as HTMLElement
-              el.style.boxShadow = '0 0 0 3px #10b981, 0 4px 24px rgba(16, 185, 129, 0.2)'
+              el.style.boxShadow =
+                '0 0 0 3px #10b981, 0 4px 24px rgba(16, 185, 129, 0.2)'
               setTimeout(() => {
                 el.style.boxShadow = ''
               }, 2000)
@@ -115,7 +164,7 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
   }, [highlightSection, highlightLabel, result.matchedCamps])
 
   const toggleCampExpanded = (idx: number) => {
-    setExpandedCamps(prev => {
+    setExpandedCamps((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(idx)) {
         newSet.delete(idx)
@@ -126,26 +175,34 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
     })
   }
 
+  // Count unique authors across all camps
+  const uniqueAuthorCount = useMemo(() => {
+    const authorIds = new Set<string>()
+    result.matchedCamps.forEach((camp) => {
+      camp.topAuthors.forEach((author) => {
+        authorIds.add(author.id || author.name)
+      })
+    })
+    return authorIds.size
+  }, [result.matchedCamps])
+
   const handleShare = async () => {
     const shareData = {
       title: 'Research Assistant Analysis',
       text: result.summary.substring(0, 100) + '...',
-      url: window.location.href
+      url: window.location.href,
     }
 
-    // Use native share if available (mobile, some desktop browsers)
     if (navigator.share && navigator.canShare?.(shareData)) {
       try {
         await navigator.share(shareData)
         showToast('Shared successfully!')
       } catch (e) {
-        // User cancelled or error - silently ignore cancel
         if ((e as Error).name !== 'AbortError') {
           showToast('Failed to share', 'error')
         }
       }
     } else {
-      // Fallback: copy URL to clipboard
       try {
         await navigator.clipboard.writeText(window.location.href)
         setUrlCopied(true)
@@ -159,31 +216,33 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
 
   const handleSaveAnalysis = () => {
     try {
-      const saved = JSON.parse(localStorage.getItem('savedResearchAssistantAnalyses') || '[]')
+      const saved = JSON.parse(
+        localStorage.getItem('savedResearchAssistantAnalyses') || '[]'
+      )
 
       if (analysisSaved) {
-        // Remove from saved
-        const updated = saved.filter((s: any) => s.id !== analysisId)
-        localStorage.setItem('savedResearchAssistantAnalyses', JSON.stringify(updated))
+        const updated = saved.filter((s: { id: string }) => s.id !== analysisId)
+        localStorage.setItem(
+          'savedResearchAssistantAnalyses',
+          JSON.stringify(updated)
+        )
         setAnalysisSaved(false)
         showToast('Analysis removed from saved')
       } else {
-        // Add to saved
         const newSaved = {
           id: analysisId,
           text: text,
           result: result,
-          timestamp: timestamp || new Date().toISOString()
+          timestamp: timestamp || new Date().toISOString(),
         }
-
-        // Add to beginning, limit to 50 analyses
         saved.unshift(newSaved)
         const limited = saved.slice(0, 50)
-        localStorage.setItem('savedResearchAssistantAnalyses', JSON.stringify(limited))
+        localStorage.setItem(
+          'savedResearchAssistantAnalyses',
+          JSON.stringify(limited)
+        )
         setAnalysisSaved(true)
         showToast('Analysis saved!')
-
-        // Dispatch event for other components
         window.dispatchEvent(new CustomEvent('analysis-saved', { detail: newSaved }))
       }
     } catch (e) {
@@ -192,8 +251,12 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
     }
   }
 
-  // Save a helpful insight to history
-  const saveHelpfulInsight = (type: 'summary' | 'camp', content: string, campLabel?: string, campIdx?: number) => {
+  const saveHelpfulInsight = (
+    type: 'summary' | 'camp',
+    content: string,
+    campLabel?: string,
+    campIdx?: number
+  ) => {
     try {
       const insights = JSON.parse(localStorage.getItem('helpfulInsights') || '[]')
 
@@ -206,7 +269,7 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
         fullText: text,
         cachedResult: result,
         analysisId: analysisId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       }
 
       insights.unshift(newInsight)
@@ -216,11 +279,13 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
       if (type === 'summary') {
         setLikedSummary(true)
       } else if (campIdx !== undefined) {
-        setLikedCamps(prev => new Set([...prev, campIdx]))
+        setLikedCamps((prev) => new Set([...prev, campIdx]))
       }
 
       showToast('Saved to your helpful insights!')
-      window.dispatchEvent(new CustomEvent('helpful-insight-added', { detail: newInsight }))
+      window.dispatchEvent(
+        new CustomEvent('helpful-insight-added', { detail: newInsight })
+      )
     } catch (e) {
       console.error('Error saving helpful insight:', e)
       showToast('Failed to save insight', 'error')
@@ -231,7 +296,7 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
     if (type === 'summary') {
       setLikedSummary(false)
     } else if (campIdx !== undefined) {
-      setLikedCamps(prev => {
+      setLikedCamps((prev) => {
         const newSet = new Set(prev)
         newSet.delete(campIdx)
         return newSet
@@ -275,8 +340,12 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
         lines.push(`   ${camp.explanation}`)
         lines.push('')
         camp.topAuthors.forEach((author) => {
-          const stanceLabel = author.stance === 'agrees' ? 'Agrees' :
-            author.stance === 'disagrees' ? 'Disagrees' : 'Partial'
+          const stanceLabel =
+            author.stance === 'agrees'
+              ? 'Agrees'
+              : author.stance === 'disagrees'
+                ? 'Disagrees'
+                : 'Partial'
           lines.push(`   - ${author.name} [${stanceLabel}]`)
           lines.push(`     Position: ${author.position}`)
           if (author.draftConnection) {
@@ -326,7 +395,7 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
       const date = new Date().toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       })
 
       printWindow.document.write(`
@@ -389,33 +458,45 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
             <div class="suggestions-grid">
               <div class="suggestion-box present">
                 <h3>What You're Using</h3>
-                <ul>${result.editorialSuggestions.presentPerspectives.map(p => `<li>${p}</li>`).join('')}</ul>
+                <ul>${result.editorialSuggestions.presentPerspectives.map((p) => `<li>${p}</li>`).join('')}</ul>
               </div>
               <div class="suggestion-box missing">
                 <h3>What You're Missing</h3>
-                <ul>${result.editorialSuggestions.missingPerspectives.map(p => `<li>${p}</li>`).join('')}</ul>
+                <ul>${result.editorialSuggestions.missingPerspectives.map((p) => `<li>${p}</li>`).join('')}</ul>
               </div>
             </div>
           </div>
-          ${result.matchedCamps.length > 0 ? `
+          ${
+            result.matchedCamps.length > 0
+              ? `
           <div class="section">
             <h2>Relevant Thought Leaders</h2>
-            ${result.matchedCamps.map(camp => `
+            ${result.matchedCamps
+              .map(
+                (camp) => `
               <div class="camp">
                 <h3>${camp.campLabel}</h3>
                 <p class="camp-desc">${camp.explanation}</p>
-                ${camp.topAuthors.map(author => `
+                ${camp.topAuthors
+                  .map(
+                    (author) => `
                   <div class="author ${author.stance}">
                     <div class="author-name">${author.name}</div>
                     <p class="author-position"><strong>Position:</strong> ${author.position}</p>
                     ${author.draftConnection ? `<div class="author-connection"><strong>Connection:</strong> ${author.draftConnection}</div>` : ''}
                     ${author.quote ? `<blockquote class="author-quote">"${author.quote}"</blockquote>` : ''}
                   </div>
-                `).join('')}
+                `
+                  )
+                  .join('')}
               </div>
-            `).join('')}
+            `
+              )
+              .join('')}
           </div>
-          ` : ''}
+          `
+              : ''
+          }
           <div class="footer">
             Generated by Compass Research Assistant<br/>
             ${window.location.href}
@@ -446,50 +527,35 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
 
   const getStanceColor = (stance: 'agrees' | 'disagrees' | 'partial') => {
     switch (stance) {
-      case 'agrees': return { bg: 'rgba(16, 185, 129, 0.08)', border: '#10b981', text: '#059669' }
-      case 'disagrees': return { bg: 'rgba(239, 68, 68, 0.08)', border: '#ef4444', text: '#dc2626' }
-      case 'partial': return { bg: 'rgba(245, 158, 11, 0.08)', border: '#f59e0b', text: '#d97706' }
-    }
-  }
-
-  const getStanceIcon = (stance: 'agrees' | 'disagrees' | 'partial') => {
-    switch (stance) {
-      case 'agrees': return <ThumbsUp className="w-4 h-4" />
-      case 'disagrees': return <ThumbsDown className="w-4 h-4" />
-      case 'partial': return <Minus className="w-4 h-4" />
-    }
-  }
-
-  const getStanceLabel = (stance: 'agrees' | 'disagrees' | 'partial') => {
-    switch (stance) {
-      case 'agrees': return 'Agrees with you'
-      case 'disagrees': return 'Challenges your view'
-      case 'partial': return 'Partially aligns'
+      case 'agrees':
+        return { bg: 'rgba(16, 185, 129, 0.08)', border: '#10b981', text: '#059669' }
+      case 'disagrees':
+        return { bg: 'rgba(239, 68, 68, 0.08)', border: '#ef4444', text: '#dc2626' }
+      case 'partial':
+        return { bg: 'rgba(245, 158, 11, 0.08)', border: '#f59e0b', text: '#d97706' }
     }
   }
 
   // Extract first sentence from text for preview
   const getFirstSentence = (text: string): string => {
-    // Match first sentence ending with . ! or ?
     const match = text.match(/^[^.!?]*[.!?]/)
     if (match) {
       return match[0].trim()
     }
-    // Fallback: if no sentence ending found, truncate at 80 chars
     return text.length > 80 ? text.substring(0, 80) + '...' : text
   }
 
   // Build author name to ID map
   const buildAuthorMap = () => {
     const map = new Map<string, string>()
-    allAuthors.forEach(author => {
+    allAuthors.forEach((author) => {
       if (author.id && author.name) {
         map.set(author.name, author.id)
       }
     })
     if (result?.matchedCamps) {
-      result.matchedCamps.forEach(camp => {
-        camp.topAuthors.forEach(author => {
+      result.matchedCamps.forEach((camp) => {
+        camp.topAuthors.forEach((author) => {
           if (author.id && author.name) {
             map.set(author.name, author.id)
           }
@@ -506,13 +572,13 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
     if (authorNames.length === 0) return text
 
     const escapedNames = authorNames
-      .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
       .sort((a, b) => b.length - a.length)
 
     const pattern = `\\[([^\\]]+)\\]|\\b(${escapedNames.join('|')})\\b`
     const regex = new RegExp(pattern, 'g')
 
-    const parts = []
+    const parts: (string | React.ReactElement)[] = []
     let lastIndex = 0
     let match
     let linkKey = 0
@@ -531,21 +597,8 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
         <button
           key={`author-link-${linkKey++}`}
           onClick={() => authorId && openPanel(authorId)}
-          style={{
-            color: '#0158AE',
-            fontWeight: 600,
-            textDecoration: 'underline',
-            textDecorationColor: 'rgba(1, 88, 174, 0.3)',
-            textUnderlineOffset: '2px',
-            transition: 'all 0.15s ease',
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            font: 'inherit',
-            cursor: authorId ? 'pointer' : 'default'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.textDecorationColor = '#0158AE'}
-          onMouseLeave={(e) => e.currentTarget.style.textDecorationColor = 'rgba(1, 88, 174, 0.3)'}
+          className="text-[#0158AE] font-semibold underline underline-offset-2 decoration-[#0158AE]/30 hover:decoration-[#0158AE] transition-all bg-transparent border-none p-0 cursor-pointer"
+          style={{ font: 'inherit' }}
         >
           {authorName}
         </button>
@@ -562,290 +615,156 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
   }
 
   return (
-    <div style={{ maxWidth: '100%' }}>
+    <div className="max-w-full">
       {/* Page Title */}
-      <div style={{ marginBottom: 'var(--space-6)', textAlign: 'center' }}>
-        <h1 style={{
-          fontSize: 'clamp(1.5rem, 4vw, 2rem)',
-          fontWeight: 'var(--weight-bold)',
-          marginBottom: 'var(--space-2)',
-          background: 'linear-gradient(135deg, #162950 0%, #1075DC 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        }}>
+      <div className="mb-6 text-center">
+        <h1
+          className="text-2xl md:text-3xl font-bold mb-2"
+          style={{
+            background: 'linear-gradient(135deg, #162950 0%, #1075DC 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
           Analysis Results
         </h1>
         {timestamp && (
-          <p style={{
-            fontSize: '14px',
-            color: '#64748b',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px'
-          }}>
-            <Clock style={{ width: '14px', height: '14px' }} />
+          <p className="text-sm text-gray-500 flex items-center justify-center gap-1.5">
+            <Clock className="w-3.5 h-3.5" />
             {new Date(timestamp).toLocaleDateString(undefined, {
               month: 'short',
               day: 'numeric',
               year: 'numeric',
               hour: '2-digit',
-              minute: '2-digit'
+              minute: '2-digit',
             })}
           </p>
         )}
       </div>
 
       {/* Analyzed Text Preview */}
-      <div style={{
-        borderRadius: '12px',
-        background: 'linear-gradient(135deg, #DCF2FA 0%, #AADAF9 100%)',
-        border: '1px solid #48AFF0',
-        padding: '20px',
-        marginBottom: 'var(--space-6)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-          <Quote style={{
-            width: '24px',
-            height: '24px',
-            color: '#0158AE',
-            flexShrink: 0,
-            marginTop: '2px'
-          }} />
-          <div style={{ flex: 1 }}>
-            <p style={{
-              fontSize: '15px',
-              lineHeight: '1.7',
-              color: '#162950',
-              margin: 0,
-              fontStyle: 'italic',
-              whiteSpace: 'pre-wrap'
-            }}>
-              {textExpanded ? text : (text.length > 300 ? text.substring(0, 300) + '...' : text)}
+      <div className="rounded-xl bg-gradient-to-br from-[#DCF2FA] to-[#AADAF9] border border-[#48AFF0] p-5 mb-6">
+        <div className="flex items-start gap-3">
+          <Quote className="w-6 h-6 text-[#0158AE] flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-[15px] leading-relaxed text-[#162950] italic whitespace-pre-wrap">
+              {textExpanded
+                ? text
+                : text.length > 300
+                  ? text.substring(0, 300) + '...'
+                  : text}
             </p>
             {text.length > 300 && (
               <button
                 onClick={() => setTextExpanded(!textExpanded)}
-                style={{
-                  marginTop: '8px',
-                  padding: '4px 8px',
-                  fontSize: '12px',
-                  color: '#1075DC',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textDecoration: 'underline'
-                }}
+                className="mt-2 px-2 py-1 text-xs text-[#1075DC] bg-transparent border-none cursor-pointer underline"
               >
                 {textExpanded ? 'Show less' : 'Show full text'}
               </button>
             )}
           </div>
         </div>
-        <div style={{
-          marginTop: '12px',
-          paddingTop: '12px',
-          borderTop: '1px solid #48AFF0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <span style={{ fontSize: '12px', color: '#0158AE', fontWeight: 500 }}>
+        <div className="mt-3 pt-3 border-t border-[#48AFF0] flex items-center justify-between">
+          <span className="text-xs text-[#0158AE] font-medium">
             {text.length.toLocaleString()} characters analyzed
           </span>
         </div>
       </div>
 
       {/* Results Display */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+      <div className="flex flex-col gap-6">
         {/* Toolbar */}
-        <div style={{
-          backgroundColor: 'white',
-          border: '1px solid #e5e7eb',
-          borderRadius: '12px',
-          padding: '10px 16px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px'
-          }}>
+        <div className="bg-white border border-gray-200 rounded-xl p-2.5 shadow-sm">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             {/* Left: New Analysis + Navigation pills */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="flex items-center gap-3">
               <Link
                 href="/research-assistant"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '7px 12px',
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: '#374151',
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  transition: 'all 0.15s ease',
-                  whiteSpace: 'nowrap'
-                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap no-underline"
               >
-                <Plus style={{ width: '14px', height: '14px' }} />
+                <Plus className="w-3.5 h-3.5" />
                 New
               </Link>
-              <div style={{ width: '1px', height: '20px', backgroundColor: '#e5e7eb' }} />
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '2px',
-                padding: '3px',
-                backgroundColor: '#f1f5f9',
-                borderRadius: '8px'
-              }}>
-              <button
-                onClick={() => scrollToSection(summaryRef)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '6px 12px',
-                  backgroundColor: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: '#0158AE',
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                Summary
-              </button>
-              <button
-                onClick={() => scrollToSection(suggestionsRef)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '6px 12px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                Suggestions
-              </button>
-              <button
-                onClick={() => scrollToSection(authorsRef)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '6px 12px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                Authors
-              </button>
+              <div className="w-px h-5 bg-gray-200" />
+              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+                <button
+                  onClick={() => scrollToSection(summaryRef)}
+                  className="px-3 py-1.5 bg-white border-none rounded-md text-sm font-medium text-[#0158AE] cursor-pointer shadow-sm transition-all"
+                >
+                  Summary
+                </button>
+                <button
+                  onClick={() => {
+                    setAccordionValue((prev) =>
+                      prev.includes('suggestions') ? prev : [...prev, 'suggestions']
+                    )
+                    setTimeout(() => scrollToSection(suggestionsRef), 100)
+                  }}
+                  className="px-3 py-1.5 bg-transparent border-none rounded-md text-sm font-medium text-gray-500 cursor-pointer hover:text-gray-700 transition-all"
+                >
+                  Suggestions
+                </button>
+                <button
+                  onClick={() => {
+                    setAccordionValue((prev) =>
+                      prev.includes('camps') ? prev : [...prev, 'camps']
+                    )
+                    setTimeout(() => scrollToSection(authorsRef), 100)
+                  }}
+                  className="px-3 py-1.5 bg-transparent border-none rounded-md text-sm font-medium text-gray-500 cursor-pointer hover:text-gray-700 transition-all"
+                >
+                  Authors
+                </button>
               </div>
             </div>
 
             {/* Right: Action buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={handleSaveAnalysis}
                 title={analysisSaved ? 'Remove from saved' : 'Save this analysis'}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 12px',
-                  backgroundColor: analysisSaved ? '#0158AE' : 'white',
-                  border: analysisSaved ? '1px solid #0158AE' : '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: analysisSaved ? 'white' : '#374151',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer transition-all',
+                  analysisSaved
+                    ? 'bg-[#0158AE] border-[#0158AE] text-white'
+                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                )}
               >
-                <Bookmark style={{ width: '14px', height: '14px', fill: analysisSaved ? 'white' : 'none' }} />
+                <Bookmark
+                  className="w-3.5 h-3.5"
+                  fill={analysisSaved ? 'white' : 'none'}
+                />
                 {analysisSaved ? 'Saved' : 'Save'}
               </button>
-              <div style={{ width: '1px', height: '20px', backgroundColor: '#e5e7eb' }} />
+              <div className="w-px h-5 bg-gray-200" />
               <button
                 onClick={handleShare}
                 title={urlCopied ? 'Link copied!' : 'Share this analysis'}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '34px',
-                  height: '34px',
-                  backgroundColor: urlCopied ? '#d1fae5' : 'transparent',
-                  border: urlCopied ? '1px solid #10b981' : '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  color: urlCopied ? '#059669' : '#6b7280',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
+                className={cn(
+                  'inline-flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-all',
+                  urlCopied
+                    ? 'bg-emerald-50 border border-emerald-500 text-emerald-600'
+                    : 'bg-transparent border border-gray-200 text-gray-500 hover:bg-gray-50'
+                )}
               >
-                <Share2 style={{ width: '15px', height: '15px' }} />
+                <Share2 className="w-4 h-4" />
               </button>
               <button
                 onClick={handleCopy}
                 disabled={copying}
                 title="Copy analysis"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '34px',
-                  height: '34px',
-                  backgroundColor: 'transparent',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  color: '#6b7280',
-                  cursor: copying ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
+                className="inline-flex items-center justify-center w-8 h-8 bg-transparent border border-gray-200 rounded-md text-gray-500 cursor-pointer hover:bg-gray-50 transition-all disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Copy style={{ width: '15px', height: '15px' }} />
+                <Copy className="w-4 h-4" />
               </button>
               <button
                 onClick={handleExportPDF}
                 disabled={exporting}
                 title="Export as PDF"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '34px',
-                  height: '34px',
-                  backgroundColor: 'transparent',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  color: '#6b7280',
-                  cursor: exporting ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
+                className="inline-flex items-center justify-center w-8 h-8 bg-transparent border border-gray-200 rounded-md text-gray-500 cursor-pointer hover:bg-gray-50 transition-all disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <FileDown style={{ width: '15px', height: '15px' }} />
+                <FileDown className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -853,554 +772,339 @@ export default function ResearchAssistantResults({ text, result, analysisId, tim
 
         {/* PDF Export Container */}
         <div ref={resultsRef}>
-          {/* Summary */}
-          <div ref={summaryRef} style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '24px',
-            boxShadow: '0 2px 12px rgba(22, 41, 80, 0.06)',
-            border: '1px solid #AADAF9',
-            scrollMarginTop: '96px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              marginBottom: '12px'
-            }}>
-              <h2 style={{
-                margin: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: '#162950'
-              }}>
-                <CheckCircle style={{ width: '20px', height: '20px', color: '#10b981' }} />
+          {/* Summary - Always Visible */}
+          <div
+            ref={summaryRef}
+            className="bg-white rounded-xl p-6 shadow-sm border border-[#AADAF9] scroll-mt-24"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <h2 className="m-0 flex items-center gap-2 text-[#162950]">
+                <CheckCircle className="w-5 h-5 text-emerald-500" />
                 Summary
               </h2>
               <button
-                onClick={() => likedSummary
-                  ? removeHelpfulInsight('summary')
-                  : saveHelpfulInsight('summary', result.summary)
+                onClick={() =>
+                  likedSummary
+                    ? removeHelpfulInsight('summary')
+                    : saveHelpfulInsight('summary', result.summary)
                 }
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  borderRadius: '16px',
-                  border: likedSummary ? '1px solid #10b981' : '1px solid #e5e7eb',
-                  backgroundColor: likedSummary ? '#d1fae5' : 'white',
-                  color: likedSummary ? '#059669' : '#6b7280',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                title={likedSummary ? 'Remove from helpful insights' : 'Save as helpful'}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all',
+                  likedSummary
+                    ? 'border border-emerald-500 bg-emerald-50 text-emerald-600'
+                    : 'border border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                )}
+                title={
+                  likedSummary
+                    ? 'Remove from helpful insights'
+                    : 'Save as helpful'
+                }
               >
-                <ThumbsUp style={{ width: '14px', height: '14px', fill: likedSummary ? '#059669' : 'none' }} />
+                <ThumbsUp
+                  className="w-3.5 h-3.5"
+                  fill={likedSummary ? '#059669' : 'none'}
+                />
                 {likedSummary ? 'Helpful!' : 'This is helpful'}
               </button>
             </div>
-            <p style={{
-              color: '#374151',
-              lineHeight: '1.75',
-              margin: 0,
-              fontSize: '15px'
-            }}>
+            <p className="text-gray-700 leading-relaxed m-0 text-[15px]">
               {result.summary}
             </p>
           </div>
 
-          {/* Editorial Suggestions */}
-          <div ref={suggestionsRef} style={{ scrollMarginTop: '96px', marginTop: '24px' }}>
-            <div style={{
-              backgroundColor: '#FFFFFF',
-              border: '2px solid #1075DC',
-              borderRadius: '12px',
-              padding: '32px',
-              boxShadow: '0 4px 24px rgba(22, 41, 80, 0.08)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                marginBottom: '24px'
-              }}>
-                <div style={{
-                  padding: '12px',
-                  background: 'linear-gradient(135deg, #0158AE 0%, #1075DC 100%)',
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 8px rgba(1, 88, 174, 0.25)'
-                }}>
-                  <Lightbulb style={{ width: '28px', height: '28px', color: 'white' }} />
+          {/* Accordion Sections */}
+          <Accordion
+            type="multiple"
+            value={accordionValue}
+            onValueChange={setAccordionValue}
+            className="mt-6 space-y-4"
+          >
+            {/* Editorial Suggestions */}
+            <AccordionItem
+              value="suggestions"
+              className="bg-white border-2 border-[#1075DC] rounded-xl overflow-hidden shadow-sm"
+            >
+              <AccordionTrigger
+                ref={suggestionsRef}
+                className="px-6 py-4 hover:no-underline scroll-mt-24 [&>svg]:hidden"
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="p-2.5 bg-gradient-to-br from-[#0158AE] to-[#1075DC] rounded-lg shadow-md">
+                    <Lightbulb className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <h2 className="m-0 text-[#162950] text-lg font-semibold">
+                      Editorial Suggestions
+                    </h2>
+                    <p className="text-sm text-gray-500 m-0">
+                      Key insights to strengthen your content
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 style={{ marginBottom: '4px', color: '#162950' }}>Editorial Suggestions</h2>
-                  <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-                    Key insights to strengthen your content
+                <ChevronDown className="w-5 h-5 text-[#1075DC] shrink-0 transition-transform duration-200 data-[state=open]:rotate-180" />
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6 pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Present Perspectives */}
+                  <div className="bg-emerald-50 rounded-lg p-5 border border-emerald-500">
+                    <h3 className="text-base font-semibold text-emerald-600 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5" />
+                      What You're Already Using
+                    </h3>
+                    <ul className="list-none p-0 m-0 flex flex-col gap-3">
+                      {result.editorialSuggestions.presentPerspectives.map(
+                        (perspective, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-start gap-3 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20"
+                          >
+                            <span className="text-emerald-600 text-lg flex-shrink-0">
+                              ✓
+                            </span>
+                            <span className="text-gray-800 text-sm leading-relaxed font-medium">
+                              {linkifyAuthors(perspective)}
+                            </span>
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+
+                  {/* Missing Perspectives */}
+                  <div className="bg-amber-50 rounded-lg p-5 border border-amber-500">
+                    <h3 className="text-base font-semibold text-amber-600 mb-3 flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5" />
+                      What You're Missing
+                    </h3>
+                    <ul className="list-none p-0 m-0 flex flex-col gap-3">
+                      {result.editorialSuggestions.missingPerspectives.map(
+                        (perspective, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-start gap-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20"
+                          >
+                            <span className="text-amber-600 text-lg flex-shrink-0">
+                              !
+                            </span>
+                            <span className="text-gray-800 text-sm leading-relaxed font-medium">
+                              {linkifyAuthors(perspective)}
+                            </span>
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Ideological Camps */}
+            {result.matchedCamps.length > 0 && (
+              <AccordionItem
+                value="camps"
+                className="bg-white border border-[#AADAF9] rounded-xl overflow-hidden shadow-sm"
+              >
+                <AccordionTrigger
+                  ref={authorsRef}
+                  className="px-6 py-4 hover:no-underline scroll-mt-24 [&>svg]:hidden"
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <Users className="w-6 h-6 text-[#1075DC]" />
+                    <div className="text-left">
+                      <h2 className="m-0 text-[#162950] text-lg font-semibold">
+                        Ideological Camps
+                      </h2>
+                      <p className="text-sm text-gray-500 m-0">
+                        {result.matchedCamps.length} perspectives found
+                      </p>
+                    </div>
+                    <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+                      Most relevant first
+                    </span>
+                  </div>
+                  <ChevronDown className="w-5 h-5 text-[#1075DC] shrink-0 transition-transform duration-200 data-[state=open]:rotate-180" />
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6 pt-0">
+                  <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                    See what each thought leader believes and how their ideas
+                    specifically support or challenge your draft.
                   </p>
-                </div>
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: '24px'
-              }}>
-                {/* Present Perspectives */}
-                <div style={{
-                  backgroundColor: '#f0fdf4',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  border: '1px solid #10b981'
-                }}>
-                  <h3 style={{
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    color: '#059669',
-                    marginBottom: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <CheckCircle style={{ width: '20px', height: '20px' }} />
-                    What You're Already Using
-                  </h3>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {result.editorialSuggestions.presentPerspectives.map((perspective, idx) => (
-                      <li key={idx} style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '12px',
-                        padding: '12px',
-                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(16, 185, 129, 0.2)'
-                      }}>
-                        <span style={{ color: '#059669', fontSize: '18px', flexShrink: 0 }}>✓</span>
-                        <span style={{ color: '#1f2937', fontSize: '14px', lineHeight: '1.6', fontWeight: 500 }}>
-                          {linkifyAuthors(perspective)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Missing Perspectives */}
-                <div style={{
-                  backgroundColor: '#fffbeb',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  border: '1px solid #f59e0b'
-                }}>
-                  <h3 style={{
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    color: '#d97706',
-                    marginBottom: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <AlertCircle style={{ width: '20px', height: '20px' }} />
-                    What You're Missing
-                  </h3>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {result.editorialSuggestions.missingPerspectives.map((perspective, idx) => (
-                      <li key={idx} style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '12px',
-                        padding: '12px',
-                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(245, 158, 11, 0.2)'
-                      }}>
-                        <span style={{ color: '#d97706', fontSize: '18px', flexShrink: 0 }}>!</span>
-                        <span style={{ color: '#1f2937', fontSize: '14px', lineHeight: '1.6', fontWeight: 500 }}>
-                          {linkifyAuthors(perspective)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Thought Leaders */}
-          {result.matchedCamps.length > 0 && (
-            <div ref={authorsRef} style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '12px',
-              padding: '24px',
-              boxShadow: '0 2px 12px rgba(22, 41, 80, 0.06)',
-              border: '1px solid #AADAF9',
-              scrollMarginTop: '96px',
-              marginTop: '24px'
-            }}>
-              <h2 style={{
-                marginBottom: '8px',
-                color: '#162950',
-                fontSize: '1.25rem',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <Users style={{ width: '22px', height: '22px', color: '#1075DC' }} />
-                Relevant Thought Leaders
-                <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b', marginLeft: '4px' }}>
-                  ({result.matchedCamps.length} perspectives)
-                </span>
-              </h2>
-              <p style={{
-                fontSize: '14px',
-                color: '#64748b',
-                marginBottom: '24px',
-                lineHeight: '1.5'
-              }}>
-                See what each thought leader believes and how their ideas specifically support or challenge your draft.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                {result.matchedCamps.map((camp, idx) => {
-                  const isExpanded = expandedCamps.has(idx)
-                  return (
-                  <div
-                    key={idx}
-                    data-camp-label={camp.campLabel}
-                    style={{
-                      border: '1px solid #AADAF9',
-                      borderRadius: '12px',
-                      backgroundColor: '#FFFFFF',
-                      boxShadow: '0 2px 8px rgba(22, 41, 80, 0.04)',
-                      overflow: 'hidden',
-                      transition: 'box-shadow 0.3s ease'
-                    }}
-                  >
-                    {/* Collapsible Header */}
-                    <div
-                      onClick={() => toggleCampExpanded(idx)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '16px 20px',
-                        cursor: 'pointer',
-                        backgroundColor: isExpanded ? 'transparent' : '#f8fafc',
-                        borderBottom: isExpanded ? '1px solid #AADAF9' : 'none',
-                        transition: 'background-color 0.1s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-                        <div style={{ flex: 1 }}>
-                          <Link
-                            href={`/results?q=${encodeURIComponent(camp.campLabel)}`}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{
-                              fontWeight: 600,
-                              fontSize: '17px',
-                              color: '#0158AE',
-                              textDecoration: 'underline',
-                              textDecorationColor: 'rgba(1, 88, 174, 0.3)',
-                              textUnderlineOffset: '3px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              transition: 'color 0.1s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.color = '#1075DC'
-                              e.currentTarget.style.textDecorationColor = '#1075DC'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.color = '#0158AE'
-                              e.currentTarget.style.textDecorationColor = 'rgba(1, 88, 174, 0.3)'
+                  <div className="flex flex-col gap-6">
+                    {result.matchedCamps.map((camp, idx) => {
+                      const isExpanded = expandedCamps.has(idx)
+                      return (
+                        <div
+                          key={idx}
+                          data-camp-label={camp.campLabel}
+                          className="border border-[#AADAF9] rounded-xl bg-white shadow-sm overflow-hidden transition-shadow duration-300"
+                        >
+                          {/* Collapsible Header */}
+                          <div
+                            onClick={() => toggleCampExpanded(idx)}
+                            className={cn(
+                              'flex items-center justify-between p-4 cursor-pointer transition-colors',
+                              isExpanded
+                                ? 'bg-transparent border-b border-[#AADAF9]'
+                                : 'bg-gray-50'
+                            )}
+                            role="button"
+                            tabIndex={0}
+                            aria-expanded={isExpanded}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                toggleCampExpanded(idx)
+                              }
                             }}
                           >
-                            {camp.campLabel}
-                            <ExternalLink style={{ width: '14px', height: '14px', opacity: 0.6 }} />
-                          </Link>
-                          {!isExpanded && (
-                            <p style={{
-                              fontSize: '13px',
-                              color: '#64748b',
-                              margin: '4px 0 0 0',
-                              lineHeight: '1.4'
-                            }}>
-                              {camp.topAuthors.length} author{camp.topAuthors.length !== 1 ? 's' : ''} • {getFirstSentence(camp.explanation)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            likedCamps.has(idx)
-                              ? removeHelpfulInsight('camp', idx)
-                              : saveHelpfulInsight('camp', camp.explanation, camp.campLabel, idx)
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '5px 10px',
-                            borderRadius: '14px',
-                            border: likedCamps.has(idx) ? '1px solid #10b981' : '1px solid #e5e7eb',
-                            backgroundColor: likedCamps.has(idx) ? '#d1fae5' : 'white',
-                            color: likedCamps.has(idx) ? '#059669' : '#6b7280',
-                            fontSize: '11px',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            flexShrink: 0
-                          }}
-                        >
-                          <ThumbsUp style={{ width: '12px', height: '12px', fill: likedCamps.has(idx) ? '#059669' : 'none' }} />
-                          {likedCamps.has(idx) ? 'Saved' : 'Helpful'}
-                        </button>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '6px',
-                          backgroundColor: '#DCF2FA',
-                          color: '#1075DC',
-                          transition: 'transform 0.15s ease',
-                          transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'
-                        }}>
-                          <ChevronDown style={{ width: '18px', height: '18px' }} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Collapsible Content */}
-                    <div style={{
-                      maxHeight: isExpanded ? '5000px' : '0',
-                      opacity: isExpanded ? 1 : 0,
-                      overflow: 'hidden',
-                      transition: 'max-height 0.15s ease, opacity 0.1s ease',
-                      padding: isExpanded ? '20px' : '0 20px'
-                    }}>
-                      <p style={{
-                        fontSize: '14px',
-                        color: '#374151',
-                        lineHeight: '1.6',
-                        margin: '0 0 16px 0'
-                      }}>
-                        {camp.explanation}
-                      </p>
-
-                    {/* Author Cards */}
-                    {camp.topAuthors.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {camp.topAuthors.map((author, authorIdx) => {
-                          const colors = getStanceColor(author.stance)
-                          return (
-                            <div
-                              key={authorIdx}
-                              style={{
-                                border: `1px solid ${colors.border}`,
-                                borderRadius: '8px',
-                                padding: '16px',
-                                backgroundColor: colors.bg
-                              }}
-                            >
-                              {/* Author Header */}
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                marginBottom: '12px'
-                              }}>
-                                {author.id ? (
-                                  <button
-                                    onClick={() => openPanel(author.id as string)}
-                                    style={{
-                                      fontWeight: 600,
-                                      fontSize: '15px',
-                                      color: '#0158AE',
-                                      background: 'none',
-                                      border: 'none',
-                                      padding: 0,
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    {author.name}
-                                  </button>
-                                ) : (
-                                  <span style={{ fontWeight: 600, fontSize: '15px', color: '#1f2937' }}>
-                                    {author.name}
-                                  </span>
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="flex-1">
+                                <Link
+                                  href={`/results?q=${encodeURIComponent(camp.campLabel)}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="font-semibold text-[17px] text-[#0158AE] underline underline-offset-2 decoration-[#0158AE]/30 hover:decoration-[#0158AE] inline-flex items-center gap-1 transition-colors"
+                                >
+                                  {camp.campLabel}
+                                  <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+                                </Link>
+                                {!isExpanded && (
+                                  <p className="text-sm text-gray-500 mt-1 leading-snug">
+                                    {camp.topAuthors.length} author
+                                    {camp.topAuthors.length !== 1 ? 's' : ''} •{' '}
+                                    {getFirstSentence(camp.explanation)}
+                                  </p>
                                 )}
-                                <span style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '2px 8px',
-                                  borderRadius: '4px',
-                                  fontSize: '12px',
-                                  fontWeight: 500,
-                                  border: `1px solid ${colors.border}`,
-                                  backgroundColor: colors.bg,
-                                  color: colors.text
-                                }}>
-                                  {getStanceIcon(author.stance)}
-                                  {getStanceLabel(author.stance)}
-                                </span>
                               </div>
-
-                              {/* Position */}
-                              <div style={{ marginBottom: '12px' }}>
-                                <p style={{
-                                  fontSize: '12px',
-                                  fontWeight: 500,
-                                  color: '#64748b',
-                                  marginBottom: '6px',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.5px'
-                                }}>
-                                  What they believe
-                                </p>
-                                <p style={{
-                                  fontSize: '14px',
-                                  color: '#1f2937',
-                                  lineHeight: '1.6',
-                                  margin: 0
-                                }}>
-                                  {author.position}
-                                </p>
-                              </div>
-
-                              {/* Draft Connection */}
-                              {author.draftConnection && (
-                                <div style={{
-                                  marginBottom: '12px',
-                                  padding: '12px 14px',
-                                  backgroundColor: author.stance === 'agrees'
-                                    ? 'rgba(16, 185, 129, 0.06)'
-                                    : author.stance === 'disagrees'
-                                    ? 'rgba(239, 68, 68, 0.06)'
-                                    : 'rgba(245, 158, 11, 0.06)',
-                                  borderRadius: '8px',
-                                  borderLeft: `3px solid ${colors.border}`
-                                }}>
-                                  <p style={{
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    color: colors.text,
-                                    marginBottom: '6px',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.3px'
-                                  }}>
-                                    {author.stance === 'agrees'
-                                      ? '✓ Supports your draft'
-                                      : author.stance === 'disagrees'
-                                      ? '✗ Challenges your draft'
-                                      : '◐ Relates to your draft'}
-                                  </p>
-                                  <p style={{
-                                    fontSize: '14px',
-                                    color: '#1f2937',
-                                    lineHeight: '1.6',
-                                    margin: 0
-                                  }}>
-                                    {author.draftConnection}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* Quote */}
-                              {author.quote && (
-                                author.sourceUrl ? (
-                                  <a
-                                    href={author.sourceUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                      display: 'block',
-                                      backgroundColor: '#FFFFFF',
-                                      border: '1px solid #AADAF9',
-                                      borderRadius: '8px',
-                                      padding: '12px',
-                                      textDecoration: 'none'
-                                    }}
-                                  >
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                      <Quote style={{
-                                        width: '16px',
-                                        height: '16px',
-                                        color: '#1075DC',
-                                        flexShrink: 0,
-                                        marginTop: '2px'
-                                      }} />
-                                      <div style={{ flex: 1 }}>
-                                        <p style={{
-                                          fontSize: '14px',
-                                          fontStyle: 'italic',
-                                          color: '#162950',
-                                          margin: 0,
-                                          lineHeight: '1.6'
-                                        }}>
-                                          "{author.quote}"
-                                        </p>
-                                        <span style={{
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '4px',
-                                          fontSize: '12px',
-                                          color: '#0158AE',
-                                          marginTop: '8px'
-                                        }}>
-                                          <ExternalLink style={{ width: '12px', height: '12px' }} />
-                                          View source
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </a>
-                                ) : (
-                                  <div style={{
-                                    backgroundColor: '#DCF2FA',
-                                    border: '1px solid #AADAF9',
-                                    borderRadius: '8px',
-                                    padding: '12px'
-                                  }}>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                      <Quote style={{
-                                        width: '16px',
-                                        height: '16px',
-                                        color: '#48AFF0',
-                                        flexShrink: 0,
-                                        marginTop: '2px'
-                                      }} />
-                                      <p style={{
-                                        fontSize: '14px',
-                                        fontStyle: 'italic',
-                                        color: '#162950',
-                                        margin: 0,
-                                        lineHeight: '1.6'
-                                      }}>
-                                        "{author.quote}"
-                                      </p>
-                                    </div>
-                                  </div>
-                                )
-                              )}
                             </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                    </div>{/* End Collapsible Content */}
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  likedCamps.has(idx)
+                                    ? removeHelpfulInsight('camp', idx)
+                                    : saveHelpfulInsight(
+                                        'camp',
+                                        camp.explanation,
+                                        camp.campLabel,
+                                        idx
+                                      )
+                                }}
+                                className={cn(
+                                  'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer flex-shrink-0 transition-all',
+                                  likedCamps.has(idx)
+                                    ? 'border border-emerald-500 bg-emerald-50 text-emerald-600'
+                                    : 'border border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                                )}
+                              >
+                                <ThumbsUp
+                                  className="w-3 h-3"
+                                  fill={likedCamps.has(idx) ? '#059669' : 'none'}
+                                />
+                                {likedCamps.has(idx) ? 'Saved' : 'Helpful'}
+                              </button>
+                              <div
+                                className={cn(
+                                  'flex items-center justify-center w-7 h-7 rounded-md bg-[#DCF2FA] text-[#1075DC] transition-transform duration-150',
+                                  isExpanded ? 'rotate-0' : '-rotate-90'
+                                )}
+                              >
+                                <ChevronDown className="w-4.5 h-4.5" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Collapsible Content */}
+                          <div
+                            className={cn(
+                              'overflow-hidden transition-all duration-150',
+                              isExpanded
+                                ? 'max-h-[5000px] opacity-100 p-5'
+                                : 'max-h-0 opacity-0 p-0'
+                            )}
+                          >
+                            <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                              {camp.explanation}
+                            </p>
+
+                            {/* Author Cards */}
+                            {camp.topAuthors.length > 0 && (
+                              <div className="flex flex-col gap-3">
+                                {camp.topAuthors.map((author, authorIdx) => (
+                                  <EnhancedAuthorCard
+                                    key={authorIdx}
+                                    author={{
+                                      id: author.id,
+                                      name: author.name,
+                                      position: author.position,
+                                      stance: author.stance,
+                                      draftConnection: author.draftConnection,
+                                      quote: author.quote,
+                                      sourceUrl: author.sourceUrl,
+                                    }}
+                                    showActions={true}
+                                    isSaved={
+                                      author.id
+                                        ? comparisonAuthors.includes(author.id)
+                                        : false
+                                    }
+                                    onSaveForComparison={(id) =>
+                                      toggleAuthorComparison(id, author.name)
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
-                )})}
-              </div>
-            </div>
-          )}
+                </AccordionContent>
+              </AccordionItem>
+            )}
+
+            {/* All Authors */}
+            {result.matchedCamps.length > 0 && (
+              <AccordionItem
+                value="all-authors"
+                className="bg-white border border-[#AADAF9] rounded-xl overflow-hidden shadow-sm"
+              >
+                <AccordionTrigger className="px-6 py-4 hover:no-underline [&>svg]:hidden">
+                  <div className="flex items-center gap-3 flex-1">
+                    <BookOpen className="w-6 h-6 text-[#1075DC]" />
+                    <div className="text-left">
+                      <h2 className="m-0 text-[#162950] text-lg font-semibold">
+                        All Key Authors
+                      </h2>
+                      <p className="text-sm text-gray-500 m-0">
+                        {uniqueAuthorCount} unique author
+                        {uniqueAuthorCount !== 1 ? 's' : ''} across all camps
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronDown className="w-5 h-5 text-[#1075DC] shrink-0 transition-transform duration-200 data-[state=open]:rotate-180" />
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6 pt-0">
+                  <AllAuthorsSection
+                    matchedCamps={result.matchedCamps}
+                    comparisonAuthors={comparisonAuthors}
+                    onSaveForComparison={(id) => {
+                      // Find author name for better toast message
+                      let authorName: string | undefined
+                      for (const camp of result.matchedCamps) {
+                        const author = camp.topAuthors.find((a) => a.id === id)
+                        if (author) {
+                          authorName = author.name
+                          break
+                        }
+                      }
+                      toggleAuthorComparison(id, authorName)
+                    }}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            )}
+          </Accordion>
         </div>
       </div>
     </div>
