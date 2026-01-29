@@ -32,6 +32,9 @@ import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 import { useToast } from '@/components/Toast'
 import { supabase } from '@/lib/supabase'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
+import SavedBadge from '@/components/SavedBadge'
+import FilterBar, { TimeFilter as FilterBarTimeFilter, TypeFilter } from '@/components/library/FilterBar'
+import ViewToggle, { ViewMode } from '@/components/library/ViewToggle'
 
 interface SearchItem {
   id: string
@@ -102,6 +105,10 @@ export default function HistoryPage() {
   // Favorite authors filter
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [showRecentlyDeleted, setShowRecentlyDeleted] = useState(false)
+
+  // Library view preferences
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Data states
   const [recentSearches, setRecentSearches] = useState<SearchItem[]>([])
@@ -670,7 +677,7 @@ export default function HistoryPage() {
             icon={<BookMarked size={24} />}
             iconVariant="purple"
             title={TERMINOLOGY.history}
-            subtitle="Your saved analyses, favorite authors, and research insights."
+            subtitle="Organize and revisit your saved searches, analyses, insights, and favorite authors in one place."
             helpButton={{
               label: 'How it works',
               onClick: () => setShowAboutModal(true)
@@ -678,8 +685,28 @@ export default function HistoryPage() {
           />
 
           {/* Framing Question */}
-          <div className="text-center mb-4">
+          <div className="text-center mb-6">
             <h3 className="text-[17px] font-semibold text-gray-900 mb-2">What have you explored so far?</h3>
+          </div>
+
+          {/* Filter Bar and View Toggle */}
+          <div className="mb-6">
+            <FilterBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              timeFilter={timeFilter}
+              onTimeFilterChange={setTimeFilter}
+              typeFilter={activeTab}
+              onTypeFilterChange={(filter: TypeFilter) => setActiveTab(filter as TabType)}
+            />
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm text-gray-600">
+              {activeTab === 'all' ? 'All Items' : tabs.find(t => t.id === activeTab)?.label}
+            </div>
+            <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
           </div>
 
           {/* Horizontal Navigation Tabs */}
