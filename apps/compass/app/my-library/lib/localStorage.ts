@@ -305,7 +305,7 @@ export function clearAllDeleted(): void {
  * Clear operations
  */
 export function clearAllByType(
-  type: 'recent' | 'saved' | 'analyses' | 'notes' | 'favorites'
+  type: 'recent' | 'saved' | 'analyses' | 'notes' | 'favorites' | 'insights'
 ): void {
   switch (type) {
     case 'recent':
@@ -325,6 +325,9 @@ export function clearAllByType(
       break
     case 'favorites':
       saveToStorage(STORAGE_KEYS.FAVORITE_AUTHORS, [])
+      break
+    case 'insights':
+      saveToStorage(STORAGE_KEYS.HELPFUL_INSIGHTS, [])
       break
   }
 }

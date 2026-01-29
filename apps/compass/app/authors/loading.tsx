@@ -25,7 +25,7 @@ export default function Loading() {
 
       {/* Main content skeleton */}
       <main className="flex-1 mt-16 overflow-y-auto" style={{ marginLeft: `${SIDEBAR_WIDTH}px` }}>
-        <div className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="max-w-6xl mx-auto p-6 space-y-6">
           <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
           <div className="h-4 w-72 bg-gray-200 rounded animate-pulse" />
           <div className="h-12 bg-gray-200 rounded-lg animate-pulse" />

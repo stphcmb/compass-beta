@@ -50,7 +50,7 @@ export default function ResearchAssistantClient({
         ref={mainRef}
         className="flex-1 mt-16 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-indigo-50/30"
       >
-        <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
+        <div className="max-w-6xl mx-auto" style={{ padding: '24px' }}>
           {/* Page Header */}
           <PageHeader
             icon={<Search size={24} />}

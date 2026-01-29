@@ -95,7 +95,7 @@ export default function ResearchAssistantResultsPage() {
             />
           </div>
 
-          <div className="max-w-4xl mx-auto relative z-10" style={{ padding: '48px 24px' }}>
+          <div className="max-w-6xl mx-auto relative z-10" style={{ padding: '48px 24px' }}>
             {loading ? (
               <div style={{
                 display: 'flex',

@@ -188,7 +188,7 @@ export function useHistoryActions({ data, reloadData, showToast }: UseHistoryAct
    * Clear all by type
    */
   const handleClearAllByType = useCallback(
-    (type: 'recent' | 'saved' | 'analyses' | 'notes' | 'favorites') => {
+    (type: 'recent' | 'saved' | 'analyses' | 'notes' | 'favorites' | 'insights') => {
       clearAllByType(type)
       reloadData()
     },

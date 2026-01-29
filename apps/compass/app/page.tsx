@@ -63,7 +63,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="max-w-4xl mx-auto text-center relative z-10" style={{ padding: '64px 24px 72px' }}>
+          <div className="max-w-6xl mx-auto text-center relative z-10" style={{ padding: '64px 24px 72px' }}>
             {/* Badge */}
             <div
               className="inline-flex items-center gap-2 mb-3"
@@ -270,7 +270,7 @@ export default function Home() {
         <section aria-labelledby="how-works-heading" className="w-full relative" style={{
           background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
         }}>
-          <div className="max-w-4xl mx-auto" style={{ padding: '56px 24px 64px' }}>
+          <div className="max-w-6xl mx-auto" style={{ padding: '56px 24px 64px' }}>
             {/* Section Header */}
             <div className="text-center mb-4">
               <span
@@ -350,7 +350,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="max-w-4xl mx-auto relative z-10" style={{ padding: '16px 24px 20px' }}>
+          <div className="max-w-6xl mx-auto relative z-10" style={{ padding: '16px 24px 20px' }}>
             <div className="text-center mb-4">
               <span
                 style={{
@@ -450,7 +450,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="max-w-4xl mx-auto relative z-10">
+          <div className="max-w-6xl mx-auto relative z-10">
             {/* Section Header */}
             <div className="text-center mb-5">
               <span

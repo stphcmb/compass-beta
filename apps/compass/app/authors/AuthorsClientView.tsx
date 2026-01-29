@@ -917,7 +917,7 @@ export default function AuthorsClientView({ authorsWithDomains }: AuthorsClientV
         className="flex-1 mt-16 overflow-y-auto transition-all duration-300"
         style={{ marginLeft: `${mainContentLeft}px` }}
       >
-        <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
+        <div className="max-w-6xl mx-auto" style={{ padding: '24px' }}>
           {/* Page Header - same as Explore */}
           <PageHeader
             icon={<Users size={24} />}

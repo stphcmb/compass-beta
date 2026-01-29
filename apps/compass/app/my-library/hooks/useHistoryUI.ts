@@ -18,7 +18,7 @@ export function useHistoryUI() {
   const [favoritesOnly, setFavoritesOnly] = useState(false)
 
   // View mode
-  const [viewMode, setViewMode] = useState<ViewMode>('expanded')
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
 
   // Collapsed sections (map of section ID to collapsed state)
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
@@ -42,7 +42,7 @@ export function useHistoryUI() {
   const closeRecentlyDeleted = useCallback(() => setShowRecentlyDeleted(false), [])
 
   const toggleViewMode = useCallback(() => {
-    setViewMode(prev => (prev === 'compact' ? 'expanded' : 'compact'))
+    setViewMode(prev => (prev === 'grid' ? 'list' : 'grid'))
   }, [])
 
   return {

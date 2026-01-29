@@ -34,276 +34,64 @@ import { supabase } from '@/lib/supabase'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
 import SavedBadge from '@/components/SavedBadge'
 import FilterBar, { TimeFilter as FilterBarTimeFilter, TypeFilter } from '@/components/library/FilterBar'
-import ViewToggle, { ViewMode } from '@/components/library/ViewToggle'
+import ViewToggle, { ViewMode as ViewModeType } from '@/components/library/ViewToggle'
 
-interface SearchItem {
-  id: string
-  query: string
-  timestamp: string
-  domain?: string
-  camp?: string
-  cachedResult?: any
-  note?: string
-}
-
-interface AnalysisItem {
-  id: string
-  text: string
-  preview?: string
-  timestamp: string
-  cachedResult?: any
-  note?: string
-}
-
-interface FavoriteAuthor {
-  id: string
-  name: string
-  addedAt: string
-}
-
-interface AuthorNote {
-  id: string
-  name: string
-  note: string
-  updatedAt: string
-}
-
-interface HelpfulInsight {
-  id: string
-  type: 'summary' | 'camp'
-  content: string
-  campLabel?: string
-  originalText: string
-  fullText?: string
-  cachedResult?: any
-  analysisId?: string
-  timestamp: string
-}
-
-interface DeletedItem {
-  id: string
-  type: 'favorite' | 'note' | 'search' | 'analysis'
-  name: string
-  data: any
-  deletedAt: string
-}
-
-type TabType = 'all' | 'searches' | 'analyses' | 'insights' | 'authors'
-type TimeFilter = 'all' | 'today' | 'week' | 'month'
+// Import centralized hooks and utilities
+import { useHistoryData, useHistoryActions, useHistoryUI, useHistoryEvents, useHistoryFilters, timeAgo, formatDate } from './hooks'
+import type { TabType, DeletedItem, TimeFilter, HelpfulInsight } from './lib/types'
 
 export default function HistoryPage() {
   const router = useRouter()
   const { openPanel } = useAuthorPanel()
   const { showToast } = useToast()
   const [mounted, setMounted] = useState(false)
-  const [activeTab, setActiveTab] = useState<TabType>('all')
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
-  const [showAboutModal, setShowAboutModal] = useState(false)
 
-  // Collapsible sections state
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
-  // Favorite authors filter
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
-  const [showRecentlyDeleted, setShowRecentlyDeleted] = useState(false)
+  // Use centralized hooks
+  const { data, loading, reloadData } = useHistoryData()
+  const actions = useHistoryActions({ data, reloadData, showToast })
+  const ui = useHistoryUI()
 
-  // Library view preferences
-  const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [searchQuery, setSearchQuery] = useState('')
-
-  // Data states
-  const [recentSearches, setRecentSearches] = useState<SearchItem[]>([])
-  const [savedSearches, setSavedSearches] = useState<SearchItem[]>([])
-  const [savedAnalyses, setSavedAnalyses] = useState<AnalysisItem[]>([])
-  const [favoriteAuthors, setFavoriteAuthors] = useState<FavoriteAuthor[]>([])
-  const [authorNotes, setAuthorNotes] = useState<AuthorNote[]>([])
-  const [helpfulInsights, setHelpfulInsights] = useState<HelpfulInsight[]>([])
-  const [authorDetails, setAuthorDetails] = useState<Record<string, any>>({})
-  const [deletedItems, setDeletedItems] = useState<DeletedItem[]>([])
+  // Setup event listeners for cross-component synchronization
+  useHistoryEvents({
+    onNoteUpdated: reloadData,
+    onFavoriteAdded: reloadData,
+    onInsightAdded: reloadData,
+    onSearchNoteUpdated: reloadData,
+  })
 
   useEffect(() => {
     setMounted(true)
-    loadAllData()
 
     // Check for auto-show modal
     const seenCount = parseInt(localStorage.getItem('historyPageSeenCount') || '0', 10)
     if (seenCount < 2) {
-      setShowAboutModal(true)
+      ui.openAboutModal()
       localStorage.setItem('historyPageSeenCount', String(seenCount + 1))
-    }
-
-    // Listen for note updates from Author panel
-    const handleNoteUpdated = (e: CustomEvent<{ name: string; note: string }>) => {
-      // Reload author notes from localStorage
-      try {
-        const notes = JSON.parse(localStorage.getItem('authorNotes') || '[]')
-        setAuthorNotes(notes)
-      } catch {
-        setAuthorNotes([])
-      }
-    }
-    window.addEventListener('author-note-updated', handleNoteUpdated as EventListener)
-
-    // Listen for favorite added from Author panel
-    const handleFavoriteAdded = () => {
-      loadAllData()
-    }
-    window.addEventListener('favorite-author-added', handleFavoriteAdded)
-
-    // Listen for helpful insights added from Research Assistant
-    const handleInsightAdded = () => {
-      try {
-        const insights = JSON.parse(localStorage.getItem('helpfulInsights') || '[]')
-        setHelpfulInsights(insights)
-      } catch {
-        setHelpfulInsights([])
-      }
-    }
-    window.addEventListener('helpful-insight-added', handleInsightAdded)
-
-    // Listen for search note updates from SearchResults
-    const handleSearchNoteUpdated = () => {
-      try {
-        const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
-        setRecentSearches(recent)
-      } catch {
-        setRecentSearches([])
-      }
-    }
-    window.addEventListener('search-note-updated', handleSearchNoteUpdated)
-
-    return () => {
-      window.removeEventListener('author-note-updated', handleNoteUpdated as EventListener)
-      window.removeEventListener('favorite-author-added', handleFavoriteAdded)
-      window.removeEventListener('helpful-insight-added', handleInsightAdded)
-      window.removeEventListener('search-note-updated', handleSearchNoteUpdated)
     }
   }, [])
 
-  const loadAllData = () => {
-    // Load recent searches
-    try {
-      const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
-      setRecentSearches(recent)
-    } catch { setRecentSearches([]) }
+  // Apply filters using the hook
+  const filteredRecentSearches = useHistoryFilters(data.recentSearches, ui.timeFilter, ui.searchQuery)
+  const filteredSavedSearches = useHistoryFilters(data.savedSearches, ui.timeFilter, ui.searchQuery)
+  const filteredAnalyses = useHistoryFilters(data.savedAnalyses, ui.timeFilter, ui.searchQuery)
+  const filteredInsights = useHistoryFilters(data.helpfulInsights, ui.timeFilter, ui.searchQuery)
+  const filteredFavorites = useHistoryFilters(data.favoriteAuthors, ui.timeFilter, ui.searchQuery, ui.favoritesOnly)
+  const filteredAuthorNotes = useHistoryFilters(
+    data.authorNotes.map(n => ({ ...n, timestamp: n.updatedAt })),
+    ui.timeFilter,
+    ui.searchQuery
+  )
 
-    // Load saved searches
-    try {
-      const saved = JSON.parse(localStorage.getItem('savedSearches') || '[]')
-      setSavedSearches(saved)
-    } catch { setSavedSearches([]) }
-
-    // Load saved analyses
-    try {
-      const analyses = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
-      setSavedAnalyses(analyses)
-    } catch { setSavedAnalyses([]) }
-
-    // Load favorite authors
-    try {
-      const favorites = JSON.parse(localStorage.getItem('favoriteAuthors') || '[]')
-      setFavoriteAuthors(favorites)
-    } catch { setFavoriteAuthors([]) }
-
-    // Load author notes
-    try {
-      const notes = JSON.parse(localStorage.getItem('authorNotes') || '[]')
-      setAuthorNotes(notes)
-    } catch { setAuthorNotes([]) }
-
-    // Load helpful insights
-    try {
-      const insights = JSON.parse(localStorage.getItem('helpfulInsights') || '[]')
-      setHelpfulInsights(insights)
-    } catch { setHelpfulInsights([]) }
-
-    // Load recently deleted items (clean up items older than 30 days)
-    try {
-      const deleted = JSON.parse(localStorage.getItem('recentlyDeletedItems') || '[]')
-      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-      const validDeleted = deleted.filter((item: DeletedItem) =>
-        new Date(item.deletedAt).getTime() > thirtyDaysAgo
-      )
-      if (validDeleted.length !== deleted.length) {
-        localStorage.setItem('recentlyDeletedItems', JSON.stringify(validDeleted))
-      }
-      setDeletedItems(validDeleted)
-    } catch { setDeletedItems([]) }
-
-    // Load author details from database for both favorites and notes
-    try {
-      const favorites = JSON.parse(localStorage.getItem('favoriteAuthors') || '[]')
-      const notes = JSON.parse(localStorage.getItem('authorNotes') || '[]')
-      const allNames = [...new Set([
-        ...favorites.map((f: FavoriteAuthor) => f.name),
-        ...notes.map((n: AuthorNote) => n.name)
-      ])]
-      if (allNames.length > 0) {
-        loadAuthorDetails(allNames)
-      }
-    } catch {}
+  // Calculate filtered author count
+  const getFilteredAuthorsCount = () => {
+    const authorNames = new Set([
+      ...filteredFavorites.map(f => f.name),
+      ...filteredAuthorNotes.map(n => n.name)
+    ])
+    return authorNames.size
   }
 
-  const loadAuthorDetails = async (authorNames: string[]) => {
-    if (!supabase || authorNames.length === 0) return
-    try {
-      const { data } = await supabase
-        .from('authors')
-        .select('name, affiliation, primary_domain')
-        .in('name', authorNames)
-
-      if (data) {
-        const details: Record<string, any> = {}
-        data.forEach(author => {
-          details[author.name] = author
-        })
-        setAuthorDetails(details)
-      }
-    } catch (error) {
-      console.error('Error loading author details:', error)
-    }
-  }
-
-  const timeAgo = (ts?: string) => {
-    if (!ts) return ''
-    const diffMs = Date.now() - new Date(ts).getTime()
-    const mins = Math.floor(diffMs / 60000)
-    if (mins < 60) return `${mins}m ago`
-    const hrs = Math.floor(mins / 60)
-    if (hrs < 24) return `${hrs}h ago`
-    const days = Math.floor(hrs / 24)
-    if (days < 7) return `${days}d ago`
-    const weeks = Math.floor(days / 7)
-    if (weeks < 4) return `${weeks}w ago`
-    const months = Math.floor(days / 30)
-    return `${months}mo ago`
-  }
-
-  const formatDate = (ts: string) => {
-    return new Date(ts).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    })
-  }
-
-  const filterByTime = <T extends { timestamp?: string; addedAt?: string }>(items: T[]): T[] => {
-    if (timeFilter === 'all') return items
-    const now = Date.now()
-    const cutoff = {
-      today: now - 24 * 60 * 60 * 1000,
-      week: now - 7 * 24 * 60 * 60 * 1000,
-      month: now - 30 * 24 * 60 * 60 * 1000
-    }[timeFilter]
-
-    return items.filter(item => {
-      const ts = item.timestamp || item.addedAt
-      if (!ts) return false
-      return new Date(ts).getTime() > cutoff
-    })
-  }
-
+  // Navigation handlers (keep these - not part of CRUD actions)
   const handleSearchClick = (query: string, cachedResult?: any) => {
     if (cachedResult) {
       sessionStorage.setItem('pending-search-cache', JSON.stringify({
@@ -355,302 +143,7 @@ export default function HistoryPage() {
     }
   }
 
-  const deleteRecentSearch = (id: string) => {
-    const search = recentSearches.find(s => s.id === id)
-    if (search) {
-      addToRecentlyDeleted({
-        id: `deleted-search-${Date.now()}`,
-        type: 'search',
-        name: search.query,
-        data: search,
-        deletedAt: new Date().toISOString()
-      })
-    }
-    const filtered = recentSearches.filter(s => s.id !== id)
-    localStorage.setItem('recentSearches', JSON.stringify(filtered))
-    setRecentSearches(filtered)
-  }
 
-  const deleteSavedSearch = (id: string) => {
-    const search = savedSearches.find(s => s.id === id)
-    if (search) {
-      addToRecentlyDeleted({
-        id: `deleted-search-${Date.now()}`,
-        type: 'search',
-        name: search.query,
-        data: { ...search, wasSaved: true },
-        deletedAt: new Date().toISOString()
-      })
-    }
-    const filtered = savedSearches.filter(s => s.id !== id)
-    localStorage.setItem('savedSearches', JSON.stringify(filtered))
-    setSavedSearches(filtered)
-  }
-
-  const deleteAnalysis = (id: string) => {
-    const analysis = savedAnalyses.find(a => a.id === id)
-    if (analysis) {
-      addToRecentlyDeleted({
-        id: `deleted-analysis-${Date.now()}`,
-        type: 'analysis',
-        name: analysis.preview || analysis.text.slice(0, 50),
-        data: analysis,
-        deletedAt: new Date().toISOString()
-      })
-    }
-    const filtered = savedAnalyses.filter(a => a.id !== id)
-    localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(filtered))
-    setSavedAnalyses(filtered)
-  }
-
-  // Helper function to add item to recently deleted
-  const addToRecentlyDeleted = (item: DeletedItem) => {
-    const updated = [item, ...deletedItems]
-    localStorage.setItem('recentlyDeletedItems', JSON.stringify(updated))
-    setDeletedItems(updated)
-  }
-
-  const removeFavoriteAuthor = (name: string) => {
-    const removedAuthor = favoriteAuthors.find(a => a.name === name)
-    const filtered = favoriteAuthors.filter(a => a.name !== name)
-    localStorage.setItem('favoriteAuthors', JSON.stringify(filtered))
-    setFavoriteAuthors(filtered)
-    // Dispatch event for other components to update
-    window.dispatchEvent(new CustomEvent('favorite-author-removed', { detail: { name } }))
-
-    // Move to recently deleted
-    if (removedAuthor) {
-      addToRecentlyDeleted({
-        id: removedAuthor.id,
-        type: 'favorite',
-        name: removedAuthor.name,
-        data: removedAuthor,
-        deletedAt: new Date().toISOString()
-      })
-      showToast(`Removed ${name} from favorites`, 'info')
-    }
-  }
-
-  // Note update functions
-  const updateSavedSearchNote = (id: string, note: string) => {
-    const updated = savedSearches.map(s => s.id === id ? { ...s, note } : s)
-    localStorage.setItem('savedSearches', JSON.stringify(updated))
-    setSavedSearches(updated)
-  }
-
-  const updateAnalysisNote = (id: string, note: string) => {
-    const updated = savedAnalyses.map(a => a.id === id ? { ...a, note } : a)
-    localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(updated))
-    setSavedAnalyses(updated)
-  }
-
-  const updateRecentSearchNote = (id: string, note: string) => {
-    // If adding a note, auto-save the search and move it to saved searches
-    if (note && note.trim()) {
-      const search = recentSearches.find(s => s.id === id)
-      if (search) {
-        // Create a new saved search with the note
-        const savedSearch = {
-          ...search,
-          id: `saved-${Date.now()}`, // New ID for saved search
-          note: note,
-          timestamp: new Date().toISOString() // Update timestamp
-        }
-
-        // Add to saved searches (avoid duplicates by query)
-        const existingSaved = savedSearches.filter(s => s.query !== search.query)
-        const updatedSaved = [savedSearch, ...existingSaved]
-        localStorage.setItem('savedSearches', JSON.stringify(updatedSaved))
-        setSavedSearches(updatedSaved)
-
-        // Remove from recent searches
-        const updatedRecent = recentSearches.filter(s => s.id !== id)
-        localStorage.setItem('recentSearches', JSON.stringify(updatedRecent))
-        setRecentSearches(updatedRecent)
-
-        showToast('Search saved with note', 'success')
-        return
-      }
-    }
-
-    // If removing note, just update in place
-    const updated = recentSearches.map(s => s.id === id ? { ...s, note: note || undefined } : s)
-    localStorage.setItem('recentSearches', JSON.stringify(updated))
-    setRecentSearches(updated)
-  }
-
-  const deleteAuthorNote = (name: string) => {
-    const removedNote = authorNotes.find(n => n.name === name)
-    const filtered = authorNotes.filter(n => n.name !== name)
-    localStorage.setItem('authorNotes', JSON.stringify(filtered))
-    setAuthorNotes(filtered)
-    // Dispatch event to sync with author panel
-    window.dispatchEvent(new CustomEvent('author-note-updated', {
-      detail: { name, note: '' }
-    }))
-
-    // Move to recently deleted
-    if (removedNote) {
-      addToRecentlyDeleted({
-        id: removedNote.id,
-        type: 'note',
-        name: removedNote.name,
-        data: removedNote,
-        deletedAt: new Date().toISOString()
-      })
-      showToast(`Removed note for ${name}`, 'info')
-    }
-  }
-
-  // Restore deleted item
-  const restoreDeletedItem = (item: DeletedItem) => {
-    if (item.type === 'favorite') {
-      const current = JSON.parse(localStorage.getItem('favoriteAuthors') || '[]')
-      const restored = [item.data, ...current]
-      localStorage.setItem('favoriteAuthors', JSON.stringify(restored))
-      setFavoriteAuthors(restored)
-      window.dispatchEvent(new CustomEvent('favorite-author-added', { detail: item.data }))
-    } else if (item.type === 'note') {
-      const current = JSON.parse(localStorage.getItem('authorNotes') || '[]')
-      const restored = [item.data, ...current]
-      localStorage.setItem('authorNotes', JSON.stringify(restored))
-      setAuthorNotes(restored)
-      window.dispatchEvent(new CustomEvent('author-note-updated', {
-        detail: { name: item.name, note: item.data.note }
-      }))
-    } else if (item.type === 'search') {
-      if (item.data.wasSaved) {
-        // Restore as saved search
-        const { wasSaved, ...searchData } = item.data
-        const current = JSON.parse(localStorage.getItem('savedSearches') || '[]')
-        const restored = [searchData, ...current]
-        localStorage.setItem('savedSearches', JSON.stringify(restored))
-        setSavedSearches(restored)
-      } else {
-        // Restore as recent search
-        const current = JSON.parse(localStorage.getItem('recentSearches') || '[]')
-        const restored = [item.data, ...current]
-        localStorage.setItem('recentSearches', JSON.stringify(restored))
-        setRecentSearches(restored)
-      }
-    } else if (item.type === 'analysis') {
-      const current = JSON.parse(localStorage.getItem('savedAIEditorAnalyses') || '[]')
-      const restored = [item.data, ...current]
-      localStorage.setItem('savedAIEditorAnalyses', JSON.stringify(restored))
-      setSavedAnalyses(restored)
-    }
-
-    // Remove from deleted items
-    const filtered = deletedItems.filter(d => d.id !== item.id)
-    localStorage.setItem('recentlyDeletedItems', JSON.stringify(filtered))
-    setDeletedItems(filtered)
-
-    const typeLabels: Record<string, string> = {
-      favorite: 'favorite author',
-      note: 'author note',
-      search: item.data?.wasSaved ? 'saved search' : 'recent search',
-      analysis: 'analysis'
-    }
-    showToast(`Restored ${typeLabels[item.type] || item.type}`, 'success')
-  }
-
-  // Permanently delete item
-  const permanentlyDeleteItem = (id: string) => {
-    const filtered = deletedItems.filter(d => d.id !== id)
-    localStorage.setItem('recentlyDeletedItems', JSON.stringify(filtered))
-    setDeletedItems(filtered)
-  }
-
-  // Clear all recently deleted
-  const clearAllDeleted = () => {
-    localStorage.setItem('recentlyDeletedItems', '[]')
-    setDeletedItems([])
-  }
-
-  const updateAuthorNote = (name: string, note: string) => {
-    const now = new Date().toISOString()
-    const existingNote = authorNotes.find(n => n.name === name)
-
-    let updated: AuthorNote[]
-    if (existingNote) {
-      // Update existing note
-      updated = authorNotes.map(n =>
-        n.name === name ? { ...n, note, updatedAt: now } : n
-      )
-    } else {
-      // Create new note
-      const newNote: AuthorNote = {
-        id: `note-${Date.now()}`,
-        name,
-        note,
-        updatedAt: now
-      }
-      updated = [newNote, ...authorNotes]
-    }
-
-    localStorage.setItem('authorNotes', JSON.stringify(updated))
-    setAuthorNotes(updated)
-    // Dispatch event to sync with author panel
-    window.dispatchEvent(new CustomEvent('author-note-updated', {
-      detail: { name, note }
-    }))
-  }
-
-  const clearAllByType = (type: 'recent' | 'saved' | 'analyses' | 'notes' | 'favorites') => {
-    switch (type) {
-      case 'recent':
-        localStorage.setItem('recentSearches', '[]')
-        setRecentSearches([])
-        break
-      case 'saved':
-        localStorage.setItem('savedSearches', '[]')
-        setSavedSearches([])
-        break
-      case 'analyses':
-        localStorage.setItem('savedAIEditorAnalyses', '[]')
-        setSavedAnalyses([])
-        break
-      case 'notes':
-        localStorage.setItem('authorNotes', '[]')
-        setAuthorNotes([])
-        // Dispatch event to clear notes in author panels
-        window.dispatchEvent(new CustomEvent('author-notes-cleared'))
-        break
-      case 'favorites':
-        localStorage.setItem('favoriteAuthors', '[]')
-        setFavoriteAuthors([])
-        break
-    }
-  }
-
-  // Combine favorites and notes into a unified authors list
-  const getUniqueAuthorsCount = () => {
-    const authorNames = new Set([
-      ...favoriteAuthors.map(f => f.name),
-      ...authorNotes.map(n => n.name)
-    ])
-    return authorNames.size
-  }
-
-  const toggleSection = (sectionId: string) => {
-    setCollapsedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }))
-  }
-
-  const filteredRecentSearches = filterByTime(recentSearches)
-  const filteredSavedSearches = filterByTime(savedSearches)
-  const filteredAnalyses = filterByTime(savedAnalyses)
-  const filteredInsights = filterByTime(helpfulInsights)
-  const filteredAuthorNotes = filterByTime(authorNotes.map(n => ({ ...n, timestamp: n.updatedAt })))
-  const filteredFavorites = filterByTime(favoriteAuthors)
-
-  // Calculate filtered author count
-  const getFilteredAuthorsCount = () => {
-    const authorNames = new Set([
-      ...filteredFavorites.map(f => f.name),
-      ...filteredAuthorNotes.map(n => n.name)
-    ])
-    return authorNames.size
-  }
 
   // Use filtered counts for tabs when filter is applied
   const tabs = [
@@ -671,7 +164,7 @@ export default function HistoryPage() {
       <main
         className="flex-1 mt-16 overflow-auto bg-gradient-to-br from-purple-50/50 via-white to-indigo-50/30"
       >
-        <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
+        <div className="max-w-6xl mx-auto" style={{ padding: '24px 32px' }}>
           {/* Page Header - Centered like Explore page */}
           <PageHeader
             icon={<BookMarked size={24} />}
@@ -680,7 +173,7 @@ export default function HistoryPage() {
             subtitle="Organize and revisit your saved searches, analyses, insights, and favorite authors in one place."
             helpButton={{
               label: 'How it works',
-              onClick: () => setShowAboutModal(true)
+              onClick: () => ui.openAboutModal()
             }}
           />
 
@@ -692,21 +185,21 @@ export default function HistoryPage() {
           {/* Filter Bar and View Toggle */}
           <div className="mb-6">
             <FilterBar
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              timeFilter={timeFilter}
-              onTimeFilterChange={setTimeFilter}
-              typeFilter={activeTab}
-              onTypeFilterChange={(filter: TypeFilter) => setActiveTab(filter as TabType)}
+              searchQuery={ui.searchQuery}
+              onSearchChange={ui.setSearchQuery}
+              timeFilter={ui.timeFilter}
+              onTimeFilterChange={ui.setTimeFilter}
+              typeFilter={ui.activeTab}
+              onTypeFilterChange={(filter: TypeFilter) => ui.setActiveTab(filter as TabType)}
             />
           </div>
 
           {/* View Mode Toggle */}
           <div className="flex items-center justify-between mb-4">
             <div className="text-sm text-gray-600">
-              {activeTab === 'all' ? 'All Items' : tabs.find(t => t.id === activeTab)?.label}
+              {ui.activeTab === 'all' ? 'All Items' : tabs.find(t => t.id === ui.activeTab)?.label}
             </div>
-            <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
+            <ViewToggle viewMode={ui.viewMode} onViewModeChange={ui.setViewMode} />
           </div>
 
           {/* Horizontal Navigation Tabs */}
@@ -743,50 +236,50 @@ export default function HistoryPage() {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => ui.setActiveTab(tab.id)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
                       padding: '5px 10px',
                       borderRadius: '16px',
-                      border: activeTab === tab.id ? `1.5px solid ${colors[tab.id]}` : '1.5px solid transparent',
-                      background: activeTab === tab.id ? `${colors[tab.id]}12` : '#f5f5f5',
+                      border: ui.activeTab ===tab.id ? `1.5px solid ${colors[tab.id]}` : '1.5px solid transparent',
+                      background: ui.activeTab ===tab.id ? `${colors[tab.id]}12` : '#f5f5f5',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                       whiteSpace: 'nowrap',
                       flexShrink: 0
                     }}
                     onMouseEnter={(e) => {
-                      if (activeTab !== tab.id) {
+                      if (ui.activeTab !==tab.id) {
                         e.currentTarget.style.background = '#ebebeb'
                         e.currentTarget.style.borderColor = '#d1d5db'
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (activeTab !== tab.id) {
+                      if (ui.activeTab !==tab.id) {
                         e.currentTarget.style.background = '#f5f5f5'
                         e.currentTarget.style.borderColor = 'transparent'
                       }
                     }}
                   >
-                    <span style={{ color: activeTab === tab.id ? colors[tab.id] : 'var(--color-mid-gray)' }}>
+                    <span style={{ color: ui.activeTab ===tab.id ? colors[tab.id] : 'var(--color-mid-gray)' }}>
                       {icons[tab.id]}
                     </span>
                     <span style={{
                       fontSize: '12px',
-                      fontWeight: activeTab === tab.id ? 600 : 500,
-                      color: activeTab === tab.id ? colors[tab.id] : 'var(--color-charcoal)'
+                      fontWeight: ui.activeTab ===tab.id ? 600 : 500,
+                      color: ui.activeTab ===tab.id ? colors[tab.id] : 'var(--color-charcoal)'
                     }}>
                       {tab.label}
                     </span>
                     <span style={{
                       padding: '0px 5px',
                       borderRadius: '6px',
-                      background: activeTab === tab.id ? `${colors[tab.id]}25` : '#e5e7eb',
+                      background: ui.activeTab ===tab.id ? `${colors[tab.id]}25` : '#e5e7eb',
                       fontSize: '10px',
                       fontWeight: 600,
-                      color: activeTab === tab.id ? colors[tab.id] : 'var(--color-mid-gray)'
+                      color: ui.activeTab ===tab.id ? colors[tab.id] : 'var(--color-mid-gray)'
                     }}>
                       {tab.count}
                     </span>
@@ -796,7 +289,7 @@ export default function HistoryPage() {
 
               {/* Recently Deleted */}
               <button
-                onClick={() => setShowRecentlyDeleted(true)}
+                onClick={() => ui.openRecentlyDeleted()}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -804,32 +297,32 @@ export default function HistoryPage() {
                   padding: '5px 10px',
                   borderRadius: '16px',
                   border: '1.5px solid transparent',
-                  background: deletedItems.length > 0 ? '#fef2f2' : '#f5f5f5',
+                  background: data.deletedItems.length > 0 ? '#fef2f2' : '#f5f5f5',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
                   flexShrink: 0
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = deletedItems.length > 0 ? '#fee2e2' : '#ebebeb'
-                  e.currentTarget.style.borderColor = deletedItems.length > 0 ? '#fecaca' : '#d1d5db'
+                  e.currentTarget.style.background = data.deletedItems.length > 0 ? '#fee2e2' : '#ebebeb'
+                  e.currentTarget.style.borderColor = data.deletedItems.length > 0 ? '#fecaca' : '#d1d5db'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = deletedItems.length > 0 ? '#fef2f2' : '#f5f5f5'
+                  e.currentTarget.style.background = data.deletedItems.length > 0 ? '#fef2f2' : '#f5f5f5'
                   e.currentTarget.style.borderColor = 'transparent'
                 }}
               >
-                <span style={{ color: deletedItems.length > 0 ? '#ef4444' : 'var(--color-mid-gray)' }}>
+                <span style={{ color: data.deletedItems.length > 0 ? '#ef4444' : 'var(--color-mid-gray)' }}>
                   <Trash2 size={12} />
                 </span>
                 <span style={{
                   fontSize: '12px',
                   fontWeight: 500,
-                  color: deletedItems.length > 0 ? '#b91c1c' : 'var(--color-charcoal)'
+                  color: data.deletedItems.length > 0 ? '#b91c1c' : 'var(--color-charcoal)'
                 }}>
                   Deleted
                 </span>
-                {deletedItems.length > 0 && (
+                {data.deletedItems.length > 0 && (
                   <span style={{
                     padding: '0px 5px',
                     borderRadius: '6px',
@@ -838,7 +331,7 @@ export default function HistoryPage() {
                     fontWeight: 600,
                     color: '#dc2626'
                   }}>
-                    {deletedItems.length}
+                    {data.deletedItems.length}
                   </span>
                 )}
               </button>
@@ -846,8 +339,8 @@ export default function HistoryPage() {
 
             {/* Time Filter */}
             <select
-              value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
+              value={ui.timeFilter}
+              onChange={(e) => ui.setTimeFilter(e.target.value as TimeFilter)}
               style={{
                 padding: '5px 8px',
                 borderRadius: '6px',
@@ -867,15 +360,15 @@ export default function HistoryPage() {
           </div>
 
         {/* Content - Single column layout for "All" view */}
-        {activeTab === 'all' ? (
+        {ui.activeTab ==='all' ? (
           // Only show full empty state when there's truly NO history at all (unfiltered)
-          timeFilter === 'all' &&
-          recentSearches.length === 0 &&
-          savedSearches.length === 0 &&
-          savedAnalyses.length === 0 &&
-          helpfulInsights.length === 0 &&
-          favoriteAuthors.length === 0 &&
-          authorNotes.length === 0 ? (
+          ui.timeFilter === 'all' &&
+          data.recentSearches.length === 0 &&
+          data.savedSearches.length === 0 &&
+          data.savedAnalyses.length === 0 &&
+          data.helpfulInsights.length === 0 &&
+          data.favoriteAuthors.length === 0 &&
+          data.authorNotes.length === 0 ? (
             <EmptyStateComponent
               icon={History}
               iconColor="var(--color-indigo-500)"
@@ -893,131 +386,78 @@ export default function HistoryPage() {
           ) : (
           <div className="bg-gradient-to-br from-purple-50/70 via-white to-indigo-50/50 border border-purple-100/50 rounded-xl p-5">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {/* Searches - 2-column layout */}
+            {/* Searches - Combined compact section */}
             {(filteredSavedSearches.length > 0 || filteredRecentSearches.length > 0) && (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '8px'
-              }}>
-                {/* Saved Searches Column */}
-                <CollapsibleSection
-                  id="saved-searches"
-                  title="Saved"
-                  icon={<Star size={14} style={{ color: '#f59e0b' }} />}
-                  count={filteredSavedSearches.length}
-                  isCollapsed={collapsedSections['saved-searches']}
-                  onToggle={() => toggleSection('saved-searches')}
-                  onClear={() => clearAllByType('saved')}
-                  color="#f59e0b"
-                >
-                  {filteredSavedSearches.length > 0 ? (
-                    <>
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                        width: '100%',
-                        maxHeight: '180px',
-                        overflowY: filteredSavedSearches.length > 3 ? 'auto' : 'visible',
-                        paddingRight: filteredSavedSearches.length > 3 ? '4px' : '0'
-                      }}>
-                        {filteredSavedSearches.slice(0, 5).map(s => (
-                          <SearchCard
-                            key={s.id}
-                            query={s.query}
-                            timestamp={timeAgo(s.timestamp)}
-                            isSaved={true}
-                            note={s.note}
-                            onClick={() => handleSearchClick(s.query, s.cachedResult)}
-                            onDelete={() => deleteSavedSearch(s.id)}
-                          />
-                        ))}
-                      </div>
-                      {filteredSavedSearches.length > 5 && (
-                        <div style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', marginTop: '6px' }}>
-                          <button
-                            onClick={() => setActiveTab('searches')}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: '#3b82f6',
-                              cursor: 'pointer',
-                              fontSize: '10px',
-                              fontWeight: 500
-                            }}
-                          >
-                            +{filteredSavedSearches.length - 5} more →
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', padding: '12px 0' }}>
-                      No saved searches yet
-                    </div>
-                  )}
-                </CollapsibleSection>
-
-                {/* Recent Searches Column */}
-                <CollapsibleSection
-                  id="recent-searches"
-                  title="Recent"
-                  icon={<Clock size={14} style={{ color: '#6b7280' }} />}
-                  count={filteredRecentSearches.length}
-                  isCollapsed={collapsedSections['recent-searches']}
-                  onToggle={() => toggleSection('recent-searches')}
-                  onClear={() => clearAllByType('recent')}
-                  color="#6b7280"
-                >
-                  {filteredRecentSearches.length > 0 ? (
-                    <>
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                        width: '100%',
-                        maxHeight: '180px',
-                        overflowY: filteredRecentSearches.length > 3 ? 'auto' : 'visible',
-                        paddingRight: filteredRecentSearches.length > 3 ? '4px' : '0'
-                      }}>
-                        {filteredRecentSearches.slice(0, 5).map(s => (
-                          <SearchCard
-                            key={s.id}
-                            query={s.query}
-                            timestamp={timeAgo(s.timestamp)}
-                            isSaved={false}
-                            note={s.note}
-                            onClick={() => handleSearchClick(s.query, s.cachedResult)}
-                            onDelete={() => deleteRecentSearch(s.id)}
-                          />
-                        ))}
-                      </div>
-                      {filteredRecentSearches.length > 5 && (
-                        <div style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', marginTop: '6px' }}>
-                          <button
-                            onClick={() => setActiveTab('searches')}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: '#3b82f6',
-                              cursor: 'pointer',
-                              fontSize: '10px',
-                              fontWeight: 500
-                            }}
-                          >
-                            +{filteredRecentSearches.length - 5} more →
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', padding: '12px 0' }}>
-                      No recent searches yet
-                    </div>
-                  )}
-                </CollapsibleSection>
-              </div>
+              <CollapsibleSection
+                id="searches"
+                title="Search History"
+                icon={<Search size={14} style={{ color: '#3b82f6' }} />}
+                count={filteredSavedSearches.length + filteredRecentSearches.length}
+                isCollapsed={ui.collapsedSections['searches']}
+                onToggle={() => ui.toggleSection('searches')}
+                onClear={() => {
+                  actions.clearAllByType('saved')
+                  actions.clearAllByType('recent')
+                }}
+                color="#3b82f6"
+              >
+                <div style={{
+                  display: ui.viewMode === 'grid' ? 'grid' : 'flex',
+                  gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(280px, 1fr))' : undefined,
+                  flexDirection: ui.viewMode === 'list' ? 'column' : undefined,
+                  gap: ui.viewMode === 'grid' ? '8px' : '0',
+                  width: '100%',
+                  maxHeight: '180px',
+                  overflowY: 'auto',
+                  border: ui.viewMode === 'list' ? '1px solid #e5e7eb' : 'none',
+                  borderRadius: ui.viewMode === 'list' ? '8px' : '0',
+                  overflow: ui.viewMode === 'list' ? 'hidden auto' : 'visible'
+                }}>
+                  {/* Show saved searches first (max 3) */}
+                  {filteredSavedSearches.slice(0, 3).map(s => (
+                    <SearchCard
+                      key={s.id}
+                      query={s.query}
+                      timestamp={timeAgo(s.timestamp)}
+                      isSaved={true}
+                      note={s.note}
+                      onClick={() => handleSearchClick(s.query, s.cachedResult)}
+                      onDelete={() => actions.deleteSavedSearch(s.id)}
+                      viewMode={ui.viewMode}
+                    />
+                  ))}
+                  {/* Then show recent searches (max 3) */}
+                  {filteredRecentSearches.slice(0, 3).map(s => (
+                    <SearchCard
+                      key={s.id}
+                      query={s.query}
+                      timestamp={timeAgo(s.timestamp)}
+                      isSaved={false}
+                      note={s.note}
+                      onClick={() => handleSearchClick(s.query, s.cachedResult)}
+                      onDelete={() => actions.deleteRecentSearch(s.id)}
+                      viewMode={ui.viewMode}
+                    />
+                  ))}
+                </div>
+                {(filteredSavedSearches.length + filteredRecentSearches.length > 6) && (
+                  <div style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
+                    <button
+                      onClick={() => ui.setActiveTab('searches')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#3b82f6',
+                        cursor: 'pointer',
+                        fontSize: '10px',
+                        fontWeight: 500
+                      }}
+                    >
+                      +{filteredSavedSearches.length + filteredRecentSearches.length - 6} more →
+                    </button>
+                  </div>
+                )}
+              </CollapsibleSection>
             )}
 
             {/* Empty state when no searches at all */}
@@ -1031,7 +471,7 @@ export default function HistoryPage() {
               }}>
                 <Search size={24} style={{ color: '#d1d5db', margin: '0 auto 8px' }} />
                 <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
-                  {timeFilter !== 'all' ? 'No searches in this time period' : 'Your search history will appear here'}
+                  {ui.timeFilter !=='all' ? 'No searches in this time period' : 'Your search history will appear here'}
                 </div>
                 <button
                   onClick={() => router.push('/explore')}
@@ -1057,21 +497,25 @@ export default function HistoryPage() {
               title="AI Analyses"
               icon={<Sparkles size={16} style={{ color: '#8b5cf6' }} />}
               count={filteredAnalyses.length}
-              isCollapsed={collapsedSections['analyses']}
-              onToggle={() => toggleSection('analyses')}
-              onClear={() => clearAllByType('analyses')}
+              isCollapsed={ui.collapsedSections['analyses']}
+              onToggle={() => ui.toggleSection('analyses')}
+              onClear={() => actions.clearAllByType('analyses')}
               color="#8b5cf6"
             >
               {filteredAnalyses.length > 0 ? (
                 <>
                   <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
+                    display: ui.viewMode === 'grid' ? 'grid' : 'flex',
+                    gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(320px, 1fr))' : undefined,
+                    flexDirection: ui.viewMode === 'list' ? 'column' : undefined,
+                    gap: ui.viewMode === 'grid' ? '8px' : '0',
                     width: '100%',
-                    maxHeight: filteredAnalyses.length > 3 ? '260px' : 'none',
-                    overflowY: filteredAnalyses.length > 3 ? 'auto' : 'visible',
-                    paddingRight: filteredAnalyses.length > 3 ? '4px' : '0'
+                    maxHeight: ui.viewMode === 'list' && filteredAnalyses.length > 3 ? '260px' : 'none',
+                    overflowY: ui.viewMode === 'list' && filteredAnalyses.length > 3 ? 'auto' : 'visible',
+                    paddingRight: ui.viewMode === 'list' && filteredAnalyses.length > 3 ? '4px' : '0',
+                    border: ui.viewMode === 'list' ? '1px solid #e5e7eb' : 'none',
+                    borderRadius: ui.viewMode === 'list' ? '8px' : '0',
+                    overflow: ui.viewMode === 'list' ? 'hidden' : 'visible'
                   }}>
                     {filteredAnalyses.map(analysis => (
                       <AnalysisCard
@@ -1081,7 +525,8 @@ export default function HistoryPage() {
                         timestamp={timeAgo(analysis.timestamp)}
                         note={analysis.note}
                         onClick={() => handleAnalysisClick(analysis.id, analysis.text, analysis.cachedResult)}
-                        onDelete={() => deleteAnalysis(analysis.id)}
+                        onDelete={() => actions.deleteAnalysis(analysis.id)}
+                        viewMode={ui.viewMode}
                       />
                     ))}
                   </div>
@@ -1093,7 +538,7 @@ export default function HistoryPage() {
                 </>
               ) : (
                 <EmptySection
-                  message={timeFilter !== 'all' ? 'No analyses in this time period' : 'Analyze content in the Research Assistant to save analyses here'}
+                  message={ui.timeFilter !=='all' ? 'No analyses in this time period' : 'Analyze content in the Research Assistant to save analyses here'}
                   actionLabel="Try Research Assistant"
                   actionIcon={<Sparkles size={14} />}
                   onAction={() => router.push('/research-assistant')}
@@ -1107,23 +552,24 @@ export default function HistoryPage() {
               title="Helpful Insights"
               icon={<ThumbsUp size={16} style={{ color: '#10b981' }} />}
               count={filteredInsights.length}
-              isCollapsed={collapsedSections['insights']}
-              onToggle={() => toggleSection('insights')}
-              onClear={() => {
-                localStorage.setItem('helpfulInsights', '[]')
-                setHelpfulInsights([])
-              }}
+              isCollapsed={ui.collapsedSections['insights']}
+              onToggle={() => ui.toggleSection('insights')}
+              onClear={() => actions.clearAllByType('insights')}
               color="#10b981"
             >
               {filteredInsights.length > 0 ? (
                 <>
                   <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                    maxHeight: filteredInsights.length > 3 ? '260px' : 'none',
-                    overflowY: filteredInsights.length > 3 ? 'auto' : 'visible',
-                    paddingRight: filteredInsights.length > 3 ? '4px' : '0'
+                    display: ui.viewMode === 'grid' ? 'grid' : 'flex',
+                    gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(320px, 1fr))' : undefined,
+                    flexDirection: ui.viewMode === 'list' ? 'column' : undefined,
+                    gap: ui.viewMode === 'grid' ? '8px' : '0',
+                    maxHeight: ui.viewMode === 'list' && filteredInsights.length > 3 ? '260px' : 'none',
+                    overflowY: ui.viewMode === 'list' && filteredInsights.length > 3 ? 'auto' : 'visible',
+                    paddingRight: ui.viewMode === 'list' && filteredInsights.length > 3 ? '4px' : '0',
+                    border: ui.viewMode === 'list' ? '1px solid #e5e7eb' : 'none',
+                    borderRadius: ui.viewMode === 'list' ? '8px' : '0',
+                    overflow: ui.viewMode === 'list' ? 'hidden' : 'visible'
                   }}>
                     {filteredInsights.map((insight: HelpfulInsight) => (
                       <InsightCard
@@ -1150,10 +596,11 @@ export default function HistoryPage() {
                           }
                         }}
                         onDelete={() => {
-                          const filtered = helpfulInsights.filter(i => i.id !== insight.id)
+                          const filtered = data.helpfulInsights.filter(i => i.id !== insight.id)
                           localStorage.setItem('helpfulInsights', JSON.stringify(filtered))
-                          setHelpfulInsights(filtered)
+                          reloadData()
                         }}
+                        viewMode={ui.viewMode}
                       />
                     ))}
                   </div>
@@ -1165,7 +612,7 @@ export default function HistoryPage() {
                 </>
               ) : (
                 <EmptySection
-                  message={timeFilter !== 'all' ? 'No insights in this time period' : 'Mark summaries or perspectives as helpful in the Research Assistant'}
+                  message={ui.timeFilter !=='all' ? 'No insights in this time period' : 'Mark summaries or perspectives as helpful in the Research Assistant'}
                   actionLabel="Try Research Assistant"
                   actionIcon={<ThumbsUp size={14} />}
                   onAction={() => router.push('/research-assistant')}
@@ -1176,10 +623,10 @@ export default function HistoryPage() {
             {/* Saved Authors - Collapsible with filter (always visible) */}
             {(() => {
               const authorMap = new Map<string, any>()
-              favoriteAuthors.forEach(fav => {
+              data.favoriteAuthors.forEach(fav => {
                 authorMap.set(fav.name, { name: fav.name, isFavorite: true, addedAt: fav.addedAt })
               })
-              authorNotes.forEach(noteItem => {
+              data.authorNotes.forEach(noteItem => {
                 const existing = authorMap.get(noteItem.name)
                 if (existing) {
                   existing.note = noteItem.note
@@ -1192,11 +639,10 @@ export default function HistoryPage() {
                 .map(a => ({ ...a, timestamp: a.noteUpdatedAt || a.addedAt || '' }))
                 .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-              // Apply time filter
-              unifiedAuthors = filterByTime(unifiedAuthors)
+              // Note: Time filter already applied via useHistoryFilters for filteredFavorites and filteredAuthorNotes
 
               // Apply favorites filter
-              if (showFavoritesOnly) {
+              if (ui.favoritesOnly) {
                 unifiedAuthors = unifiedAuthors.filter(a => a.isFavorite)
               }
 
@@ -1208,22 +654,22 @@ export default function HistoryPage() {
                   title="Saved Authors"
                   icon={<Users size={16} style={{ color: '#059669' }} />}
                   count={unifiedAuthors.length}
-                  isCollapsed={collapsedSections['authors']}
-                  onToggle={() => toggleSection('authors')}
-                  onClear={() => { clearAllByType('favorites'); clearAllByType('notes') }}
+                  isCollapsed={ui.collapsedSections['authors']}
+                  onToggle={() => ui.toggleSection('authors')}
+                  onClear={() => { actions.clearAllByType('favorites'); actions.clearAllByType('notes') }}
                   color="#059669"
                   headerExtra={unifiedAuthors.length > 0 ? (
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        setShowFavoritesOnly(!showFavoritesOnly)
+                        ui.setFavoritesOnly(!ui.favoritesOnly)
                       }}
                       style={{
                         padding: '4px 10px',
                         borderRadius: '6px',
                         border: 'none',
-                        background: showFavoritesOnly ? '#fef3c7' : '#f3f4f6',
-                        color: showFavoritesOnly ? '#d97706' : '#6b7280',
+                        background: ui.favoritesOnly ? '#fef3c7' : '#f3f4f6',
+                        color: ui.favoritesOnly ? '#d97706' : '#6b7280',
                         fontSize: '11px',
                         fontWeight: 500,
                         cursor: 'pointer',
@@ -1232,14 +678,14 @@ export default function HistoryPage() {
                         gap: '4px'
                       }}
                     >
-                      <Star size={12} style={{ fill: showFavoritesOnly ? '#f59e0b' : 'none' }} />
-                      {showFavoritesOnly ? 'Showing Favorites' : `Favorites (${favoritesCount})`}
+                      <Star size={12} style={{ fill: ui.favoritesOnly ? '#f59e0b' : 'none' }} />
+                      {ui.favoritesOnly ? 'Showing Favorites' : `Favorites (${favoritesCount})`}
                     </button>
                   ) : undefined}
                 >
                   {unifiedAuthors.length === 0 ? (
                     <EmptySection
-                      message={showFavoritesOnly ? 'No favorite authors yet' : (timeFilter !== 'all' ? 'No authors saved in this time period' : 'Star authors or add notes from the Authors page')}
+                      message={ui.favoritesOnly ? 'No favorite authors yet' : (ui.timeFilter !=='all' ? 'No authors saved in this time period' : 'Star authors or add notes from the Authors page')}
                       actionLabel="Discover Authors"
                       actionIcon={<Users size={14} />}
                       onAction={() => router.push('/authors')}
@@ -1247,11 +693,16 @@ export default function HistoryPage() {
                   ) : (
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(3, 1fr)',
-                      gap: '10px'
+                      gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(200px, 1fr))' : '1fr',
+                      gap: ui.viewMode === 'grid' ? '10px' : '0',
+                      maxHeight: '240px',
+                      overflowY: 'auto',
+                      border: ui.viewMode === 'list' ? '1px solid #e5e7eb' : 'none',
+                      borderRadius: ui.viewMode === 'list' ? '8px' : '0',
+                      paddingRight: '4px'
                     }}>
                       {unifiedAuthors.map(author => {
-                        const details = authorDetails[author.name]
+                        const details = data.authorDetails[author.name]
                         return (
                           <MiniAuthorCard
                             key={author.name}
@@ -1260,6 +711,7 @@ export default function HistoryPage() {
                             isFavorite={author.isFavorite}
                             note={author.note}
                             onClick={() => handleAuthorClick(author.name)}
+                            viewMode={ui.viewMode}
                           />
                         )
                       })}
@@ -1276,7 +728,7 @@ export default function HistoryPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Back to All button */}
             <button
-              onClick={() => setActiveTab('all')}
+              onClick={() => ui.setActiveTab('all')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1296,22 +748,32 @@ export default function HistoryPage() {
             </button>
 
           {/* Searches (single view) */}
-          {activeTab === 'searches' && (
+          {ui.activeTab ==='searches' && (
             <>
               {filteredRecentSearches.length > 0 && (
-                <Section title="Recent Searches" icon={<Clock size={16} style={{ color: '#6b7280' }} />} count={filteredRecentSearches.length} onClear={() => clearAllByType('recent')}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <Section title="Recent Searches" icon={<Clock size={16} style={{ color: '#6b7280' }} />} count={filteredRecentSearches.length} onClear={() => actions.clearAllByType('recent')}>
+                  <div style={{
+                    display: ui.viewMode === 'grid' ? 'grid' : 'flex',
+                    gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(300px, 1fr))' : undefined,
+                    flexDirection: ui.viewMode === 'list' ? 'column' : undefined,
+                    gap: '8px'
+                  }}>
                     {filteredRecentSearches.map(s => (
-                      <HistoryCard key={s.id} icon={<Search size={16} style={{ color: '#3b82f6' }} />} title={s.query} subtitle={timeAgo(s.timestamp)} note={s.note} onClick={() => handleSearchClick(s.query, s.cachedResult)} onDelete={() => deleteRecentSearch(s.id)} onUpdateNote={(note) => updateRecentSearchNote(s.id, note)} color="#3b82f6" />
+                      <HistoryCard key={s.id} icon={<Search size={16} style={{ color: '#3b82f6' }} />} title={s.query} subtitle={timeAgo(s.timestamp)} note={s.note} onClick={() => handleSearchClick(s.query, s.cachedResult)} onDelete={() => actions.deleteRecentSearch(s.id)} onUpdateNote={(note) => actions.updateSearchNote(s.id, note, false)} color="#3b82f6" />
                     ))}
                   </div>
                 </Section>
               )}
               {filteredSavedSearches.length > 0 && (
-                <Section title="Saved Searches" icon={<Search size={16} style={{ color: '#3b82f6' }} />} count={filteredSavedSearches.length} onClear={() => clearAllByType('saved')}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <Section title="Saved Searches" icon={<Search size={16} style={{ color: '#3b82f6' }} />} count={filteredSavedSearches.length} onClear={() => actions.clearAllByType('saved')}>
+                  <div style={{
+                    display: ui.viewMode === 'grid' ? 'grid' : 'flex',
+                    gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(300px, 1fr))' : undefined,
+                    flexDirection: ui.viewMode === 'list' ? 'column' : undefined,
+                    gap: '8px'
+                  }}>
                     {filteredSavedSearches.map(s => (
-                      <HistoryCard key={s.id} icon={<Search size={16} style={{ color: '#3b82f6' }} />} title={s.query} subtitle={formatDate(s.timestamp)} meta={s.domain || s.camp} note={s.note} onClick={() => handleSearchClick(s.query, s.cachedResult)} onDelete={() => deleteSavedSearch(s.id)} onUpdateNote={(note) => updateSavedSearchNote(s.id, note)} color="#3b82f6" saved />
+                      <HistoryCard key={s.id} icon={<Search size={16} style={{ color: '#3b82f6' }} />} title={s.query} subtitle={formatDate(s.timestamp)} meta={s.domain || s.camp} note={s.note} onClick={() => handleSearchClick(s.query, s.cachedResult)} onDelete={() => actions.deleteSavedSearch(s.id)} onUpdateNote={(note) => actions.updateSearchNote(s.id, note, true)} color="#3b82f6" saved />
                     ))}
                   </div>
                 </Section>
@@ -1320,9 +782,14 @@ export default function HistoryPage() {
           )}
 
           {/* Analyses (single view) */}
-          {activeTab === 'analyses' && filteredAnalyses.length > 0 && (
-            <Section title="AI Analyses" icon={<Sparkles size={16} style={{ color: '#8b5cf6' }} />} count={filteredAnalyses.length} onClear={() => clearAllByType('analyses')}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {ui.activeTab ==='analyses' && filteredAnalyses.length > 0 && (
+            <Section title="AI Analyses" icon={<Sparkles size={16} style={{ color: '#8b5cf6' }} />} count={filteredAnalyses.length} onClear={() => actions.clearAllByType('analyses')}>
+              <div style={{
+                display: ui.viewMode === 'grid' ? 'grid' : 'flex',
+                gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(350px, 1fr))' : undefined,
+                flexDirection: ui.viewMode === 'list' ? 'column' : undefined,
+                gap: '8px'
+              }}>
                 {filteredAnalyses.map(a => (
                   <AnalysisCard
                     key={a.id}
@@ -1331,7 +798,8 @@ export default function HistoryPage() {
                     timestamp={formatDate(a.timestamp)}
                     note={a.note}
                     onClick={() => handleAnalysisClick(a.id, a.text, a.cachedResult)}
-                    onDelete={() => deleteAnalysis(a.id)}
+                    onDelete={() => actions.deleteAnalysis(a.id)}
+                    viewMode={ui.viewMode}
                   />
                 ))}
               </div>
@@ -1339,17 +807,19 @@ export default function HistoryPage() {
           )}
 
           {/* Helpful Insights Section (single view) */}
-          {activeTab === 'insights' && filteredInsights.length > 0 && (
+          {ui.activeTab ==='insights' && filteredInsights.length > 0 && (
             <Section
               title="Helpful Insights"
               icon={<ThumbsUp size={16} style={{ color: '#10b981' }} />}
               count={filteredInsights.length}
-              onClear={() => {
-                localStorage.setItem('helpfulInsights', '[]')
-                setHelpfulInsights([])
-              }}
+              onClear={() => actions.clearAllByType('insights')}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{
+                display: ui.viewMode === 'grid' ? 'grid' : 'flex',
+                gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(350px, 1fr))' : undefined,
+                flexDirection: ui.viewMode === 'list' ? 'column' : undefined,
+                gap: '8px'
+              }}>
                 {filteredInsights.map((insight: HelpfulInsight) => (
                   <div
                     key={insight.id}
@@ -1433,9 +903,9 @@ export default function HistoryPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          const filtered = helpfulInsights.filter(i => i.id !== insight.id)
+                          const filtered = data.helpfulInsights.filter(i => i.id !== insight.id)
                           localStorage.setItem('helpfulInsights', JSON.stringify(filtered))
-                          setHelpfulInsights(filtered)
+                          reloadData()
                         }}
                         style={{
                           padding: '4px',
@@ -1457,7 +927,7 @@ export default function HistoryPage() {
           )}
 
           {/* Combined Authors Section (single view) */}
-          {activeTab === 'authors' && (() => {
+          {ui.activeTab ==='authors' && (() => {
             // Build unified author list from favorites and notes
             const authorMap = new Map<string, {
               name: string
@@ -1468,7 +938,7 @@ export default function HistoryPage() {
             }>()
 
             // Add favorites
-            favoriteAuthors.forEach(fav => {
+            data.favoriteAuthors.forEach(fav => {
               authorMap.set(fav.name, {
                 name: fav.name,
                 isFavorite: true,
@@ -1477,7 +947,7 @@ export default function HistoryPage() {
             })
 
             // Add/merge notes
-            authorNotes.forEach(noteItem => {
+            data.authorNotes.forEach(noteItem => {
               const existing = authorMap.get(noteItem.name)
               if (existing) {
                 existing.note = noteItem.note
@@ -1500,8 +970,8 @@ export default function HistoryPage() {
               }))
               .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-            // Apply time filter
-            const filteredAuthors = filterByTime(unifiedAuthors)
+            // Time filter already applied via useHistoryFilters to filteredFavorites and filteredAuthorNotes
+            const filteredAuthors = unifiedAuthors
 
             if (filteredAuthors.length === 0) return null
 
@@ -1511,17 +981,17 @@ export default function HistoryPage() {
                 icon={<Users size={16} style={{ color: '#6366f1' }} />}
                 count={filteredAuthors.length}
                 onClear={() => {
-                  clearAllByType('favorites')
-                  clearAllByType('notes')
+                  actions.clearAllByType('favorites')
+                  actions.clearAllByType('notes')
                 }}
               >
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                  gap: '12px'
+                  gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(320px, 1fr))' : '1fr',
+                  gap: ui.viewMode === 'grid' ? '12px' : '8px'
                 }}>
                   {filteredAuthors.map(author => {
-                    const details = authorDetails[author.name]
+                    const details = data.authorDetails[author.name]
                     return (
                       <UnifiedAuthorCard
                         key={author.name}
@@ -1533,7 +1003,7 @@ export default function HistoryPage() {
                         onClick={() => handleAuthorClick(author.name)}
                         onToggleFavorite={() => {
                           if (author.isFavorite) {
-                            removeFavoriteAuthor(author.name)
+                            actions.removeFavoriteAuthor(author.name)
                           } else {
                             // Add to favorites
                             const newFavorite = {
@@ -1541,13 +1011,13 @@ export default function HistoryPage() {
                               name: author.name,
                               addedAt: new Date().toISOString()
                             }
-                            const updated = [newFavorite, ...favoriteAuthors]
+                            const updated = [newFavorite, ...data.favoriteAuthors]
                             localStorage.setItem('favoriteAuthors', JSON.stringify(updated))
-                            setFavoriteAuthors(updated)
+                            reloadData()
                           }
                         }}
-                        onDeleteNote={() => deleteAuthorNote(author.name)}
-                        onUpdateNote={(note) => updateAuthorNote(author.name, note)}
+                        onDeleteNote={() => actions.deleteAuthorNote(author.name)}
+                        onUpdateNote={(note) => actions.updateAuthorNote(author.name, note)}
                         timeAgo={timeAgo}
                       />
                     )
@@ -1558,7 +1028,7 @@ export default function HistoryPage() {
           })()}
 
           {/* Tab-specific Empty States */}
-          {activeTab === 'searches' && filteredRecentSearches.length === 0 && filteredSavedSearches.length === 0 && (
+          {ui.activeTab ==='searches' && filteredRecentSearches.length === 0 && filteredSavedSearches.length === 0 && (
             <EmptyStateComponent
               icon={Search}
               iconColor="#3b82f6"
@@ -1574,7 +1044,7 @@ export default function HistoryPage() {
             />
           )}
 
-          {activeTab === 'analyses' && filteredAnalyses.length === 0 && (
+          {ui.activeTab ==='analyses' && filteredAnalyses.length === 0 && (
             <EmptyStateComponent
               icon={Sparkles}
               iconColor="#8b5cf6"
@@ -1590,7 +1060,7 @@ export default function HistoryPage() {
             />
           )}
 
-          {activeTab === 'insights' && filteredInsights.length === 0 && (
+          {ui.activeTab ==='insights' && filteredInsights.length === 0 && (
             <EmptyStateComponent
               icon={ThumbsUp}
               iconColor="#10b981"
@@ -1606,7 +1076,7 @@ export default function HistoryPage() {
             />
           )}
 
-          {activeTab === 'authors' && getUniqueAuthorsCount() === 0 && (
+          {ui.activeTab ==='authors' && getFilteredAuthorsCount() === 0 && (
             <EmptyStateComponent
               icon={Users}
               iconColor="#6366f1"
@@ -1628,18 +1098,18 @@ export default function HistoryPage() {
       </main>
 
       {/* About Modal */}
-      {showAboutModal && (
-        <AboutHistoryModal onClose={() => setShowAboutModal(false)} />
+      {ui.showAboutModal && (
+        <AboutHistoryModal onClose={() => ui.closeAboutModal()} />
       )}
 
       {/* Recently Deleted Modal */}
-      {showRecentlyDeleted && (
+      {ui.showRecentlyDeleted && (
         <RecentlyDeletedModal
-          items={deletedItems}
-          onRestore={restoreDeletedItem}
-          onDelete={permanentlyDeleteItem}
-          onClearAll={clearAllDeleted}
-          onClose={() => setShowRecentlyDeleted(false)}
+          items={data.deletedItems}
+          onRestore={actions.restoreItem}
+          onDelete={actions.permanentlyDelete}
+          onClearAll={actions.clearAllDeleted}
+          onClose={() => ui.closeRecentlyDeleted()}
           timeAgo={timeAgo}
         />
       )}
@@ -2063,7 +1533,8 @@ function SearchCard({
   isSaved,
   note,
   onClick,
-  onDelete
+  onDelete,
+  viewMode = 'grid'
 }: {
   query: string
   timestamp: string
@@ -2071,30 +1542,158 @@ function SearchCard({
   note?: string
   onClick: () => void
   onDelete: () => void
+  viewMode?: 'grid' | 'list'
 }) {
+  // List View - Compact row layout
+  if (viewMode === 'list') {
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px 12px',
+          borderBottom: '1px solid #f3f4f6',
+          background: '#ffffff',
+          cursor: 'pointer',
+          transition: 'background 0.12s ease-out',
+          minHeight: '48px'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = '#f0f9ff'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = '#ffffff'
+        }}
+      >
+        {/* Icon */}
+        <div style={{
+          width: '16px',
+          height: '16px',
+          marginRight: '12px',
+          flexShrink: 0
+        }}>
+          <Search size={16} style={{ color: isSaved ? '#3b82f6' : '#9ca3af' }} />
+        </div>
+
+        {/* Query text - flex-1 */}
+        <div style={{
+          flex: 1,
+          fontSize: '14px',
+          fontWeight: 500,
+          color: '#141414',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          minWidth: 0
+        }}>
+          {query}
+        </div>
+
+        {/* Note badge */}
+        {note && (
+          <div style={{
+            padding: '2px 6px',
+            borderRadius: '4px',
+            background: '#fef3c7',
+            color: '#d97706',
+            fontSize: '11px',
+            fontWeight: 600,
+            marginLeft: '8px',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}>
+            <MessageSquare size={10} />
+            Note
+          </div>
+        )}
+
+        {/* Timestamp */}
+        <div style={{
+          fontSize: '12px',
+          color: '#6b7280',
+          marginLeft: '12px',
+          flexShrink: 0,
+          width: '80px',
+          textAlign: 'right'
+        }}>
+          {timestamp}
+        </div>
+
+        {/* Saved badge */}
+        {isSaved && (
+          <div style={{
+            padding: '2px 6px',
+            borderRadius: '4px',
+            background: '#dcfce7',
+            color: '#16a34a',
+            fontSize: '11px',
+            fontWeight: 600,
+            marginLeft: '8px',
+            flexShrink: 0
+          }}>
+            Saved
+          </div>
+        )}
+
+        {/* Delete button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          style={{
+            padding: '4px',
+            marginLeft: '8px',
+            borderRadius: '4px',
+            border: 'none',
+            background: 'transparent',
+            color: '#9ca3af',
+            cursor: 'pointer',
+            flexShrink: 0,
+            transition: 'all 0.12s ease-out'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#fee2e2'
+            e.currentTarget.style.color = '#dc2626'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = '#9ca3af'
+          }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+    )
+  }
+
+  // Grid View - Card layout (default)
   return (
     <div
       onClick={onClick}
       style={{
-        padding: '8px 10px',
-        borderRadius: '6px',
-        border: note ? '1px solid #fde68a' : '1px solid #f3f4f6',
-        background: note ? '#fffbeb' : '#fafafa',
+        padding: '12px',
+        borderRadius: '8px',
+        border: note ? '1px solid #fde68a' : '1px solid #e5e7eb',
+        background: note ? '#fffbeb' : '#ffffff',
         cursor: 'pointer',
-        transition: 'all 0.15s ease',
+        transition: 'all 0.12s ease-out',
         width: '100%',
         boxSizing: 'border-box'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = '#3b82f6'
-        e.currentTarget.style.background = 'white'
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.1)'
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = note ? '#fde68a' : '#f3f4f6'
-        e.currentTarget.style.background = note ? '#fffbeb' : '#fafafa'
+        e.currentTarget.style.borderColor = note ? '#fde68a' : '#e5e7eb'
+        e.currentTarget.style.boxShadow = 'none'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
         <div style={{
           width: '24px',
           height: '24px',
@@ -2105,20 +1704,24 @@ function SearchCard({
           justifyContent: 'center',
           flexShrink: 0
         }}>
-          <Search size={12} style={{ color: isSaved ? '#3b82f6' : '#9ca3af' }} />
+          <Search size={14} style={{ color: isSaved ? '#3b82f6' : '#9ca3af' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: '12px',
+            fontSize: '14px',
             fontWeight: 500,
             color: '#374151',
+            marginBottom: '4px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            lineHeight: 1.4
           }}>
             {query}
           </div>
-          <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '1px' }}>
+          <div style={{ fontSize: '12px', color: '#9ca3af' }}>
             {timestamp}{isSaved && ' · Saved'}
           </div>
         </div>
@@ -2128,8 +1731,8 @@ function SearchCard({
             onDelete()
           }}
           style={{
-            padding: '3px',
-            borderRadius: '3px',
+            padding: '4px',
+            borderRadius: '4px',
             border: 'none',
             background: 'transparent',
             color: '#d1d5db',
@@ -2137,33 +1740,36 @@ function SearchCard({
             flexShrink: 0
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#ef4444'
+            e.currentTarget.style.background = '#fee2e2'
+            e.currentTarget.style.color = '#dc2626'
           }}
           onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
             e.currentTarget.style.color = '#d1d5db'
           }}
         >
-          <X size={12} />
+          <X size={14} />
         </button>
       </div>
       {note && (
         <div style={{
-          marginTop: '6px',
-          paddingLeft: '34px',
+          marginTop: '8px',
+          paddingTop: '8px',
+          borderTop: '1px solid #fde68a',
           display: 'flex',
           alignItems: 'flex-start',
-          gap: '5px'
+          gap: '6px'
         }}>
-          <MessageSquare size={10} style={{ color: '#d97706', marginTop: '2px', flexShrink: 0 }} />
+          <MessageSquare size={12} style={{ color: '#d97706', marginTop: '2px', flexShrink: 0 }} />
           <p style={{
-            fontSize: '11px',
+            fontSize: '12px',
             color: '#92400e',
             margin: 0,
-            lineHeight: 1.3,
+            lineHeight: 1.4,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             display: '-webkit-box',
-            WebkitLineClamp: 1,
+            WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical'
           }}>
             {note}
@@ -2181,7 +1787,8 @@ function AnalysisCard({
   timestamp,
   note,
   onClick,
-  onDelete
+  onDelete,
+  viewMode = 'grid'
 }: {
   inputPreview: string
   cachedResult?: {
@@ -2196,31 +1803,171 @@ function AnalysisCard({
   note?: string
   onClick: () => void
   onDelete: () => void
+  viewMode?: 'grid' | 'list'
 }) {
   const summary = cachedResult?.summary || ''
   const campCount = cachedResult?.matchedCamps?.length || 0
   const missingCount = cachedResult?.editorialSuggestions?.missingPerspectives?.length || 0
 
+  // List View - Compact row layout
+  if (viewMode === 'list') {
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px 12px',
+          borderBottom: '1px solid #f3f4f6',
+          background: '#ffffff',
+          cursor: 'pointer',
+          transition: 'background 0.12s ease-out',
+          minHeight: '48px'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = '#f0f9ff'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = '#ffffff'
+        }}
+      >
+        {/* Icon */}
+        <div style={{
+          width: '16px',
+          height: '16px',
+          marginRight: '12px',
+          flexShrink: 0
+        }}>
+          <Sparkles size={16} style={{ color: '#8b5cf6' }} />
+        </div>
+
+        {/* Input preview - flex-1 */}
+        <div style={{
+          flex: 1,
+          fontSize: '14px',
+          fontWeight: 500,
+          color: '#141414',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          minWidth: 0
+        }}>
+          {inputPreview.trim()}
+        </div>
+
+        {/* Summary preview */}
+        {summary && (
+          <div style={{
+            fontSize: '13px',
+            color: '#6b7280',
+            marginLeft: '12px',
+            flexShrink: 0,
+            maxWidth: '200px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}>
+            <span style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase' }}>Summary:</span> {summary}
+          </div>
+        )}
+
+        {/* Camp count badge */}
+        {campCount > 0 && (
+          <div style={{
+            padding: '2px 6px',
+            borderRadius: '4px',
+            background: '#dbeafe',
+            color: '#2563eb',
+            fontSize: '11px',
+            fontWeight: 600,
+            marginLeft: '8px',
+            flexShrink: 0
+          }}>
+            {campCount}c
+          </div>
+        )}
+
+        {/* Missing count badge */}
+        {missingCount > 0 && (
+          <div style={{
+            padding: '2px 6px',
+            borderRadius: '4px',
+            background: '#fee2e2',
+            color: '#dc2626',
+            fontSize: '11px',
+            fontWeight: 600,
+            marginLeft: '4px',
+            flexShrink: 0
+          }}>
+            {missingCount}m
+          </div>
+        )}
+
+        {/* Timestamp */}
+        <div style={{
+          fontSize: '12px',
+          color: '#6b7280',
+          marginLeft: '12px',
+          flexShrink: 0,
+          width: '80px',
+          textAlign: 'right'
+        }}>
+          {timestamp}
+        </div>
+
+        {/* Delete button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          style={{
+            padding: '4px',
+            marginLeft: '8px',
+            borderRadius: '4px',
+            border: 'none',
+            background: 'transparent',
+            color: '#9ca3af',
+            cursor: 'pointer',
+            flexShrink: 0,
+            transition: 'all 0.12s ease-out'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#fee2e2'
+            e.currentTarget.style.color = '#dc2626'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = '#9ca3af'
+          }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+    )
+  }
+
+  // Grid View - Card layout (default)
   return (
     <div
       onClick={onClick}
       style={{
-        padding: '8px 10px',
-        borderRadius: '6px',
-        border: '1px solid #f3f4f6',
-        background: '#fafafa',
+        padding: '12px',
+        borderRadius: '8px',
+        border: '1px solid #e5e7eb',
+        background: '#ffffff',
         cursor: 'pointer',
-        transition: 'all 0.15s ease',
+        transition: 'all 0.12s ease-out',
         width: '100%',
         boxSizing: 'border-box'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = '#8b5cf6'
-        e.currentTarget.style.background = 'white'
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(139, 92, 246, 0.1)'
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#f3f4f6'
-        e.currentTarget.style.background = '#fafafa'
+        e.currentTarget.style.borderColor = '#e5e7eb'
+        e.currentTarget.style.boxShadow = 'none'
       }}
     >
       <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
@@ -2234,27 +1981,46 @@ function AnalysisCard({
           justifyContent: 'center',
           flexShrink: 0
         }}>
-          <Sparkles size={12} style={{ color: '#8b5cf6' }} />
+          <Sparkles size={14} style={{ color: '#8b5cf6' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Top row: type + timestamp + badges */}
-          <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '2px' }}>
+          <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>
             <span style={{ fontWeight: 600, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Analysis</span>
             {' · '}{timestamp}
             {campCount > 0 && ` · ${campCount} perspectives`}
           </div>
-          {/* Input text - single line */}
+          {/* Input text */}
           <p style={{
-            fontSize: '12px',
+            fontSize: '14px',
             color: '#374151',
             margin: 0,
-            lineHeight: 1.3,
-            whiteSpace: 'nowrap',
+            marginBottom: '8px',
+            lineHeight: 1.4,
             overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical'
           }}>
             {inputPreview.trim()}
           </p>
+          {/* Summary preview */}
+          {summary && (
+            <p style={{
+              fontSize: '13px',
+              color: '#6b7280',
+              margin: 0,
+              lineHeight: 1.4,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical'
+            }}>
+              <span style={{ fontWeight: 600 }}>Summary:</span> {summary}
+            </p>
+          )}
         </div>
         <button
           onClick={(e) => {
@@ -2262,8 +2028,8 @@ function AnalysisCard({
             onDelete()
           }}
           style={{
-            padding: '3px',
-            borderRadius: '3px',
+            padding: '4px',
+            borderRadius: '4px',
             border: 'none',
             background: 'transparent',
             color: '#d1d5db',
@@ -2271,8 +2037,16 @@ function AnalysisCard({
             flexShrink: 0,
             alignSelf: 'flex-start'
           }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#fee2e2'
+            e.currentTarget.style.color = '#dc2626'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = '#d1d5db'
+          }}
         >
-          <X size={12} />
+          <X size={14} />
         </button>
       </div>
     </div>
@@ -2286,7 +2060,8 @@ function InsightCard({
   timestamp,
   originalText,
   onClick,
-  onDelete
+  onDelete,
+  viewMode = 'grid'
 }: {
   content: string
   type: string
@@ -2294,25 +2069,147 @@ function InsightCard({
   originalText?: string
   onClick: () => void
   onDelete: () => void
+  viewMode?: 'grid' | 'list'
 }) {
+  // List View - Compact row layout
+  if (viewMode === 'list') {
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px 12px',
+          borderBottom: '1px solid #f3f4f6',
+          background: '#ffffff',
+          cursor: 'pointer',
+          transition: 'background 0.12s ease-out',
+          minHeight: '48px'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = '#f0f9ff'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = '#ffffff'
+        }}
+      >
+        {/* Icon */}
+        <div style={{
+          width: '16px',
+          height: '16px',
+          marginRight: '12px',
+          flexShrink: 0
+        }}>
+          <ThumbsUp size={16} style={{ color: '#059669' }} />
+        </div>
+
+        {/* Type label */}
+        <div style={{
+          fontSize: '11px',
+          fontWeight: 600,
+          color: '#059669',
+          textTransform: 'uppercase',
+          marginRight: '12px',
+          flexShrink: 0,
+          width: '80px'
+        }}>
+          {type}
+        </div>
+
+        {/* Content - flex-1 */}
+        <div style={{
+          flex: 1,
+          fontSize: '13px',
+          fontWeight: 400,
+          color: '#374151',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          minWidth: 0
+        }}>
+          {content}
+        </div>
+
+        {/* Original text preview */}
+        {originalText && (
+          <div style={{
+            fontSize: '12px',
+            color: '#9ca3af',
+            fontStyle: 'italic',
+            marginLeft: '12px',
+            flexShrink: 0,
+            maxWidth: '150px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}>
+            from "{originalText}"
+          </div>
+        )}
+
+        {/* Timestamp */}
+        <div style={{
+          fontSize: '12px',
+          color: '#6b7280',
+          marginLeft: '12px',
+          flexShrink: 0,
+          width: '80px',
+          textAlign: 'right'
+        }}>
+          {timestamp}
+        </div>
+
+        {/* Delete button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          style={{
+            padding: '4px',
+            marginLeft: '8px',
+            borderRadius: '4px',
+            border: 'none',
+            background: 'transparent',
+            color: '#9ca3af',
+            cursor: 'pointer',
+            flexShrink: 0,
+            transition: 'all 0.12s ease-out'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#fee2e2'
+            e.currentTarget.style.color = '#dc2626'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = '#9ca3af'
+          }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+    )
+  }
+
+  // Grid View - Card layout (default)
   return (
     <div
       onClick={onClick}
       style={{
-        padding: '8px 10px',
-        borderRadius: '6px',
-        border: '1px solid #f3f4f6',
-        background: '#fafafa',
+        padding: '12px',
+        borderRadius: '8px',
+        border: '1px solid #e5e7eb',
+        background: '#ffffff',
         cursor: 'pointer',
-        transition: 'all 0.15s ease'
+        transition: 'all 0.12s ease-out'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = '#10b981'
-        e.currentTarget.style.background = 'white'
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.1)'
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#f3f4f6'
-        e.currentTarget.style.background = '#fafafa'
+        e.currentTarget.style.borderColor = '#e5e7eb'
+        e.currentTarget.style.boxShadow = 'none'
       }}
     >
       <div style={{ display: 'flex', gap: '10px' }}>
@@ -2326,12 +2223,12 @@ function InsightCard({
           justifyContent: 'center',
           flexShrink: 0
         }}>
-          <ThumbsUp size={12} style={{ color: '#059669' }} />
+          <ThumbsUp size={14} style={{ color: '#059669' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
             <span style={{
-              fontSize: '10px',
+              fontSize: '11px',
               fontWeight: 600,
               color: '#059669',
               textTransform: 'uppercase',
@@ -2339,21 +2236,36 @@ function InsightCard({
             }}>
               {type}
             </span>
-            <span style={{ fontSize: '10px', color: '#9ca3af' }}>·</span>
-            <span style={{ fontSize: '10px', color: '#9ca3af' }}>{timestamp}</span>
+            <span style={{ fontSize: '12px', color: '#9ca3af' }}>·</span>
+            <span style={{ fontSize: '12px', color: '#9ca3af' }}>{timestamp}</span>
           </div>
           <p style={{
-            fontSize: '12px',
+            fontSize: '13px',
             color: '#374151',
             margin: 0,
-            lineHeight: 1.4,
+            marginBottom: originalText ? '6px' : 0,
+            lineHeight: 1.5,
             display: '-webkit-box',
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 3,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden'
           }}>
             {content}
           </p>
+          {originalText && (
+            <p style={{
+              fontSize: '12px',
+              color: '#9ca3af',
+              margin: 0,
+              fontStyle: 'italic',
+              lineHeight: 1.4,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              From: "{originalText}"
+            </p>
+          )}
         </div>
         <button
           onClick={(e) => {
@@ -2361,8 +2273,8 @@ function InsightCard({
             onDelete()
           }}
           style={{
-            padding: '3px',
-            borderRadius: '3px',
+            padding: '4px',
+            borderRadius: '4px',
             border: 'none',
             background: 'transparent',
             color: '#d1d5db',
@@ -2370,8 +2282,16 @@ function InsightCard({
             flexShrink: 0,
             alignSelf: 'flex-start'
           }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#fee2e2'
+            e.currentTarget.style.color = '#dc2626'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = '#d1d5db'
+          }}
         >
-          <X size={12} />
+          <X size={14} />
         </button>
       </div>
     </div>
@@ -2384,24 +2304,134 @@ function MiniAuthorCard({
   affiliation,
   isFavorite,
   note,
-  onClick
+  onClick,
+  viewMode = 'grid'
 }: {
   name: string
   affiliation?: string
   isFavorite: boolean
   note?: string
   onClick: () => void
+  viewMode?: 'grid' | 'list'
 }) {
+  // List View - Compact row layout
+  if (viewMode === 'list') {
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px 12px',
+          borderBottom: '1px solid #f3f4f6',
+          background: '#ffffff',
+          cursor: 'pointer',
+          transition: 'background 0.12s ease-out',
+          minHeight: '48px'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = '#f0f9ff'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = '#ffffff'
+        }}
+      >
+        {/* Avatar */}
+        <div style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          marginRight: '12px',
+          background: isFavorite
+            ? 'linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%)'
+            : 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }}>
+          {isFavorite ? (
+            <Star size={14} style={{ color: '#f59e0b' }} />
+          ) : (
+            <Users size={14} style={{ color: '#6366f1' }} />
+          )}
+        </div>
+
+        {/* Name */}
+        <div style={{
+          fontSize: '14px',
+          fontWeight: 600,
+          color: '#1f2937',
+          flexShrink: 0,
+          minWidth: '150px'
+        }}>
+          {name}
+        </div>
+
+        {/* Affiliation - flex-1 */}
+        <div style={{
+          flex: 1,
+          fontSize: '12px',
+          color: '#6b7280',
+          marginLeft: '12px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          minWidth: 0
+        }}>
+          {affiliation || '—'}
+        </div>
+
+        {/* Favorite badge */}
+        {isFavorite && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '2px 6px',
+            marginLeft: '12px',
+            borderRadius: '4px',
+            background: '#fef3c7',
+            color: '#f59e0b',
+            fontSize: '11px',
+            fontWeight: 600,
+            flexShrink: 0
+          }}>
+            <Star size={10} style={{ fill: '#f59e0b' }} />
+            Favorite
+          </div>
+        )}
+
+        {/* Note indicator */}
+        {note && (
+          <div style={{
+            padding: '2px 6px',
+            marginLeft: '8px',
+            borderRadius: '4px',
+            background: '#e0f2fe',
+            color: '#0284c7',
+            fontSize: '11px',
+            fontWeight: 600,
+            flexShrink: 0
+          }}>
+            📝 Note
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Grid View - Card layout (default)
   return (
     <div
       onClick={onClick}
       style={{
-        padding: '10px 12px',
+        padding: '12px',
         borderRadius: '8px',
         border: '1px solid #e5e7eb',
         background: 'white',
         cursor: 'pointer',
-        transition: 'all 0.15s ease'
+        transition: 'all 0.12s ease-out'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = '#059669'
@@ -2432,14 +2462,14 @@ function MiniAuthorCard({
           )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
             <div style={{
-              fontSize: '13px',
+              fontSize: '14px',
               fontWeight: 600,
               color: '#1f2937',
-              whiteSpace: 'nowrap',
               overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
             }}>
               {name}
             </div>
@@ -2449,22 +2479,21 @@ function MiniAuthorCard({
           </div>
           {affiliation && (
             <div style={{
-              fontSize: '11px',
+              fontSize: '12px',
               color: '#9ca3af',
-              marginTop: '2px',
-              whiteSpace: 'nowrap',
               overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
             }}>
               {affiliation}
             </div>
           )}
           {note && (
             <div style={{
-              fontSize: '11px',
+              fontSize: '12px',
               color: '#6b7280',
-              marginTop: '6px',
-              padding: '6px 8px',
+              marginTop: '8px',
+              padding: '8px',
               background: '#f9fafb',
               borderRadius: '4px',
               borderLeft: '2px solid #10b981',

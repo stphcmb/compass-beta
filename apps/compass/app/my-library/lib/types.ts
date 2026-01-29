@@ -68,7 +68,7 @@ export interface HistoryData {
 
 export type TabType = 'all' | 'searches' | 'analyses' | 'insights' | 'authors'
 export type TimeFilter = 'all' | 'today' | 'week' | 'month'
-export type ViewMode = 'compact' | 'expanded'
+export type ViewMode = 'grid' | 'list'
 
 /**
  * Generic interface for items that can be filtered by time
