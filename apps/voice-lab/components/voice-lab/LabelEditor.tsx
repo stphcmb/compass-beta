@@ -88,9 +88,10 @@ export default function LabelEditor({
           {!disabled && (
             <button
               onClick={() => handleRemoveLabel(label)}
+              aria-label={`Remove ${label} label`}
               className="opacity-50 hover:opacity-100 -mr-0.5"
             >
-              <X className="w-3 h-3" />
+              <X aria-hidden="true" className="w-3 h-3" />
             </button>
           )}
         </span>
@@ -135,13 +136,13 @@ export default function LabelEditor({
                     onClick={() => handleAddLabel(suggestion)}
                     className="w-full px-3 py-1.5 text-left text-xs hover:bg-gray-50 flex items-center gap-2"
                   >
-                    <Check className="w-3 h-3 text-gray-400" />
+                    <Check className="w-3 h-3 text-gray-500" />
                     {suggestion}
                   </button>
                 ))}
 
                 {suggestions.length === 0 && !inputValue.trim() && (
-                  <div className="px-3 py-1.5 text-xs text-gray-400">
+                  <div className="px-3 py-1.5 text-xs text-gray-500">
                     No suggestions
                   </div>
                 )}
@@ -151,7 +152,7 @@ export default function LabelEditor({
         ) : (
           <button
             onClick={() => setIsAdding(true)}
-            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border border-dashed border-gray-300 text-gray-500 hover:border-violet-400 hover:text-violet-600 transition-colors"
+            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border border-dashed border-gray-300 text-gray-600 hover:border-violet-400 hover:text-violet-600 transition-colors"
           >
             <Plus className="w-3 h-3" />
             Add

@@ -1,7 +1,7 @@
 # Agent Orchestration Plan - UX Improvements
 
 **Created**: 2026-01-28
-**Orchestrator**: agent-orchestrator (agentId: aae1aa7)
+**Orchestrator**: delivery-lead (agentId: aae1aa7)
 **Status**: Ready for delegation
 **Based on**: UX Audit by ui-ux-reviewer (agentId: a4adbf3)
 
@@ -210,7 +210,7 @@ Phase 4: Quality Gates (Sequential)
 **Task**: Implement My Library page and saved badges
 
 **Files to Modify/Create**:
-- `/apps/compass/app/library/page.tsx` (renamed from history)
+- `/apps/compass/app/my-library/page.tsx` (renamed from /history)
 - `/apps/compass/components/library/FilterBar.tsx` (new)
 - `/apps/compass/components/library/CollectionManager.tsx` (new)
 - `/apps/compass/components/SavedBadge.tsx` (new, reusable)
@@ -273,7 +273,7 @@ Phase 4: Quality Gates (Sequential)
 - `/apps/compass/tests/e2e/navigation.spec.ts`
 - `/apps/compass/tests/e2e/research-assistant.spec.ts`
 - `/apps/compass/tests/e2e/explore.spec.ts`
-- `/apps/compass/tests/e2e/library.spec.ts`
+- `/apps/compass/tests/e2e/my-library.spec.ts`
 
 #### 6.2 Accessibility Audit
 **Agent**: `accessibility-auditor`
@@ -400,8 +400,8 @@ When an agent completes work:
 ## Next Steps
 
 ### Immediate Actions
-1. **Orchestrator** confirms user approval to begin delegation
-2. **Orchestrator** spawns agents for WS1 and WS2 (foundation phase)
+1. **Delivery Lead** confirms user approval to begin delegation
+2. **Delivery Lead** spawns agents for WS1 and WS2 (foundation phase)
 3. Agents begin work in parallel
 
 ### Delegation Sequence

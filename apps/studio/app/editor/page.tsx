@@ -37,7 +37,7 @@ import {
   EyeOff,
   GitBranch,
 } from 'lucide-react'
-import { useToast } from '@/components/Toast'
+import { useToast } from '@compass/ui'
 import StudioBreadcrumb from '@/components/studio/StudioBreadcrumb'
 import PublishingChecklist from '@/components/studio/PublishingChecklist'
 import type {

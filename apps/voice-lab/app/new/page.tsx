@@ -263,12 +263,12 @@ export default function VoiceLabPage() {
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: 'var(--color-bone)' }}>
       <Header sidebarCollapsed={true} />
-      <main className="flex-1 mt-16 overflow-y-auto">
+      <main className="flex-1 pt-24 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-6 py-8">
           {/* Back link */}
           <Link
             href="/"
-            className="inline-flex items-center gap-1 text-sm mb-6 transition-colors text-gray-500 hover:text-violet-600"
+            className="inline-flex items-center gap-1 text-sm mb-6 transition-colors text-gray-600 hover:text-violet-600 rounded focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
           >
             <ChevronLeft className="w-4 h-4" />
             Back to Home
@@ -312,7 +312,7 @@ export default function VoiceLabPage() {
                     <button
                       key={profile.id}
                       onClick={() => useExistingProfile(profile)}
-                      className="text-left p-4 rounded-lg border border-gray-200 hover:border-violet-300 hover:bg-violet-50 transition-colors group"
+                      className="text-left p-4 rounded-lg border border-gray-200 hover:border-violet-300 hover:bg-violet-50 transition-colors group focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
                     >
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-violet-200 transition-colors">
@@ -320,7 +320,7 @@ export default function VoiceLabPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-gray-900 truncate">{profile.name}</p>
-                          <p className="text-xs text-gray-500 truncate">
+                          <p className="text-xs text-gray-600 truncate">
                             {profile.description || 'No description'}
                           </p>
                         </div>
@@ -329,7 +329,7 @@ export default function VoiceLabPage() {
                   ))}
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-sm text-gray-500 text-center">Or analyze a new writing sample below</p>
+                  <p className="text-sm text-gray-600 text-center">Or analyze a new writing sample below</p>
                 </div>
               </div>
             )}
@@ -339,7 +339,7 @@ export default function VoiceLabPage() {
               <h2 className="text-lg font-medium text-gray-900 mb-2">
                 Analyze Writing Sample
               </h2>
-              <p className="text-sm text-gray-500 mb-6">
+              <p className="text-sm text-gray-600 mb-6">
                 Paste writing samples to analyze their style patterns. You can then optionally save it as a voice profile.
               </p>
 
@@ -357,11 +357,12 @@ export default function VoiceLabPage() {
                       className="w-full h-40 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none resize-none"
                     />
                     <div className="absolute top-2 right-2 flex items-center gap-2">
-                      <span className="text-xs text-gray-400">{sample.length} chars</span>
+                      <span className="text-xs text-gray-500">{sample.length} chars</span>
                       {samples.length > 1 && (
                         <button
                           onClick={() => removeSample(index)}
-                          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                          className="p-1 text-gray-400 hover:text-red-500 transition-colors rounded focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:outline-none"
+                          aria-label={`Remove sample ${index + 1}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -372,7 +373,7 @@ export default function VoiceLabPage() {
 
                 <button
                   onClick={addSample}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-violet-600 hover:bg-violet-50 rounded-lg transition-colors focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
                 >
                   <Plus className="w-4 h-4" />
                   Add another sample
@@ -388,13 +389,13 @@ export default function VoiceLabPage() {
 
               {/* Analyze Button */}
               <div className="mt-6 flex items-center justify-between">
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-600">
                   Total: {totalChars.toLocaleString()} characters
                 </span>
                 <button
                   onClick={handleAnalyze}
                   disabled={totalChars === 0}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
                 >
                   <Eye className="w-4 h-4" />
                   Analyze Style
@@ -413,7 +414,7 @@ export default function VoiceLabPage() {
             <h2 className="text-xl font-medium text-gray-900 mb-2">
               Analyzing Writing Style
             </h2>
-            <p className="text-gray-500 max-w-md mx-auto">
+            <p className="text-gray-600 max-w-md mx-auto">
               Detecting tone, patterns, vocabulary, and rhetorical strategies...
             </p>
           </div>
@@ -431,12 +432,12 @@ export default function VoiceLabPage() {
                   </div>
                   <div>
                     <h2 className="text-lg font-medium text-gray-900">Style Analysis</h2>
-                    <p className="text-sm text-gray-500">Here's what we detected in your writing</p>
+                    <p className="text-sm text-gray-600">Here's what we detected in your writing</p>
                   </div>
                 </div>
                 <button
                   onClick={resetWorkflow}
-                  className="text-sm text-gray-500 hover:text-gray-700"
+                  className="text-sm text-gray-600 hover:text-gray-800 rounded px-2 py-1 focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
                 >
                   Start Over
                 </button>
@@ -534,7 +535,7 @@ export default function VoiceLabPage() {
               <button
                 onClick={handleGenerateProfile}
                 disabled={!profileName.trim()}
-                className="flex items-center gap-2 px-6 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+                className="flex items-center gap-2 px-6 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
               >
                 <Sparkles className="w-4 h-4" />
                 Generate Voice Profile
@@ -552,7 +553,7 @@ export default function VoiceLabPage() {
             <h2 className="text-xl font-medium text-gray-900 mb-2">
               Generating Voice Profile
             </h2>
-            <p className="text-gray-500 max-w-md mx-auto">
+            <p className="text-gray-600 max-w-md mx-auto">
               Creating a comprehensive style guide from your analysis...
             </p>
           </div>
@@ -572,12 +573,12 @@ export default function VoiceLabPage() {
                     <h2 className="text-lg font-medium text-gray-900">
                       {profileName || generatedProfile?.name}
                     </h2>
-                    <p className="text-sm text-gray-500">Voice profile ready</p>
+                    <p className="text-sm text-gray-600">Voice profile ready</p>
                   </div>
                 </div>
                 <button
                   onClick={resetWorkflow}
-                  className="text-sm text-gray-500 hover:text-gray-700"
+                  className="text-sm text-gray-600 hover:text-gray-800 rounded px-2 py-1 focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
                 >
                   Start Over
                 </button>
@@ -590,7 +591,7 @@ export default function VoiceLabPage() {
                   {styleGuide.length > 2000 && '...'}
                 </pre>
               </div>
-              <p className="mt-2 text-xs text-gray-400">
+              <p className="mt-2 text-xs text-gray-500">
                 {styleGuide.length.toLocaleString()} characters in style guide
               </p>
             </div>
@@ -606,7 +607,7 @@ export default function VoiceLabPage() {
                 </div>
                 <button
                   onClick={() => setCurrentStep('revise')}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
                 >
                   Apply to Draft
                   <ArrowRight className="w-4 h-4" />
@@ -627,7 +628,7 @@ export default function VoiceLabPage() {
               </div>
               <button
                 onClick={() => setCurrentStep('profile')}
-                className="text-sm text-gray-500 hover:text-gray-700"
+                className="text-sm text-gray-600 hover:text-gray-800 rounded px-2 py-1 focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
               >
                 Change Profile
               </button>
@@ -648,13 +649,13 @@ export default function VoiceLabPage() {
                   className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none resize-none"
                 />
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-500">
                     {draftText.length.toLocaleString()} characters
                   </span>
                   <button
                     onClick={handleRevise}
                     disabled={!draftText.trim() || revising}
-                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
                   >
                     {revising ? (
                       <>
@@ -681,7 +682,7 @@ export default function VoiceLabPage() {
                   {revisedText && (
                     <button
                       onClick={copyRevised}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
                     >
                       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                       {copied ? 'Copied!' : 'Copy'}
@@ -699,7 +700,7 @@ export default function VoiceLabPage() {
                   <div className="h-64 flex items-center justify-center">
                     <div className="text-center">
                       <Loader2 className="w-8 h-8 text-violet-500 animate-spin mx-auto mb-3" />
-                      <p className="text-sm text-gray-500">Applying voice profile...</p>
+                      <p className="text-sm text-gray-600">Applying voice profile...</p>
                     </div>
                   </div>
                 ) : revisedText ? (
@@ -712,7 +713,7 @@ export default function VoiceLabPage() {
                   </div>
                 ) : (
                   <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-lg">
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-500">
                       Revised draft will appear here
                     </p>
                   </div>
@@ -720,13 +721,13 @@ export default function VoiceLabPage() {
 
                 {revisedText && (
                   <div className="mt-3 flex items-center justify-between">
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-500">
                       {revisedText.length.toLocaleString()} characters
                     </span>
                     <button
                       onClick={handleRevise}
                       disabled={revising}
-                      className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700"
+                      className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700 rounded px-1 py-0.5 focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
                     >
                       <RefreshCw className="w-3 h-3" />
                       Regenerate
@@ -760,12 +761,12 @@ function StepIndicator({
       <div
         className={`
           w-7 h-7 rounded-full flex items-center justify-center text-sm font-medium transition-colors
-          ${completed ? 'bg-violet-600 text-white' : active ? 'bg-violet-100 text-violet-600 ring-2 ring-violet-600' : 'bg-gray-100 text-gray-400'}
+          ${completed ? 'bg-violet-600 text-white' : active ? 'bg-violet-100 text-violet-600 ring-2 ring-violet-600' : 'bg-gray-100 text-gray-500'}
         `}
       >
         {completed ? <Check className="w-4 h-4" /> : step}
       </div>
-      <span className={`text-sm ${active ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>
+      <span className={`text-sm ${active ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
         {label}
       </span>
     </div>

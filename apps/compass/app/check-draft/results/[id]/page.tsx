@@ -142,7 +142,7 @@ export default function ResearchAssistantResultsPage() {
                 </p>
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                   <Link
-                    href="/research-assistant"
+                    href="/check-draft"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -161,7 +161,7 @@ export default function ResearchAssistantResultsPage() {
                     New Analysis
                   </Link>
                   <Link
-                    href="/history"
+                    href="/my-library"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',

@@ -13,7 +13,7 @@
    - Communication protocols
 
 2. **[AGENT_ORCHESTRATION_PLAN.md](./AGENT_ORCHESTRATION_PLAN.md)** ⭐ PRIMARY
-   - Detailed tactical execution plan by agent-orchestrator
+   - Detailed tactical execution plan by delivery-lead
    - 6 workstreams with specific agent assignments
    - Dependencies and handoff protocols
    - Code examples and file paths
@@ -118,7 +118,7 @@ WS6: Testing & Validation
 - `/apps/compass/components/explore/BrowseMode.tsx` - NEW: Browse mode
 
 ### My Library (WS4)
-- `/apps/compass/app/library/page.tsx` - Renamed from history
+- `/apps/compass/app/my-library/page.tsx` - Renamed from /history
 - `/apps/compass/components/library/FilterBar.tsx` - NEW: Filters
 - `/apps/compass/components/library/CollectionManager.tsx` - NEW: Collections
 - `/apps/compass/components/SavedBadge.tsx` - NEW: Reusable badge
@@ -219,8 +219,8 @@ Before final deployment:
 **Awaiting user confirmation to begin delegation.**
 
 Once approved:
-1. Orchestrator spawns WS1 agents (navigation-architect + ux-writer)
-2. Orchestrator spawns WS2 agents (ux-designer + frontend-form-builder)
+1. Delivery Lead spawns WS1 agents (navigation-architect + ux-writer)
+2. Delivery Lead spawns WS2 agents (ux-designer + frontend-form-builder)
 3. Agents work in parallel on foundation workstreams
 4. Progress updates provided at key milestones
 

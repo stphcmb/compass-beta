@@ -53,17 +53,17 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
     if (item.href === '/authors') {
       return pathname === '/authors' || pathname.startsWith('/authors/')
     }
-    if (item.href === '/explore') {
-      return pathname === '/explore' || pathname === '/results'
+    if (item.href === '/browse') {
+      return pathname === '/browse' || pathname === '/results'
     }
-    if (item.href === '/history') {
-      return pathname === '/history' || pathname.startsWith('/history')
+    if (item.href === '/my-library') {
+      return pathname === '/my-library' || pathname.startsWith('/my-library')
     }
     if (item.href === '/admin') {
       return pathname === '/admin' || pathname.startsWith('/admin')
     }
-    if (item.href === '/research-assistant') {
-      return pathname === '/research-assistant' || pathname.startsWith('/research-assistant')
+    if (item.href === '/check-draft') {
+      return pathname === '/check-draft' || pathname.startsWith('/check-draft')
     }
     return pathname === item.href
   }

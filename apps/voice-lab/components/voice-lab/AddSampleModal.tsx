@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Loader2, AlertCircle } from 'lucide-react'
 import type { VoiceSampleCategory } from '@/lib/voice-lab/types'
 
@@ -75,7 +75,23 @@ export default function AddSampleModal({
     }
   }
 
+  // Handle Escape key to close modal
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        handleClose()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, isSubmitting])
+
   if (!isOpen) return null
+
+  // TODO: Add focus trap with library like focus-trap-react
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -83,19 +99,26 @@ export default function AddSampleModal({
       <div
         className="absolute inset-0 bg-black/50"
         onClick={handleClose}
+        aria-hidden="true"
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-sample-modal-title"
+        className="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Add Writing Sample</h2>
+          <h2 id="add-sample-modal-title" className="text-lg font-semibold text-gray-900">Add Writing Sample</h2>
           <button
             onClick={handleClose}
             disabled={isSubmitting}
+            aria-label="Close modal"
             className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -123,11 +146,11 @@ export default function AddSampleModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 resize-none disabled:bg-gray-50 disabled:text-gray-500"
             />
             <div className="flex justify-between mt-1 text-xs">
-              <span className={charCount < MIN_CHARS ? 'text-red-500' : 'text-gray-500'}>
+              <span className={charCount < MIN_CHARS ? 'text-red-500' : 'text-gray-600'}>
                 {charCount} characters
                 {charCount < MIN_CHARS && ` (need ${MIN_CHARS - charCount} more)`}
               </span>
-              <span className="text-gray-400">
+              <span className="text-gray-500">
                 ~{Math.round(content.split(/\s+/).filter(w => w).length)} words
               </span>
             </div>
@@ -136,7 +159,7 @@ export default function AddSampleModal({
           {/* Category select */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Category <span className="text-gray-400 font-normal">(optional)</span>
+              Category <span className="text-gray-500 font-normal">(optional)</span>
             </label>
             <select
               value={category}
@@ -155,7 +178,7 @@ export default function AddSampleModal({
           {/* Notes input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes <span className="text-gray-400 font-normal">(optional)</span>
+              Notes <span className="text-gray-500 font-normal">(optional)</span>
             </label>
             <input
               type="text"

@@ -57,13 +57,13 @@ export default function VoiceProfileCard({ profile, onApplyVoice }: VoiceProfile
             </div>
 
             {profile.description && (
-              <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                 {profile.description}
               </p>
             )}
 
             {/* Stats row */}
-            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+            <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
               <span className="flex items-center gap-1">
                 <FileText className="w-3.5 h-3.5" />
                 {profile.sample_count} samples
@@ -101,14 +101,14 @@ export default function VoiceProfileCard({ profile, onApplyVoice }: VoiceProfile
           <div className="flex items-center gap-2 mt-auto">
             <Link
               href={`/library/${profile.slug || profile.id}`}
-              className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
+              className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
             >
               View
             </Link>
             {onApplyVoice && (
               <button
                 onClick={() => onApplyVoice(profile.id)}
-                className="text-sm text-violet-600 hover:text-violet-700 px-3 py-1.5 rounded-md hover:bg-violet-50 transition-colors flex items-center gap-1"
+                className="text-sm text-violet-600 hover:text-violet-700 px-3 py-1.5 rounded-md hover:bg-violet-50 transition-colors flex items-center gap-1 focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
               >
                 Apply Voice
                 <ArrowRight className="w-3.5 h-3.5" />

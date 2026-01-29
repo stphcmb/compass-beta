@@ -15,7 +15,7 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home, tooltip: 'Voice Lab overview' },
-    { href: '/library', label: 'Library', icon: Library, tooltip: 'Browse all voice profiles' },
+    { href: '/library', label: 'Library', icon: Library, tooltip: 'View and manage your voice profiles' },
     { href: '/new', label: 'New Profile', icon: Plus, tooltip: 'Create a new voice profile' },
   ]
 
@@ -42,20 +42,21 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 text-xl font-bold transition-all duration-200 hover:scale-105"
+          className="flex items-center gap-2 text-xl font-bold transition-all duration-200 hover:scale-105 focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none rounded-lg"
           style={{
             background: 'linear-gradient(135deg, #A78BFA 0%, #8B5CF6 50%, #7C3AED 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
           }}
+          aria-label="Voice Lab: Go to home page"
         >
-          <Mic className="w-5 h-5 text-violet-400" />
+          <Mic className="w-5 h-5 text-violet-400" aria-hidden="true" />
           Voice Lab
         </Link>
 
         {/* Navigation */}
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1" aria-label="Main navigation">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href ||
@@ -64,7 +65,7 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:outline-none"
                 style={{
                   background: isActive
                     ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.15) 100%)'
@@ -85,9 +86,11 @@ export default function Header({ sidebarCollapsed = false }: HeaderProps) {
                   }
                 }}
                 title={item.tooltip}
+                aria-label={`${item.label}: ${item.tooltip}`}
+                aria-current={isActive ? 'page' : undefined}
               >
-                <Icon className="w-4 h-4" />
-                {item.label}
+                <Icon className="w-4 h-4" aria-hidden="true" />
+                <span className="hidden sm:inline">{item.label}</span>
               </Link>
             )
           })}

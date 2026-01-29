@@ -7,7 +7,19 @@ import { X, Quote, ExternalLink, BookOpen, FileText, Video, Mic, Newspaper, Grad
 import { getAuthorWithDetails } from '@/lib/api/thought-leaders'
 import { CitationBadge, CitationStatus } from './CitationBadge'
 
+interface CachedAuthorData {
+  id: string
+  name: string
+  header_affiliation?: string | null
+  primary_affiliation?: string | null
+  notes?: string | null
+  domains?: number[] // Domain IDs from optimized API
+  created_at?: string | null
+  credibility_tier?: string | null
+}
+
 interface AuthorDetailPanelProps {
+  cachedAuthor?: CachedAuthorData | null // Optional: Basic author data from listing page for instant display
   authorId: string | null
   isOpen: boolean
   onClose: () => void
@@ -68,7 +80,7 @@ function getSourceIcon(type: string) {
   }
 }
 
-export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded = false }: AuthorDetailPanelProps) {
+export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded = false, cachedAuthor = null }: AuthorDetailPanelProps) {
   const router = useRouter()
   const [author, setAuthor] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -80,20 +92,29 @@ export default function AuthorDetailPanel({ authorId, isOpen, onClose, embedded 
 
   useEffect(() => {
     if (authorId && isOpen) {
-      const fetchAuthor = async () => {
+      // If we have cached data, show it immediately
+      if (cachedAuthor && cachedAuthor.id === authorId) {
+        setAuthor(cachedAuthor)
+        setLoading(false)
+      } else {
         setLoading(true)
+      }
+
+      // Fetch full details (either in background if cached, or as primary load)
+      const fetchFullDetails = async () => {
         try {
           const data = await getAuthorWithDetails(authorId)
           if (data) setAuthor(data)
         } catch (error) {
-          console.error('Error fetching author:', error)
+          console.error('Error fetching full author details:', error)
         } finally {
           setLoading(false)
         }
       }
-      fetchAuthor()
+      
+      fetchFullDetails()
     }
-  }, [authorId, isOpen])
+  }, [authorId, isOpen, cachedAuthor])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

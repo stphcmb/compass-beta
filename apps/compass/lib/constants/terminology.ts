@@ -55,7 +55,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     featured: false,
   },
   {
-    href: '/research-assistant',
+    href: '/check-draft',
     label: 'Check Draft',
     icon: 'Search',
     description: 'Validate your writing',
@@ -64,7 +64,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     featured: true,
   },
   {
-    href: '/explore',
+    href: '/browse',
     label: 'Browse Topics',
     icon: 'Compass',
     description: 'Explore perspectives',
@@ -72,7 +72,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     featured: false,
   },
   {
-    href: '/history',
+    href: '/my-library',
     label: 'My Library',
     icon: 'BookMarked',
     description: 'Saved analyses',

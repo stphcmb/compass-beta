@@ -83,7 +83,7 @@ export default function SampleCard({
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className="flex-shrink-0 w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
-          <FileText className="w-4 h-4 text-gray-500" />
+          <FileText className="w-4 h-4 text-gray-600" />
         </div>
 
         {/* Content */}
@@ -105,7 +105,7 @@ export default function SampleCard({
           </button>
 
           {/* Metadata row */}
-          <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500">
+          <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-600">
             <span>{sample.word_count} words</span>
             <span className={quality.color}>{quality.label}</span>
             {sample.source_name && (
@@ -148,9 +148,10 @@ export default function SampleCard({
             {onViewInsights && insightCount > 0 && (
               <button
                 onClick={() => onViewInsights(sample.id)}
-                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
+                aria-label="View insights for this sample"
+                className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
               >
-                <Eye className="w-3.5 h-3.5" />
+                <Eye aria-hidden="true" className="w-3.5 h-3.5" />
               </button>
             )}
 
@@ -158,16 +159,17 @@ export default function SampleCard({
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
+                aria-label="Delete this sample"
                 className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 disabled:opacity-50"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 aria-hidden="true" className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
           {/* Notes (if any) */}
           {sample.notes && (
-            <p className="text-xs text-gray-400 mt-2 italic">
+            <p className="text-xs text-gray-600 mt-2 italic">
               Note: {sample.notes}
             </p>
           )}

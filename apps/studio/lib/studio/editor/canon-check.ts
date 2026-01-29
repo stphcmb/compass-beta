@@ -20,10 +20,9 @@ export async function checkCanon(content: string): Promise<CanonCheckResult> {
   // with authors, camps, and thought leadership data
 
   const result: CanonCheckResult = {
-    overallScore: 0,
-    matchedCamps: [],
-    missingPerspectives: [],
-    summary: 'Canon check is not available in standalone Studio mode. Use Compass app for full thought leadership analysis.',
+    matched_camps: [],
+    missing_perspectives: [],
+    checked_at: new Date().toISOString(),
   }
 
   return result

@@ -1307,10 +1307,10 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
               {savedAnalyses.length > 4 && (
                 <div className="text-center mt-3">
                   <Link
-                    href="/history"
+                    href="/my-library"
                     className="text-[12px] text-indigo-600 hover:text-indigo-700 hover:underline"
                   >
-                    +{savedAnalyses.length - 4} more in history →
+                    +{savedAnalyses.length - 4} more in library →
                   </Link>
                 </div>
               )}

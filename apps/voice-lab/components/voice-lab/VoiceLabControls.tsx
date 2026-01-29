@@ -91,7 +91,7 @@ export default function VoiceLabControls({
           ) : selectedProfile ? (
             <span className="max-w-[150px] truncate">{selectedProfile.name}</span>
           ) : (
-            <span className="text-gray-500">No voice applied</span>
+            <span className="text-gray-600">No voice applied</span>
           )}
           <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
         </button>
@@ -118,7 +118,7 @@ export default function VoiceLabControls({
             {profiles.length > 0 && (
               <>
                 <div className="border-t border-gray-100 my-1" />
-                <div className="px-3 py-1 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <div className="px-3 py-1 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Your Profiles
                 </div>
               </>
@@ -146,7 +146,7 @@ export default function VoiceLabControls({
             ))}
 
             {profiles.length === 0 && !loading && (
-              <div className="px-3 py-2 text-sm text-gray-500 italic">
+              <div className="px-3 py-2 text-sm text-gray-600 italic">
                 No voice profiles yet
               </div>
             )}
@@ -215,7 +215,7 @@ export function VoiceLabControlsCompact({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-gray-400">
+      <div className="flex items-center gap-2 text-sm text-gray-500">
         <Loader2 className="w-4 h-4 animate-spin" />
         <span>Loading voices...</span>
       </div>

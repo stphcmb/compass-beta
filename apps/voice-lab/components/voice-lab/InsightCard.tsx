@@ -43,10 +43,10 @@ export default function InsightCard({
           {typeConfig.label}
         </span>
 
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="flex items-center gap-2 text-xs text-gray-600">
           <span>{insight.sample_count} samples</span>
           <div className="flex items-center gap-1">
-            <span className="text-gray-400">Confidence:</span>
+            <span className="text-gray-500">Confidence:</span>
             <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
               <div
                 className={`h-full bg-violet-500 rounded-full ${confidenceInfo.width}`}
@@ -67,7 +67,7 @@ export default function InsightCard({
         <div className="mt-3">
           <button
             onClick={() => setShowExamples(!showExamples)}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+            className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800"
           >
             <Quote className="w-3.5 h-3.5" />
             {insight.examples.length} example{insight.examples.length !== 1 ? 's' : ''}

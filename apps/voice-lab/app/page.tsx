@@ -16,7 +16,7 @@ export default function VoiceLabPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-gray-500">Loading Voice Lab...</div>
+      <div className="text-gray-600">Loading Voice Lab...</div>
     </div>
   )
 }

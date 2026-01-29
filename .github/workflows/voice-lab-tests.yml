@@ -1,0 +1,105 @@
+name: Voice Lab E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'apps/voice-lab/**'
+      - 'packages/**'
+      - '.github/workflows/voice-lab-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/voice-lab/**'
+      - 'packages/**'
+
+jobs:
+  test:
+    name: Playwright Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: apps/voice-lab
+
+      - name: Run Playwright tests
+        run: pnpm --filter @compass/voice-lab test
+        env:
+          # Supabase
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+          # Clerk
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+
+          # Test credentials (for authenticated tests)
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+          # Gemini AI
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/voice-lab/playwright-report/
+          retention-days: 30
+
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots
+          path: apps/voice-lab/test-results/
+          retention-days: 7
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            const reportPath = 'apps/voice-lab/playwright-report/index.html'
+            const reportExists = fs.existsSync(reportPath)
+
+            const status = '${{ job.status }}'
+            const emoji = status === 'success' ? '✅' : '❌'
+
+            const comment = `## ${emoji} Voice Lab E2E Tests ${status === 'success' ? 'Passed' : 'Failed'}
+
+            **Branch:** \`${{ github.head_ref || github.ref_name }}\`
+            **Commit:** ${{ github.sha }}
+
+            ${reportExists ? '📊 [View Full Test Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})' : ''}
+
+            ${status !== 'success' ? '⚠️ Check the uploaded artifacts for screenshots and detailed logs.' : ''}`
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            })
