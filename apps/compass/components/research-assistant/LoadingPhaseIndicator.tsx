@@ -43,7 +43,14 @@ const PhaseItem = memo(({
       {isComplete ? (
         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
       ) : isCurrent ? (
-        <Loader2 className="w-4 h-4 text-[#1075DC] flex-shrink-0 animate-spin" />
+        <Loader2
+          key="spinner"
+          className="w-4 h-4 text-[#1075DC] flex-shrink-0 animate-spin"
+          style={{
+            transform: 'translateZ(0)',
+            willChange: 'transform',
+          }}
+        />
       ) : (
         <div className="w-4 h-4 rounded-full border-2 border-[#AADAF9] flex-shrink-0" />
       )}
@@ -63,13 +70,30 @@ const PhaseItem = memo(({
 
 PhaseItem.displayName = 'PhaseItem'
 
+// Custom comparison function to prevent unnecessary re-renders
+const arePropsEqual = (
+  prevProps: { phase: LoadingPhase; index: number; currentPhase: number },
+  nextProps: { phase: LoadingPhase; index: number; currentPhase: number }
+) => {
+  // Only re-render if the phase status changes (not just currentPhase changes)
+  const prevStatus = prevProps.index === prevProps.currentPhase ? 'current' :
+                     prevProps.index < prevProps.currentPhase ? 'complete' : 'pending'
+  const nextStatus = nextProps.index === nextProps.currentPhase ? 'current' :
+                     nextProps.index < nextProps.currentPhase ? 'complete' : 'pending'
+
+  return prevStatus === nextStatus && prevProps.phase.message === nextProps.phase.message
+}
+
+// Re-export with custom comparison
+const MemoizedPhaseItem = memo(PhaseItem, arePropsEqual)
+
 // Main component with memoization to prevent parent re-renders
 export const LoadingPhaseIndicator = memo(({ phases, currentPhase }: LoadingPhaseIndicatorProps) => {
   return (
     <div className="bg-[#DCF2FA] border border-[#AADAF9] rounded-xl p-4 mb-6">
       <div className="flex flex-col gap-2">
         {phases.map((phase, idx) => (
-          <PhaseItem
+          <MemoizedPhaseItem
             key={idx}
             phase={phase}
             index={idx}

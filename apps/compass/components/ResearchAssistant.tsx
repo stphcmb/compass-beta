@@ -1,50 +1,42 @@
 'use client'
 
-import { useState, useRef, useEffect, useTransition } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { ResearchAssistantAnalyzeResponse } from '@/lib/research-assistant'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
-import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, ChevronDown, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Plus, Share2 } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Share2 } from 'lucide-react'
 import { LoadingPhaseIndicator } from '@/components/research-assistant/LoadingPhaseIndicator'
-
-// Loading phase messages for progressive feedback
-const LOADING_PHASES = [
-  { message: 'Analyzing your text...', duration: 2000 },
-  { message: 'Finding relevant thought leaders...', duration: 4000 },
-  { message: 'Comparing perspectives to your draft...', duration: 5000 },
-  { message: 'Generating editorial suggestions...', duration: 0 }, // Final phase, no auto-advance
-]
-
-interface ResearchAssistantProps {
-  showTitle?: boolean // When true, shows page title (for standalone page)
-  initialAnalysisId?: string | null // Analysis ID from URL for shareable links
-}
+import { useResearchState } from '@/hooks/useResearchState'
+import { useAnalysisActions } from '@/hooks/useAnalysisActions'
+import { LOADING_PHASES, STORAGE_KEYS, CONFIG, EVENTS } from '@/components/research-assistant/lib/constants'
+import type { ResearchAssistantProps, LoadTextEventDetail, PendingAnalysis } from '@/components/research-assistant/lib/types'
 
 export default function ResearchAssistant({ showTitle = false, initialAnalysisId }: ResearchAssistantProps) {
   const { openPanel } = useAuthorPanel()
-  const [text, setText] = useState('')
-  const [result, setResult] = useState<ResearchAssistantAnalyzeResponse | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [loadingPhase, setLoadingPhase] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [savedOnce, setSavedOnce] = useState(false)
-  const [allAuthors, setAllAuthors] = useState<Array<{ id: string; name: string }>>([])
-  const [copying, setCopying] = useState(false)
-  const [exporting, setExporting] = useState(false)
-  const [likedSummary, setLikedSummary] = useState(false)
-  const [likedCamps, setLikedCamps] = useState<Set<number>>(new Set())
-  const [savedAnalyses, setSavedAnalyses] = useState<any[]>([])
-  const [pendingFromHome, setPendingFromHome] = useState<boolean | null>(null) // null = checking, true/false = resolved
-  const [urlCopied, setUrlCopied] = useState(false)
-  const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null)
-  const [analysisNotFound, setAnalysisNotFound] = useState(false)
   const { showToast } = useToast()
 
-  // Use React 19 useTransition for non-blocking state updates
-  const [isPending, startTransition] = useTransition()
+  // Centralized state management via useResearchState hook
+  const {
+    state,
+    dispatch,
+    setText,
+    setResult,
+    setLoading,
+    setLoadingPhase,
+    setError,
+    toggleSummaryLike,
+    toggleCampLike,
+    resetAnalysis,
+    loadAnalysis,
+  } = useResearchState()
+
+  // Centralized action handlers via useAnalysisActions hook
+  const actions = useAnalysisActions({ state, dispatch, showToast })
+
+  // Local UI state for text expansion
+  const [showFullText, setShowFullText] = useState(false)
 
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const authorsRef = useRef<HTMLDivElement>(null)
@@ -55,16 +47,16 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
   useEffect(() => {
     const runPendingAnalysis = async () => {
       try {
-        const pending = sessionStorage.getItem('pendingAnalysis')
+        const pending = sessionStorage.getItem(STORAGE_KEYS.PENDING_ANALYSIS)
         if (pending) {
-          const { text: pendingText, autoAnalyze, timestamp } = JSON.parse(pending)
+          const { text: pendingText, autoAnalyze, timestamp } = JSON.parse(pending) as PendingAnalysis
           // Only use if recent (within 10 seconds) to avoid stale data
-          if (autoAnalyze && Date.now() - timestamp < 10000) {
-            sessionStorage.removeItem('pendingAnalysis')
+          if (autoAnalyze && Date.now() - timestamp < CONFIG.PENDING_ANALYSIS_TIMEOUT) {
+            sessionStorage.removeItem(STORAGE_KEYS.PENDING_ANALYSIS)
             setText(pendingText)
             setLoading(true)
             setLoadingPhase(0)
-            setPendingFromHome(true)
+            dispatch({ type: 'SET_PENDING_FROM_HOME', payload: true })
 
             // Start cycling through loading phases
             const phaseTimers: NodeJS.Timeout[] = []
@@ -73,11 +65,8 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
             const advancePhase = () => {
               if (currentPhase < LOADING_PHASES.length - 1) {
                 currentPhase++
-                // Use requestAnimationFrame for smooth 60fps updates
                 requestAnimationFrame(() => {
-                  startTransition(() => {
-                    setLoadingPhase(currentPhase)
-                  })
+                  setLoadingPhase(currentPhase)
                 })
                 const nextDuration = LOADING_PHASES[currentPhase].duration
                 if (nextDuration > 0) {
@@ -101,98 +90,78 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
 
               if (!res.ok) {
                 phaseTimers.forEach(timer => clearTimeout(timer))
-                startTransition(() => {
-                  setError(data.error || data.message || 'Analysis failed')
-                  setLoading(false)
-                  setLoadingPhase(0)
-                  setPendingFromHome(false)
-                })
+                setError(data.error || data.message || 'Analysis failed')
+                setLoading(false)
+                setLoadingPhase(0)
+                dispatch({ type: 'SET_PENDING_FROM_HOME', payload: false })
               } else {
                 // Save and show results inline
-                const analysisId = addToRecentSearches(pendingText, data)
-                updateSavedAnalysisCache(pendingText, data)
+                const analysisId = actions.addToRecentSearches(pendingText, data)
+                actions.updateSavedAnalysisCache(pendingText, data)
                 phaseTimers.forEach(timer => clearTimeout(timer))
 
-                // Batch all state updates in a single transition
-                startTransition(() => {
-                  setLoading(false)
-                  setLoadingPhase(0)
-                  setResult(data)
-                  setSavedOnce(true)
-                  setPendingFromHome(false)
-                })
+                setLoading(false)
+                setLoadingPhase(0)
+                setResult(data)
+                dispatch({ type: 'SET_SAVED_ONCE', payload: true })
+                dispatch({ type: 'SET_PENDING_FROM_HOME', payload: false })
 
                 // Update URL with analysis ID for sharing
-                const url = new URL(window.location.href)
-                url.searchParams.set('analysis', analysisId)
-                window.history.replaceState({}, '', url.toString())
-                setCurrentAnalysisId(analysisId)
+                actions.updateUrlWithAnalysisId(analysisId)
               }
             } catch (err) {
               phaseTimers.forEach(timer => clearTimeout(timer))
-              startTransition(() => {
-                setError(err instanceof Error ? err.message : 'Network error')
-                setLoading(false)
-                setLoadingPhase(0)
-                setPendingFromHome(false)
-              })
+              setError(err instanceof Error ? err.message : 'Network error')
+              setLoading(false)
+              setLoadingPhase(0)
+              dispatch({ type: 'SET_PENDING_FROM_HOME', payload: false })
             }
             return
           }
-          sessionStorage.removeItem('pendingAnalysis')
+          sessionStorage.removeItem(STORAGE_KEYS.PENDING_ANALYSIS)
         }
       } catch (e) {
         console.error('Error checking pending analysis:', e)
       }
-      setPendingFromHome(false)
+      dispatch({ type: 'SET_PENDING_FROM_HOME', payload: false })
     }
 
     runPendingAnalysis()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Listen for load text events from sidebar/home
   useEffect(() => {
     const handleLoadText = (e: Event) => {
-      const ev = e as CustomEvent<{ text: string; cachedResult?: ResearchAssistantAnalyzeResponse; autoAnalyze?: boolean; id?: string }>
+      const ev = e as CustomEvent<LoadTextEventDetail>
       if (ev?.detail?.text) {
         const textToLoad = ev.detail.text
 
         if (ev.detail.cachedResult && ev.detail.id) {
           // Show results inline
-          setText(ev.detail.text)
-          setResult(ev.detail.cachedResult)
-          setSavedOnce(true)
-          setError(null)
+          loadAnalysis(ev.detail.text, ev.detail.cachedResult, ev.detail.id)
           // Update URL with analysis ID for sharing
-          const url = new URL(window.location.href)
-          url.searchParams.set('analysis', ev.detail.id)
-          window.history.replaceState({}, '', url.toString())
-          setCurrentAnalysisId(ev.detail.id)
+          actions.updateUrlWithAnalysisId(ev.detail.id)
         } else if (ev.detail.autoAnalyze) {
           // Auto-analyze - set text and trigger analysis
           setText(textToLoad)
           setError(null)
-          setLikedSummary(false)
-          setLikedCamps(new Set())
-          setResult(null)
-          setSavedOnce(false)
+          dispatch({ type: 'RESET_ANALYSIS' })
           setTimeout(() => {
-            handleAnalyze(textToLoad)
+            actions.handleAnalyze(textToLoad)
           }, 50)
         } else {
           // Just load text without analyzing
           setText(textToLoad)
           setError(null)
-          setLikedSummary(false)
-          setLikedCamps(new Set())
-          setResult(null)
-          setSavedOnce(false)
+          dispatch({ type: 'RESET_ANALYSIS' })
         }
       }
     }
 
-    window.addEventListener('load-research-assistant-text', handleLoadText as EventListener)
-    return () => window.removeEventListener('load-research-assistant-text', handleLoadText as EventListener)
+    window.addEventListener(EVENTS.LOAD_RESEARCH_ASSISTANT_TEXT, handleLoadText as EventListener)
+    return () => window.removeEventListener(EVENTS.LOAD_RESEARCH_ASSISTANT_TEXT, handleLoadText as EventListener)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Fetch all authors on mount for linkification
@@ -200,52 +169,41 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     const fetchAuthors = async () => {
       try {
         const authors = await getThoughtLeaders()
-        setAllAuthors(authors.map(a => ({ id: a.id, name: a.name })))
+        dispatch({ type: 'SET_ALL_AUTHORS', payload: authors.map(a => ({ id: a.id, name: a.name })) })
       } catch (error) {
         console.error('Error fetching authors for linkification:', error)
       }
     }
     fetchAuthors()
-  }, [])
+  }, [dispatch])
 
   // Load analysis from URL param (for shareable links)
   useEffect(() => {
     if (!initialAnalysisId) return
 
     try {
-      const saved = JSON.parse(localStorage.getItem('savedResearchAssistantAnalyses') || '[]')
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.SAVED_ANALYSES) || '[]')
       const analysis = saved.find((a: any) => a.id === initialAnalysisId)
 
       if (analysis && analysis.cachedResult) {
-        setText(analysis.text || '')
-        setResult(analysis.cachedResult)
-        setCurrentAnalysisId(analysis.id)
-        setSavedOnce(true)
-        setAnalysisNotFound(false)
+        loadAnalysis(analysis.text || '', analysis.cachedResult, analysis.id)
+        dispatch({ type: 'SET_ANALYSIS_NOT_FOUND', payload: false })
       } else {
         // Analysis not found in localStorage (different device or cleared)
-        setAnalysisNotFound(true)
+        dispatch({ type: 'SET_ANALYSIS_NOT_FOUND', payload: true })
       }
     } catch (error) {
       console.error('Error loading analysis from URL:', error)
-      setAnalysisNotFound(true)
+      dispatch({ type: 'SET_ANALYSIS_NOT_FOUND', payload: true })
     }
-  }, [initialAnalysisId])
-
-  // Helper to update URL with analysis ID
-  const updateUrlWithAnalysisId = (analysisId: string) => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('analysis', analysisId)
-    window.history.replaceState({}, '', url.toString())
-    setCurrentAnalysisId(analysisId)
-  }
+  }, [initialAnalysisId, loadAnalysis, dispatch])
 
   // Load saved analyses for history dropdown
   useEffect(() => {
     const loadSavedAnalyses = () => {
       try {
-        const saved = JSON.parse(localStorage.getItem('savedResearchAssistantAnalyses') || '[]')
-        setSavedAnalyses(saved.slice(0, 10))
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.SAVED_ANALYSES) || '[]')
+        dispatch({ type: 'SET_SAVED_ANALYSES', payload: saved.slice(0, CONFIG.MAX_HISTORY_DROPDOWN) })
       } catch (error) {
         console.error('Error loading saved analyses:', error)
       }
@@ -254,268 +212,12 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
 
     // Listen for new saves
     const handleNewSave = () => loadSavedAnalyses()
-    window.addEventListener('research-assistant-saved', handleNewSave)
-    return () => window.removeEventListener('research-assistant-saved', handleNewSave)
-  }, [])
-
-  // Load a saved analysis - show results inline if cached, auto-analyze if not
-  const loadSavedAnalysis = (analysis: any) => {
-    if (analysis.cachedResult && analysis.id) {
-      // Show results inline
-      setText(analysis.text)
-      setResult(analysis.cachedResult)
-      setSavedOnce(true)
-      setError(null)
-      updateUrlWithAnalysisId(analysis.id)
-    } else {
-      // No cache - set text and trigger analysis
-      setText(analysis.text)
-      setError(null)
-      setSavedOnce(true)
-      setLikedSummary(false)
-      setLikedCamps(new Set())
-      setResult(null)
-      setTimeout(() => {
-        handleAnalyze(analysis.text)
-      }, 50)
-    }
-  }
-
-  // Clear and start a new analysis
-  const startNewAnalysis = () => {
-    setText('')
-    setResult(null)
-    setError(null)
-    setSavedOnce(false)
-    setLikedSummary(false)
-    setLikedCamps(new Set())
-  }
+    window.addEventListener(EVENTS.RESEARCH_ASSISTANT_SAVED, handleNewSave)
+    return () => window.removeEventListener(EVENTS.RESEARCH_ASSISTANT_SAVED, handleNewSave)
+  }, [dispatch])
 
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  // Update cached result for existing saved analyses
-  const updateSavedAnalysisCache = (searchText: string, analysisResult: ResearchAssistantAnalyzeResponse) => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('savedResearchAssistantAnalyses') || '[]')
-      const trimmedText = searchText.trim()
-
-      let updated = false
-      const updatedSaved = saved.map((s: any) => {
-        if (s.text?.trim() === trimmedText) {
-          updated = true
-          return { ...s, cachedResult: analysisResult }
-        }
-        return s
-      })
-
-      if (updated) {
-        localStorage.setItem('savedResearchAssistantAnalyses', JSON.stringify(updatedSaved))
-        // Refresh the local state
-        setSavedAnalyses(updatedSaved.slice(0, 10))
-        // Notify sidebar
-        window.dispatchEvent(new CustomEvent('research-assistant-saved'))
-      }
-    } catch (error) {
-      console.error('Error updating saved analysis cache:', error)
-    }
-  }
-
-  const addToRecentSearches = (searchText: string, analysisResult: ResearchAssistantAnalyzeResponse): string => {
-    const analysisId = `${Date.now()}`
-    try {
-      const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
-
-      // Create preview (first 60 chars)
-      const preview = searchText.length > 60 ? searchText.substring(0, 60) + '...' : searchText
-
-      // Remove if already exists
-      const filtered = recent.filter((s: any) => s.query !== preview)
-
-      // Add to beginning with cached result
-      filtered.unshift({
-        id: analysisId,
-        query: preview,
-        type: 'research-assistant',
-        fullText: searchText,
-        cachedResult: analysisResult,
-        timestamp: new Date().toISOString()
-      })
-
-      // Keep only last 20
-      const limited = filtered.slice(0, 20)
-      localStorage.setItem('recentSearches', JSON.stringify(limited))
-
-      // Also save to savedResearchAssistantAnalyses for the results page
-      const saved = JSON.parse(localStorage.getItem('savedResearchAssistantAnalyses') || '[]')
-      const savedFiltered = saved.filter((s: any) => s.text?.trim() !== searchText.trim())
-      savedFiltered.unshift({
-        id: analysisId,
-        text: searchText.trim(),
-        preview,
-        cachedResult: analysisResult,
-        timestamp: new Date().toISOString()
-      })
-      localStorage.setItem('savedResearchAssistantAnalyses', JSON.stringify(savedFiltered.slice(0, 20)))
-      window.dispatchEvent(new CustomEvent('research-assistant-saved'))
-    } catch (error) {
-      console.error('Error adding to recent searches:', error)
-    }
-    return analysisId
-  }
-
-  // Check if we have a cached result for given text
-  const findCachedResult = (searchText: string): ResearchAssistantAnalyzeResponse | null => {
-    const trimmedText = searchText.trim()
-    // Check saved analyses
-    const cached = savedAnalyses.find(a => a.text?.trim() === trimmedText && a.cachedResult)
-    if (cached?.cachedResult) return cached.cachedResult
-    // Check recent searches
-    try {
-      const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
-      const recentCached = recent.find((s: any) => s.fullText?.trim() === trimmedText && s.cachedResult)
-      if (recentCached?.cachedResult) return recentCached.cachedResult
-    } catch {}
-    return null
-  }
-
-  // Unified analyze function - accepts optional text parameter for auto-analyze
-  const handleAnalyze = async (textOverride?: string) => {
-    const textToAnalyze = textOverride || text
-
-    if (!textToAnalyze.trim()) {
-      if (!textOverride) setError('Please enter some text to analyze')
-      return
-    }
-
-    // Check for cached result first - instant loading!
-    const cached = findCachedResult(textToAnalyze)
-    if (cached) {
-      // Show cached result inline immediately
-      setResult(cached)
-      setSavedOnce(true)
-      return
-    }
-
-    // Use transition for smooth state updates - prevents UI blocking
-    startTransition(() => {
-      setLoading(true)
-      setLoadingPhase(0)
-      setError(null)
-      setResult(null)
-    })
-
-    // Start cycling through loading phases
-    const phaseTimers: NodeJS.Timeout[] = []
-    let currentPhase = 0
-
-    const advancePhase = () => {
-      if (currentPhase < LOADING_PHASES.length - 1) {
-        currentPhase++
-        // Use requestAnimationFrame for smooth 60fps updates
-        requestAnimationFrame(() => {
-          startTransition(() => {
-            setLoadingPhase(currentPhase)
-          })
-        })
-        const nextDuration = LOADING_PHASES[currentPhase].duration
-        if (nextDuration > 0) {
-          phaseTimers.push(setTimeout(advancePhase, nextDuration))
-        }
-      }
-    }
-
-    if (LOADING_PHASES[0].duration > 0) {
-      phaseTimers.push(setTimeout(advancePhase, LOADING_PHASES[0].duration))
-    }
-
-    try {
-      const response = await fetch('/api/brain/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: textToAnalyze,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        startTransition(() => {
-          setError(data.error || data.message || 'Analysis failed')
-          phaseTimers.forEach(timer => clearTimeout(timer))
-          setLoading(false)
-          setLoadingPhase(0)
-        })
-      } else {
-        // Save and show results inline
-        const analysisId = addToRecentSearches(textToAnalyze, data)
-        updateSavedAnalysisCache(textToAnalyze, data)
-        phaseTimers.forEach(timer => clearTimeout(timer))
-
-        // Batch all state updates in a single transition
-        startTransition(() => {
-          setLoading(false)
-          setLoadingPhase(0)
-          setResult(data)
-          setSavedOnce(true)
-        })
-        updateUrlWithAnalysisId(analysisId)
-      }
-    } catch (err) {
-      startTransition(() => {
-        setError(err instanceof Error ? err.message : 'Network error')
-        phaseTimers.forEach(timer => clearTimeout(timer))
-        setLoading(false)
-        setLoadingPhase(0)
-      })
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault()
-      handleAnalyze()
-    }
-  }
-
-  const handleSave = async () => {
-    if (!text.trim() || saving) return
-    setSaving(true)
-    try {
-      const saved = JSON.parse(localStorage.getItem('savedResearchAssistantAnalyses') || '[]')
-
-      // Create preview from text (first 60 characters)
-      const preview = text.trim().substring(0, 60) + (text.trim().length > 60 ? '...' : '')
-
-      // Remove if already exists (to avoid duplicates)
-      const filtered = saved.filter((s: any) => s.text !== text.trim())
-
-      // Add to beginning with cached result for instant loading
-      filtered.unshift({
-        id: `research-assistant-${Date.now()}`,
-        text: text.trim(),
-        preview,
-        cachedResult: result, // Store the analysis result for instant loading
-        timestamp: new Date().toISOString()
-      })
-
-      // Keep only last 20
-      const limited = filtered.slice(0, 20)
-      localStorage.setItem('savedResearchAssistantAnalyses', JSON.stringify(limited))
-
-      setSavedOnce(true)
-      showToast('Analysis saved successfully')
-      window.dispatchEvent(new CustomEvent('research-assistant-saved', {
-        detail: { text: text.trim(), preview, cachedResult: result, timestamp: new Date().toISOString() }
-      }))
-    } catch (e) {
-      console.error('Error saving AI editor analysis:', e)
-      showToast('Failed to save analysis', 'error')
-    } finally {
-      setSaving(false)
-    }
   }
 
   // Save a helpful insight to history
@@ -528,9 +230,9 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
         type,
         content,
         campLabel: campLabel || null,
-        originalText: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
-        fullText: text, // Store full text for restoration
-        cachedResult: result, // Store full result for restoration
+        originalText: state.text.substring(0, 100) + (state.text.length > 100 ? '...' : ''),
+        fullText: state.text, // Store full text for restoration
+        cachedResult: state.result, // Store full result for restoration
         timestamp: new Date().toISOString()
       }
 
@@ -543,9 +245,9 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
 
       // Update local state
       if (type === 'summary') {
-        setLikedSummary(true)
+        toggleSummaryLike()
       } else if (campIdx !== undefined) {
-        setLikedCamps(prev => new Set([...prev, campIdx]))
+        toggleCampLike(campIdx)
       }
 
       showToast('Saved to your helpful insights!')
@@ -561,19 +263,15 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
   // Remove a helpful insight
   const removeHelpfulInsight = (type: 'summary' | 'camp', campIdx?: number) => {
     if (type === 'summary') {
-      setLikedSummary(false)
+      toggleSummaryLike()
     } else if (campIdx !== undefined) {
-      setLikedCamps(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(campIdx)
-        return newSet
-      })
+      toggleCampLike(campIdx)
     }
     showToast('Removed from helpful insights')
   }
 
   const formatAnalysisAsText = () => {
-    if (!result) return ''
+    if (!state.result) return ''
 
     const lines: string[] = []
 
@@ -584,7 +282,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     lines.push('')
 
     // Original text snippet
-    const textPreview = text.length > 200 ? text.substring(0, 200) + '...' : text
+    const textPreview = state.text.length > 200 ? state.text.substring(0, 200) + '...' : state.text
     lines.push('📝 ANALYZED TEXT:')
     lines.push(textPreview)
     lines.push('')
@@ -593,7 +291,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     lines.push('───────────────────────────────────────')
     lines.push('📊 SUMMARY')
     lines.push('───────────────────────────────────────')
-    lines.push(result.summary)
+    lines.push(state.result.summary)
     lines.push('')
 
     // Editorial Suggestions
@@ -603,25 +301,25 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     lines.push('')
 
     lines.push('✓ PERSPECTIVES YOU\'RE USING:')
-    result.editorialSuggestions.presentPerspectives.forEach((p) => {
+    state.result.editorialSuggestions.presentPerspectives.forEach((p) => {
       lines.push(`  • ${p}`)
     })
     lines.push('')
 
     lines.push('⚠ PERSPECTIVES YOU\'RE MISSING:')
-    result.editorialSuggestions.missingPerspectives.forEach((p) => {
+    state.result.editorialSuggestions.missingPerspectives.forEach((p) => {
       lines.push(`  • ${p}`)
     })
     lines.push('')
 
     // Thought Leaders
-    if (result.matchedCamps.length > 0) {
+    if (state.result.matchedCamps.length > 0) {
       lines.push('───────────────────────────────────────')
-      lines.push(`👥 RELEVANT THOUGHT LEADERS (${result.matchedCamps.length} perspectives)`)
+      lines.push(`👥 RELEVANT THOUGHT LEADERS (${state.result.matchedCamps.length} perspectives)`)
       lines.push('───────────────────────────────────────')
       lines.push('')
 
-      result.matchedCamps.forEach((camp) => {
+      state.result.matchedCamps.forEach((camp) => {
         lines.push(`■ ${camp.campLabel}`)
         lines.push(`  ${camp.explanation}`)
         lines.push('')
@@ -654,8 +352,8 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
   }
 
   const handleCopy = async () => {
-    if (!result || copying) return
-    setCopying(true)
+    if (!state.result || state.copying) return
+    dispatch({ type: 'SET_COPYING', payload: true })
     try {
       const formattedText = formatAnalysisAsText()
       await navigator.clipboard.writeText(formattedText)
@@ -664,20 +362,20 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
       console.error('Failed to copy:', err)
       showToast('Failed to copy to clipboard', 'error')
     } finally {
-      setCopying(false)
+      dispatch({ type: 'SET_COPYING', payload: false })
     }
   }
 
   const handleExportPDF = () => {
-    if (!result || exporting || !resultsRef.current) return
-    setExporting(true)
+    if (!state.result || state.exporting || !resultsRef.current) return
+    dispatch({ type: 'SET_EXPORTING', payload: true })
 
     try {
       // Create a new window with just the results content for printing
       const printWindow = window.open('', '_blank', 'width=800,height=600')
       if (!printWindow) {
         showToast('Please allow popups to export PDF', 'error')
-        setExporting(false)
+        dispatch({ type: 'SET_EXPORTING', payload: false })
         return
       }
 
@@ -847,37 +545,37 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
         </head>
         <body>
           <div class="header">
-            <h1>✨ Research Assistant Analysis</h1>
+            <h1>Research Assistant Analysis</h1>
             <div class="date">${date}</div>
           </div>
 
           <div class="section">
-            <h2>📊 Summary</h2>
-            <p class="summary-text">${result.summary}</p>
+            <h2>Summary</h2>
+            <p class="summary-text">${state.result.summary}</p>
           </div>
 
           <div class="section">
-            <h2>💡 Editorial Suggestions</h2>
+            <h2>Editorial Suggestions</h2>
             <div class="suggestions-grid">
               <div class="suggestion-box present">
-                <h3>✓ What You're Using</h3>
+                <h3>What You're Using</h3>
                 <ul>
-                  ${result.editorialSuggestions.presentPerspectives.map(p => `<li>${p}</li>`).join('')}
+                  ${state.result.editorialSuggestions.presentPerspectives.map(p => `<li>${p}</li>`).join('')}
                 </ul>
               </div>
               <div class="suggestion-box missing">
-                <h3>⚠ What You're Missing</h3>
+                <h3>What You're Missing</h3>
                 <ul>
-                  ${result.editorialSuggestions.missingPerspectives.map(p => `<li>${p}</li>`).join('')}
+                  ${state.result.editorialSuggestions.missingPerspectives.map(p => `<li>${p}</li>`).join('')}
                 </ul>
               </div>
             </div>
           </div>
 
-          ${result.matchedCamps.length > 0 ? `
+          ${state.result.matchedCamps.length > 0 ? `
           <div class="section">
-            <h2>👥 Relevant Thought Leaders</h2>
-            ${result.matchedCamps.map(camp => `
+            <h2>Relevant Thought Leaders</h2>
+            ${state.result.matchedCamps.map(camp => `
               <div class="camp">
                 <h3>${camp.campLabel}</h3>
                 <p class="camp-desc">${camp.explanation}</p>
@@ -885,8 +583,8 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                   <div class="author ${author.stance}">
                     <div class="author-name">${author.name}</div>
                     <span class="author-stance">${
-                      author.stance === 'agrees' ? '👍 Agrees' :
-                      author.stance === 'disagrees' ? '👎 Disagrees' : '↔ Partial'
+                      author.stance === 'agrees' ? 'Agrees' :
+                      author.stance === 'disagrees' ? 'Disagrees' : 'Partial'
                     }</span>
                     <p class="author-position"><strong>Position:</strong> ${author.position}</p>
                     ${author.draftConnection ? `<div class="author-connection"><strong>Connection:</strong> ${author.draftConnection}</div>` : ''}
@@ -899,7 +597,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
           ` : ''}
 
           <div class="footer">
-            Generated by Compass Research Assistant • ${date}
+            Generated by Compass Research Assistant - ${date}
           </div>
         </body>
         </html>
@@ -911,22 +609,22 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
       printWindow.onload = () => {
         setTimeout(() => {
           printWindow.print()
-          setExporting(false)
+          dispatch({ type: 'SET_EXPORTING', payload: false })
         }, 250)
       }
 
       // Fallback if onload doesn't fire
       setTimeout(() => {
-        if (exporting) {
+        if (state.exporting) {
           printWindow.print()
-          setExporting(false)
+          dispatch({ type: 'SET_EXPORTING', payload: false })
         }
       }, 1000)
 
     } catch (err) {
       console.error('Failed to export PDF:', err)
       showToast('Failed to generate PDF', 'error')
-      setExporting(false)
+      dispatch({ type: 'SET_EXPORTING', payload: false })
     }
   }
 
@@ -959,15 +657,15 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     const map = new Map<string, string>()
 
     // Add all authors from the database for comprehensive linkification
-    allAuthors.forEach(author => {
+    state.allAuthors.forEach(author => {
       if (author.id && author.name) {
         map.set(author.name, author.id)
       }
     })
 
     // Also add authors from matched camps (in case they have different data)
-    if (result?.matchedCamps) {
-      result.matchedCamps.forEach(camp => {
+    if (state.result?.matchedCamps) {
+      state.result.matchedCamps.forEach(camp => {
         camp.topAuthors.forEach(author => {
           if (author.id && author.name) {
             map.set(author.name, author.id)
@@ -1055,10 +753,17 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     return parts.length > 0 ? parts : text
   }
 
-  const canAnalyze = text.trim().length > 0 && text.length <= 4000 && !loading
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      actions.handleAnalyze()
+    }
+  }
+
+  const canAnalyze = state.text.trim().length > 0 && state.text.length <= 4000 && !state.loading
 
   // Show loading state while checking for pending analysis from home
-  if (pendingFromHome === null) {
+  if (state.pendingFromHome === null) {
     return (
       <div style={{
         maxWidth: '100%',
@@ -1095,7 +800,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
       )}
 
       {/* Analysis Not Found Message - for shared links from different devices */}
-      {analysisNotFound && !result && (
+      {state.analysisNotFound && !state.result && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -1110,15 +815,12 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
       )}
 
       {/* Results Header - Shows when analysis is complete */}
-      {result && (
+      {state.result && (
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => {
-              setResult(null)
-              setText('')
-              setError(null)
-              setSavedOnce(false)
-              setCurrentAnalysisId(null)
+              resetAnalysis()
+              dispatch({ type: 'SET_CURRENT_ANALYSIS_ID', payload: null })
               // Clear the URL param
               const url = new URL(window.location.href)
               url.searchParams.delete('analysis')
@@ -1137,7 +839,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
       )}
 
       {/* Input Section - Two modes: Edit (no result) and View (has result) */}
-      {!result ? (
+      {!state.result ? (
         /* Edit Mode - Welcome state with clean layout matching explore page */
         <div className="bg-gradient-to-br from-indigo-50 via-white to-blue-50 border border-indigo-100 rounded-xl p-6">
           {/* Header */}
@@ -1159,16 +861,16 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                 background: 'white',
                 border: '1px solid #c7d2fe',
                 overflow: 'hidden',
-                marginBottom: loading || error ? '24px' : 0
+                marginBottom: state.loading || state.error ? '24px' : 0
               }}
             >
               <textarea
                 id="research-assistant-text-input"
-                value={text}
+                value={state.text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Paste your draft, thesis, or argument here..."
-                disabled={loading}
+                disabled={state.loading}
                 style={{
                   width: '100%',
                   height: '140px',
@@ -1180,7 +882,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                   backgroundColor: 'transparent',
                   resize: 'none',
                   outline: 'none',
-                  opacity: loading ? 0.5 : 1,
+                  opacity: state.loading ? 0.5 : 1,
                   fontFamily: 'inherit'
                 }}
               />
@@ -1195,10 +897,10 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '12px', color: text.length > 4000 ? '#ef4444' : '#64748b', fontWeight: 500 }}>
-                    {text.length > 0 ? `${text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
+                  <span style={{ fontSize: '12px', color: state.text.length > 4000 ? '#ef4444' : '#64748b', fontWeight: 500 }}>
+                    {state.text.length > 0 ? `${state.text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
                   </span>
-                  <span style={{ color: '#cbd5e1' }}>•</span>
+                  <span style={{ color: '#cbd5e1' }}>|</span>
                   <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                     <kbd style={{
                       padding: '2px 5px',
@@ -1207,11 +909,11 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                       borderRadius: '3px',
                       fontSize: '10px',
                       fontFamily: 'monospace'
-                    }}>⌘↵</kbd>
+                    }}>Cmd+Enter</kbd>
                   </span>
                 </div>
                 <button
-                  onClick={() => handleAnalyze()}
+                  onClick={() => actions.handleAnalyze()}
                   disabled={!canAnalyze}
                   className="group"
                   style={{
@@ -1244,7 +946,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                     }
                   }}
                 >
-                  {loading ? (
+                  {state.loading ? (
                     <>
                       <Loader2 style={{ width: '16px', height: '16px' }} className="animate-spin" />
                       Analyzing...
@@ -1261,7 +963,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
           </div>
 
           {/* Recent Analyses - Inside welcome container */}
-          {!loading && !error && savedAnalyses.length > 0 && pendingFromHome === false && (
+          {!state.loading && !state.error && state.savedAnalyses.length > 0 && state.pendingFromHome === false && (
             <div className="mt-6 pt-6 border-t border-indigo-100">
               {/* Section Header */}
               <div className="flex items-center gap-2 mb-4">
@@ -1276,10 +978,10 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
 
               {/* Analysis Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
-                {savedAnalyses.slice(0, 4).map((analysis) => (
+                {state.savedAnalyses.slice(0, 4).map((analysis) => (
                   <button
                     key={analysis.id}
-                    onClick={() => loadSavedAnalysis(analysis)}
+                    onClick={() => actions.loadSavedAnalysis(analysis)}
                     className="p-4 bg-white rounded-xl border border-indigo-200 text-left hover:border-indigo-400 hover:shadow-md transition-all group"
                   >
                     <div className="text-[13px] text-gray-800 font-medium mb-2 line-clamp-2">
@@ -1304,13 +1006,13 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                 ))}
               </div>
 
-              {savedAnalyses.length > 4 && (
+              {state.savedAnalyses.length > 4 && (
                 <div className="text-center mt-3">
                   <Link
                     href="/my-library"
                     className="text-[12px] text-indigo-600 hover:text-indigo-700 hover:underline"
                   >
-                    +{savedAnalyses.length - 4} more in library →
+                    +{state.savedAnalyses.length - 4} more in library
                   </Link>
                 </div>
               )}
@@ -1349,14 +1051,11 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                 margin: 0,
                 fontStyle: 'italic'
               }}>
-                {text.length > 300 ? text.substring(0, 300) + '...' : text}
+                {showFullText ? state.text : (state.text.length > 300 ? state.text.substring(0, 300) + '...' : state.text)}
               </p>
-              {text.length > 300 && (
+              {state.text.length > 300 && (
                 <button
-                  onClick={() => {
-                    const el = document.getElementById('full-analyzed-text')
-                    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'
-                  }}
+                  onClick={() => setShowFullText(!showFullText)}
                   style={{
                     marginTop: '8px',
                     padding: '4px 8px',
@@ -1368,24 +1067,9 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                     textDecoration: 'underline'
                   }}
                 >
-                  Show full text
+                  {showFullText ? 'Show less' : 'Show more'}
                 </button>
               )}
-              <p
-                id="full-analyzed-text"
-                style={{
-                  display: 'none',
-                  fontSize: '14px',
-                  lineHeight: '1.6',
-                  color: '#162950',
-                  margin: '12px 0 0 0',
-                  padding: '12px',
-                  backgroundColor: 'rgba(255,255,255,0.6)',
-                  borderRadius: '8px'
-                }}
-              >
-                {text}
-              </p>
             </div>
           </div>
           <div style={{
@@ -1397,19 +1081,19 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
             justifyContent: 'space-between'
           }}>
             <span style={{ fontSize: '12px', color: '#0158AE', fontWeight: 500 }}>
-              {text.length.toLocaleString()} characters analyzed
+              {state.text.length.toLocaleString()} characters analyzed
             </span>
           </div>
         </div>
       )}
 
       {/* Loading Progress Indicator - Memoized for smooth performance */}
-      {loading && (
-        <LoadingPhaseIndicator phases={LOADING_PHASES} currentPhase={loadingPhase} />
+      {state.loading && (
+        <LoadingPhaseIndicator phases={LOADING_PHASES} currentPhase={state.loadingPhase} />
       )}
 
       {/* Error Display */}
-      {error && (
+      {state.error && (
         <div style={{
           backgroundColor: 'rgba(239, 68, 68, 0.08)',
           border: '1px solid var(--color-error)',
@@ -1435,14 +1119,14 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
               color: 'var(--color-error)',
               margin: 0
             }}>
-              {error}
+              {state.error}
             </p>
           </div>
         </div>
       )}
 
       {/* Results Display */}
-      {result && (
+      {state.result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
           {/* Results Toolbar */}
           <div style={{
@@ -1461,7 +1145,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
             }}>
               {/* Left: Back button */}
               <button
-                onClick={startNewAnalysis}
+                onClick={actions.startNewAnalysis}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -1571,7 +1255,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                     e.currentTarget.style.color = '#162950'
                   }}
                 >
-                  {result.matchedCamps.reduce((total, camp) => total + camp.topAuthors.length, 0)} Authors
+                  {state.result.matchedCamps.reduce((total, camp) => total + camp.topAuthors.length, 0)} Authors
                 </button>
               </div>
 
@@ -1579,7 +1263,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   onClick={handleCopy}
-                  disabled={copying}
+                  disabled={state.copying}
                   title="Copy analysis"
                   style={{
                     display: 'inline-flex',
@@ -1591,11 +1275,11 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                     color: '#6b7280',
-                    cursor: copying ? 'not-allowed' : 'pointer',
+                    cursor: state.copying ? 'not-allowed' : 'pointer',
                     transition: 'all 0.15s ease'
                   }}
                   onMouseEnter={(e) => {
-                    if (!copying) {
+                    if (!state.copying) {
                       e.currentTarget.style.backgroundColor = '#f9fafb'
                       e.currentTarget.style.borderColor = '#d1d5db'
                     }
@@ -1609,7 +1293,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                 </button>
                 <button
                   onClick={handleExportPDF}
-                  disabled={exporting}
+                  disabled={state.exporting}
                   title="Export as PDF"
                   style={{
                     display: 'inline-flex',
@@ -1621,11 +1305,11 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                     color: '#6b7280',
-                    cursor: exporting ? 'not-allowed' : 'pointer',
+                    cursor: state.exporting ? 'not-allowed' : 'pointer',
                     transition: 'all 0.15s ease'
                   }}
                   onMouseEnter={(e) => {
-                    if (!exporting) {
+                    if (!state.exporting) {
                       e.currentTarget.style.backgroundColor = '#f9fafb'
                       e.currentTarget.style.borderColor = '#d1d5db'
                     }
@@ -1641,9 +1325,9 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                   onClick={async () => {
                     try {
                       await navigator.clipboard.writeText(window.location.href)
-                      setUrlCopied(true)
+                      dispatch({ type: 'SET_URL_COPIED', payload: true })
                       showToast('Link copied!')
-                      setTimeout(() => setUrlCopied(false), 2000)
+                      setTimeout(() => dispatch({ type: 'SET_URL_COPIED', payload: false }), 2000)
                     } catch (e) {
                       showToast('Failed to copy link', 'error')
                     }
@@ -1655,21 +1339,21 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                     justifyContent: 'center',
                     width: '36px',
                     height: '36px',
-                    backgroundColor: urlCopied ? '#dcfce7' : 'transparent',
-                    border: urlCopied ? '1px solid #86efac' : '1px solid #e5e7eb',
+                    backgroundColor: state.urlCopied ? '#dcfce7' : 'transparent',
+                    border: state.urlCopied ? '1px solid #86efac' : '1px solid #e5e7eb',
                     borderRadius: '8px',
-                    color: urlCopied ? '#16a34a' : '#6b7280',
+                    color: state.urlCopied ? '#16a34a' : '#6b7280',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease'
                   }}
                   onMouseEnter={(e) => {
-                    if (!urlCopied) {
+                    if (!state.urlCopied) {
                       e.currentTarget.style.backgroundColor = '#f9fafb'
                       e.currentTarget.style.borderColor = '#d1d5db'
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (!urlCopied) {
+                    if (!state.urlCopied) {
                       e.currentTarget.style.backgroundColor = 'transparent'
                       e.currentTarget.style.borderColor = '#e5e7eb'
                     }
@@ -1678,41 +1362,41 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                   <Share2 style={{ width: '16px', height: '16px' }} />
                 </button>
                 <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  title={savedOnce ? 'Saved' : 'Save analysis'}
+                  onClick={actions.handleSave}
+                  disabled={state.saving}
+                  title={state.savedOnce ? 'Saved' : 'Save analysis'}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
                     padding: '8px 14px',
-                    backgroundColor: savedOnce ? '#0158AE' : 'transparent',
-                    border: savedOnce ? '1px solid #0158AE' : '1px solid #e5e7eb',
+                    backgroundColor: state.savedOnce ? '#0158AE' : 'transparent',
+                    border: state.savedOnce ? '1px solid #0158AE' : '1px solid #e5e7eb',
                     borderRadius: '8px',
                     fontSize: '13px',
                     fontWeight: '500',
-                    color: savedOnce ? 'white' : '#0158AE',
-                    cursor: saving ? 'not-allowed' : 'pointer',
+                    color: state.savedOnce ? 'white' : '#0158AE',
+                    cursor: state.saving ? 'not-allowed' : 'pointer',
                     transition: 'all 0.15s ease'
                   }}
                   onMouseEnter={(e) => {
-                    if (!saving && !savedOnce) {
+                    if (!state.saving && !state.savedOnce) {
                       e.currentTarget.style.backgroundColor = '#DCF2FA'
                       e.currentTarget.style.borderColor = '#48AFF0'
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (!saving && !savedOnce) {
+                    if (!state.saving && !state.savedOnce) {
                       e.currentTarget.style.backgroundColor = 'transparent'
                       e.currentTarget.style.borderColor = '#e5e7eb'
                     }
                   }}
                 >
-                  <Bookmark style={{ width: '14px', height: '14px', fill: savedOnce ? 'white' : 'none' }} />
-                  {savedOnce ? 'Saved' : 'Save'}
+                  <Bookmark style={{ width: '14px', height: '14px', fill: state.savedOnce ? 'white' : 'none' }} />
+                  {state.savedOnce ? 'Saved' : 'Save'}
                 </button>
                 <Link
-                  href={`/studio/builder?thesis=${encodeURIComponent(text.substring(0, 200))}`}
+                  href={`/studio/builder?thesis=${encodeURIComponent(state.text.substring(0, 200))}`}
                   title="Start drafting content based on this analysis"
                   style={{
                     display: 'inline-flex',
@@ -1774,9 +1458,9 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                 Summary
               </h2>
               <button
-                onClick={() => likedSummary
+                onClick={() => state.likedSummary
                   ? removeHelpfulInsight('summary')
-                  : saveHelpfulInsight('summary', result.summary)
+                  : saveHelpfulInsight('summary', state.result!.summary)
                 }
                 style={{
                   display: 'flex',
@@ -1784,18 +1468,18 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                   gap: '6px',
                   padding: '6px 12px',
                   borderRadius: '16px',
-                  border: likedSummary ? '1px solid #10b981' : '1px solid #e5e7eb',
-                  backgroundColor: likedSummary ? '#d1fae5' : 'white',
-                  color: likedSummary ? '#059669' : '#6b7280',
+                  border: state.likedSummary ? '1px solid #10b981' : '1px solid #e5e7eb',
+                  backgroundColor: state.likedSummary ? '#d1fae5' : 'white',
+                  color: state.likedSummary ? '#059669' : '#6b7280',
                   fontSize: '12px',
                   fontWeight: 500,
                   cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
-                title={likedSummary ? 'Remove from helpful insights' : 'Save as helpful'}
+                title={state.likedSummary ? 'Remove from helpful insights' : 'Save as helpful'}
               >
-                <ThumbsUp style={{ width: '14px', height: '14px', fill: likedSummary ? '#059669' : 'none' }} />
-                {likedSummary ? 'Helpful!' : 'This is helpful'}
+                <ThumbsUp style={{ width: '14px', height: '14px', fill: state.likedSummary ? '#059669' : 'none' }} />
+                {state.likedSummary ? 'Helpful!' : 'This is helpful'}
               </button>
             </div>
             <p style={{
@@ -1804,7 +1488,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
               margin: 0,
               fontSize: '15px'
             }}>
-              {result.summary}
+              {state.result.summary}
             </p>
           </div>
 
@@ -1877,7 +1561,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                     Your content includes these perspectives:
                   </p>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                    {result.editorialSuggestions.presentPerspectives.map((perspective, idx) => (
+                    {state.result.editorialSuggestions.presentPerspectives.map((perspective, idx) => (
                       <li key={idx} style={{
                         display: 'flex',
                         alignItems: 'flex-start',
@@ -1892,7 +1576,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                           marginTop: '2px',
                           fontSize: '20px',
                           flexShrink: 0
-                        }}>✓</span>
+                        }}>+</span>
                         <span style={{
                           color: 'var(--color-soft-black)',
                           fontSize: 'var(--text-small)',
@@ -1935,7 +1619,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                     Consider adding these to strengthen your argument:
                   </p>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                    {result.editorialSuggestions.missingPerspectives.map((perspective, idx) => (
+                    {state.result.editorialSuggestions.missingPerspectives.map((perspective, idx) => (
                       <li key={idx} style={{
                         display: 'flex',
                         alignItems: 'flex-start',
@@ -1968,7 +1652,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
           </div>
 
           {/* Thought Leaders */}
-          {result.matchedCamps.length > 0 && (
+          {state.result.matchedCamps.length > 0 && (
             <div ref={authorsRef} style={{
               backgroundColor: '#FFFFFF',
               borderRadius: '12px',
@@ -1995,7 +1679,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                   color: '#64748b',
                   marginLeft: '4px'
                 }}>
-                  ({result.matchedCamps.length} perspectives)
+                  ({state.result.matchedCamps.length} perspectives)
                 </span>
               </h2>
               <p style={{
@@ -2007,7 +1691,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                 See what each thought leader believes and how their ideas specifically support or challenge your draft.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-                {result.matchedCamps.map((camp, idx) => {
+                {state.result.matchedCamps.map((camp, idx) => {
                   const campColors = getStanceColor(camp.topAuthors[0]?.stance || 'partial')
                   return (
                     <div
@@ -2050,10 +1734,10 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                             }}
                           >
                             {camp.campLabel}
-                            <span style={{ fontSize: '14px', opacity: 0.6 }}>→</span>
+                            <span style={{ fontSize: '14px', opacity: 0.6 }}>-&gt;</span>
                           </Link>
                           <button
-                            onClick={() => likedCamps.has(idx)
+                            onClick={() => state.likedCamps.has(idx)
                               ? removeHelpfulInsight('camp', idx)
                               : saveHelpfulInsight('camp', camp.explanation, camp.campLabel, idx)
                             }
@@ -2063,19 +1747,19 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                               gap: '6px',
                               padding: '5px 10px',
                               borderRadius: '14px',
-                              border: likedCamps.has(idx) ? '1px solid #10b981' : '1px solid #e5e7eb',
-                              backgroundColor: likedCamps.has(idx) ? '#d1fae5' : 'white',
-                              color: likedCamps.has(idx) ? '#059669' : '#6b7280',
+                              border: state.likedCamps.has(idx) ? '1px solid #10b981' : '1px solid #e5e7eb',
+                              backgroundColor: state.likedCamps.has(idx) ? '#d1fae5' : 'white',
+                              color: state.likedCamps.has(idx) ? '#059669' : '#6b7280',
                               fontSize: '11px',
                               fontWeight: 500,
                               cursor: 'pointer',
                               transition: 'all 0.2s',
                               flexShrink: 0
                             }}
-                            title={likedCamps.has(idx) ? 'Remove from helpful insights' : 'Save as helpful'}
+                            title={state.likedCamps.has(idx) ? 'Remove from helpful insights' : 'Save as helpful'}
                           >
-                            <ThumbsUp style={{ width: '12px', height: '12px', fill: likedCamps.has(idx) ? '#059669' : 'none' }} />
-                            {likedCamps.has(idx) ? 'Saved' : 'Helpful'}
+                            <ThumbsUp style={{ width: '12px', height: '12px', fill: state.likedCamps.has(idx) ? '#059669' : 'none' }} />
+                            {state.likedCamps.has(idx) ? 'Saved' : 'Helpful'}
                           </button>
                         </div>
                         <p style={{
@@ -2220,10 +1904,10 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
                                       letterSpacing: '0.3px'
                                     }}>
                                       {author.stance === 'agrees'
-                                        ? '✓ Supports your draft'
+                                        ? '+ Supports your draft'
                                         : author.stance === 'disagrees'
-                                        ? '✗ Challenges your draft'
-                                        : '◐ Relates to your draft'}
+                                        ? 'x Challenges your draft'
+                                        : 'o Relates to your draft'}
                                     </p>
                                     <p style={{
                                       fontSize: '14px',
