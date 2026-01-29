@@ -40,10 +40,11 @@ export default function Home() {
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bone)' }}>
       <Header sidebarCollapsed={true} />
       <main
+        id="main-content"
         className="flex-1 mt-16 flex flex-col items-center"
       >
         {/* Hero Section */}
-        <div className="w-full relative" style={{
+        <section aria-labelledby="hero-heading" className="w-full relative" style={{
           background: 'linear-gradient(135deg, #0a0f1a 0%, #111826 50%, #0f1729 100%)',
         }}>
           {/* Gradient orbs - contained */}
@@ -62,7 +63,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="max-w-4xl mx-auto text-center relative z-10" style={{ padding: '24px 24px 28px' }}>
+          <div className="max-w-4xl mx-auto text-center relative z-10" style={{ padding: '64px 24px 72px' }}>
             {/* Badge */}
             <div
               className="inline-flex items-center gap-2 mb-3"
@@ -88,6 +89,7 @@ export default function Home() {
 
             {/* Main Headline */}
             <h1
+              id="hero-heading"
               className="animate-fade-in"
               style={{
                 marginBottom: '10px',
@@ -138,12 +140,18 @@ export default function Home() {
                 textAlign: 'left'
               }}
             >
+              <label htmlFor="analysis-input" className="sr-only">
+                Enter your draft, thesis, or argument for AI analysis
+              </label>
               <textarea
+                id="analysis-input"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Paste your draft, thesis, or argument here..."
                 disabled={isSubmitting}
+                aria-describedby="char-count"
+                aria-invalid={text.length > 4000}
                 style={{
                   width: '100%',
                   height: '80px',
@@ -169,11 +177,11 @@ export default function Home() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '12px', color: text.length > 4000 ? '#ef4444' : '#64748b' }}>
+                  <span id="char-count" style={{ fontSize: '12px', color: text.length > 4000 ? '#ef4444' : '#475569' }}>
                     {text.length > 0 ? `${text.length.toLocaleString()} chars` : 'Up to 4,000 chars'}
                   </span>
-                  <span style={{ color: '#cbd5e1' }}>•</span>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  <span style={{ color: '#cbd5e1' }} aria-hidden="true">•</span>
+                  <span style={{ fontSize: '12px', color: '#475569' }}>
                     <kbd style={{
                       padding: '2px 6px',
                       backgroundColor: 'white',
@@ -181,12 +189,20 @@ export default function Home() {
                       borderRadius: '4px',
                       fontSize: '11px',
                       fontFamily: 'monospace'
-                    }}>⌘↵</kbd>
+                    }}>⌘↵</kbd> to submit
                   </span>
                 </div>
                 <button
                   onClick={handleAnalyze}
                   disabled={!canAnalyze}
+                  aria-disabled={!canAnalyze}
+                  aria-label={
+                    !text.trim()
+                      ? "Enter text to begin analysis"
+                      : text.length > 4000
+                        ? "Text exceeds 4,000 character limit"
+                        : `Analyze ${text.length} characters of text`
+                  }
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -218,6 +234,20 @@ export default function Home() {
                       e.currentTarget.style.background = 'linear-gradient(135deg, #0033FF 0%, #0028CC 100%)'
                     }
                   }}
+                  onFocus={(e) => {
+                    if (canAnalyze && e.currentTarget.matches(':focus-visible')) {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 51, 255, 0.6)'
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #3D5FFF 0%, #0033FF 100%)'
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (canAnalyze) {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 51, 255, 0.5)'
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #0033FF 0%, #0028CC 100%)'
+                    }
+                  }}
                 >
                   {isSubmitting ? (
                     <>
@@ -234,13 +264,13 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* How It Works Section */}
-        <div className="w-full relative" style={{
+        <section aria-labelledby="how-works-heading" className="w-full relative" style={{
           background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
         }}>
-          <div className="max-w-4xl mx-auto" style={{ padding: '16px 24px 20px' }}>
+          <div className="max-w-4xl mx-auto" style={{ padding: '56px 24px 64px' }}>
             {/* Section Header */}
             <div className="text-center mb-4">
               <span
@@ -256,18 +286,18 @@ export default function Home() {
               >
                 Simple Process
               </span>
-              <h2 style={{
-                fontSize: '24px',
+              <h2 id="how-works-heading" style={{
+                fontSize: 'clamp(1.25rem, 4vw, 1.75rem)',
                 fontWeight: '700',
                 color: '#0f172a',
                 letterSpacing: '-0.02em',
-                marginBottom: '4px'
+                marginBottom: '8px'
               }}>
                 How it works
               </h2>
               <p style={{
                 fontSize: '14px',
-                color: '#64748b',
+                color: '#475569',
                 lineHeight: '1.5'
               }}>
                 Three steps to stronger, more informed writing
@@ -302,7 +332,7 @@ export default function Home() {
               />
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Why Compass / Key Benefits Section - HIDDEN FOR NOW, can enable later */}
         {/*
@@ -400,9 +430,9 @@ export default function Home() {
         */}
 
         {/* Features Grid - Visual First */}
-        <div className="w-full relative overflow-hidden" style={{
+        <section aria-labelledby="features-heading" className="w-full relative overflow-hidden" style={{
           background: 'linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%)',
-          padding: '20px 24px 32px'
+          padding: '56px 24px 80px'
         }}>
           {/* Decorative gradient orbs */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -420,7 +450,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="max-w-6xl mx-auto relative z-10">
+          <div className="max-w-4xl mx-auto relative z-10">
             {/* Section Header */}
             <div className="text-center mb-5">
               <span
@@ -439,18 +469,18 @@ export default function Home() {
               >
                 Features
               </span>
-              <h2 style={{
-                fontSize: '24px',
+              <h2 id="features-heading" style={{
+                fontSize: 'clamp(1.25rem, 4vw, 1.75rem)',
                 fontWeight: '700',
                 color: '#0f172a',
                 letterSpacing: '-0.02em',
-                marginBottom: '4px'
+                marginBottom: '8px'
               }}>
                 Everything you need to navigate AI discourse
               </h2>
               <p style={{
                 fontSize: '13px',
-                color: '#64748b',
+                color: '#475569',
                 lineHeight: '1.5',
                 maxWidth: '540px',
                 margin: '0 auto'
@@ -460,12 +490,12 @@ export default function Home() {
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <FeatureCard
                 icon={Compass}
-                title="Explore Perspectives"
+                title="Browse Topics"
                 description="See where thought leaders stand on any AI topic"
-                href="/explore"
+                href="/browse"
                 gradientFrom="#0033FF"
                 gradientTo="#3D5FFF"
               />
@@ -488,15 +518,15 @@ export default function Home() {
               />
               <FeatureCard
                 icon={Search}
-                title="Research History"
+                title="My Library"
                 description="Never lose track of your past explorations"
-                href="/history"
+                href="/my-library"
                 gradientFrom="#2563eb"
                 gradientTo="#60a5fa"
               />
             </div>
           </div>
-        </div>
+        </section>
 
       </main>
     </div>
@@ -525,8 +555,11 @@ function HowItWorksStep({
   return (
     <div
       className="flex flex-col items-center text-center group relative"
+      tabIndex={0}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onFocus={() => setIsHovered(true)}
+      onBlur={() => setIsHovered(false)}
       style={{
         padding: '24px 20px',
         borderRadius: '20px',
@@ -541,7 +574,8 @@ function HowItWorksStep({
           ? '0 20px 40px -12px rgba(0, 51, 255, 0.2), 0 0 0 1px rgba(0, 51, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
           : '0 8px 24px -8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
         transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        outline: 'none'
       }}
     >
       {/* Decorative gradient glow behind card */}
