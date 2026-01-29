@@ -1,61 +1,40 @@
-'use client'
+import { Suspense } from 'react'
+import { currentUser } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
+import ResearchAssistantClient from './ResearchAssistantClient'
 
-import { useRef, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
-import Header from '@/components/Header'
-import PageHeader from '@/components/PageHeader'
-import ResearchAssistant from '@/components/ResearchAssistant'
-import BackToTop from '@/components/BackToTop'
-import { HowResearchAssistantWorksModal, useHowResearchAssistantWorksModal } from '@/components/HowResearchAssistantWorksModal'
-import { Search } from 'lucide-react'
-import { TERMINOLOGY } from '@/lib/constants/terminology'
+/**
+ * Server Component for research assistant page
+ * Handles auth on server-side for faster initial load
+ */
+export default async function ResearchAssistantPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ analysis?: string }>
+}) {
+  // Server-side auth check (much faster than middleware)
+  const user = await currentUser()
 
-function ResearchAssistantPageContent() {
-  const mainRef = useRef<HTMLElement>(null)
-  const searchParams = useSearchParams()
-  const analysisId = searchParams.get('analysis')
-  const { isOpen: isModalOpen, open: openModal, close: closeModal } = useHowResearchAssistantWorksModal()
+  if (!user) {
+    redirect('/sign-in')
+  }
+
+  // Next.js 15: searchParams is a Promise
+  const params = await searchParams
+  const analysisId = params.analysis || null
 
   return (
-    <div className="h-screen flex" style={{ backgroundColor: 'var(--color-page-bg)' }}>
-      <Header sidebarCollapsed={true} />
-      <main
-        ref={mainRef}
-        className="flex-1 mt-16 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-indigo-50/30"
-      >
-        <div className="max-w-4xl mx-auto" style={{ padding: '24px' }}>
-          {/* Page Header */}
-          <PageHeader
-            icon={<Search size={24} />}
-            iconVariant="navy"
-            title={TERMINOLOGY.researchAssistant}
-            subtitle="Validate your writing against 200+ thought leaders. Find supporting experts and discover gaps."
-            helpButton={{
-              label: 'How it works',
-              onClick: openModal
-            }}
-          />
-
-          {/* How it works Modal */}
-          <HowResearchAssistantWorksModal isOpen={isModalOpen} onClose={closeModal} />
-
-          {/* AI Editor Component */}
-          <ResearchAssistant showTitle={false} initialAnalysisId={analysisId} />
+    <Suspense
+      fallback={
+        <div
+          className="h-screen flex items-center justify-center"
+          style={{ backgroundColor: 'var(--color-page-bg)' }}
+        >
+          <div className="text-gray-500">Loading...</div>
         </div>
-        <BackToTop containerRef={mainRef} />
-      </main>
-    </div>
-  )
-}
-
-export default function ResearchAssistantPage() {
-  return (
-    <Suspense fallback={
-      <div className="h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-page-bg)' }}>
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    }>
-      <ResearchAssistantPageContent />
+      }
+    >
+      <ResearchAssistantClient initialAnalysisId={analysisId} />
     </Suspense>
   )
 }
