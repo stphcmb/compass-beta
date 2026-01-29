@@ -40,6 +40,99 @@ export async function getThoughtLeaders(): Promise<ThoughtLeader[]> {
 }
 
 /**
+ * Fetch authors with minimal camp/domain data for listing page
+ * OPTIMIZED: Two simple queries instead of complex nested join
+ */
+export async function getAuthorsWithDomains(): Promise<Array<{
+  author: ThoughtLeader
+  domains: string[] // Domain names
+  camps: string[] // Camp names for stance
+}>> {
+  if (!supabase) {
+    console.warn('Supabase not configured')
+    return []
+  }
+
+  try {
+    const startTime = Date.now()
+
+    // Query 1: Fetch all authors - ONLY the columns needed for listing!
+    // Excludes large fields like 'sources' (JSONB) but includes notes for card display
+    const { data: authors, error: authorsError } = await supabase
+      .from('authors')
+      .select('id, name, header_affiliation, primary_affiliation, credibility_tier, created_at, notes')
+      .order('name', { ascending: true })
+
+    if (authorsError) {
+      console.error('Error fetching authors:', authorsError)
+      return []
+    }
+
+    const authorsTime = Date.now() - startTime
+    console.log(`✓ Fetched ${authors?.length || 0} authors in ${authorsTime}ms`)
+
+    // Query 2: Fetch camp_authors with domain IDs and camp names for stance
+    const { data: campAuthors, error: campError } = await supabase
+      .from('camp_authors')
+      .select('author_id, camps(domain_id, label, code)')
+
+    if (campError) {
+      console.error('Error fetching camp_authors:', campError)
+      // Continue without domain/camp data
+      return (authors || []).map(author => ({
+        author,
+        domains: [],
+        camps: []
+      }))
+    }
+
+    const totalTime = Date.now() - startTime
+    console.log(`✓ Fetched camp associations in ${totalTime - authorsTime}ms (total: ${totalTime}ms)`)
+
+    // Build maps of author_id → domain names and camp stances
+    const authorDomainsMap = new Map<string, Set<string>>()
+    const authorCampsMap = new Map<string, string[]>()
+
+    campAuthors?.forEach((ca: any) => {
+      const authorId = ca.author_id
+      const domainId = ca.camps?.domain_id
+      const campName = ca.camps?.label
+
+      if (authorId && domainId) {
+        if (!authorDomainsMap.has(authorId)) {
+          authorDomainsMap.set(authorId, new Set())
+        }
+        const domainName = DOMAIN_MAP[domainId]
+        if (domainName) {
+          authorDomainsMap.get(authorId)!.add(domainName)
+        }
+      }
+
+      // Store camp names for stance
+      if (authorId && campName) {
+        if (!authorCampsMap.has(authorId)) {
+          authorCampsMap.set(authorId, [])
+        }
+        authorCampsMap.get(authorId)!.push(campName)
+      }
+    })
+
+    // Combine authors with their domains and camps
+    const result = (authors || []).map(author => ({
+      author,
+      domains: Array.from(authorDomainsMap.get(author.id) || []),
+      camps: authorCampsMap.get(author.id) || []
+    }))
+
+    console.log(`✓ Authors page data ready in ${Date.now() - startTime}ms`)
+    return result
+  } catch (error) {
+    console.error('Error in getAuthorsWithDomains:', error)
+    return []
+  }
+}
+
+/**
  * Fetch a single thought leader by ID
  */
 export async function getThoughtLeaderById(id: string): Promise<ThoughtLeader | null> {
