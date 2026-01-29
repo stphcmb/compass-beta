@@ -2,69 +2,16 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-
-interface SearchItem {
-  id: string
-  query: string
-  timestamp: string
-  domain?: string
-  camp?: string
-  cachedResult?: any
-  note?: string
-}
-
-interface AnalysisItem {
-  id: string
-  text: string
-  preview?: string
-  timestamp: string
-  cachedResult?: any
-  note?: string
-}
-
-interface FavoriteAuthor {
-  id: string
-  name: string
-  addedAt: string
-}
-
-interface AuthorNote {
-  id: string
-  name: string
-  note: string
-  updatedAt: string
-}
-
-interface HelpfulInsight {
-  id: string
-  type: 'summary' | 'camp'
-  content: string
-  campLabel?: string
-  originalText: string
-  fullText?: string
-  cachedResult?: any
-  analysisId?: string
-  timestamp: string
-}
-
-interface DeletedItem {
-  id: string
-  type: 'favorite' | 'note' | 'search' | 'analysis'
-  name: string
-  data: any
-  deletedAt: string
-}
-
-interface HistoryData {
-  recentSearches: SearchItem[]
-  savedSearches: SearchItem[]
-  savedAnalyses: AnalysisItem[]
-  favoriteAuthors: FavoriteAuthor[]
-  authorNotes: AuthorNote[]
-  helpfulInsights: HelpfulInsight[]
-  deletedItems: DeletedItem[]
-  authorDetails: Record<string, any>
-}
+import type {
+  SearchItem,
+  AnalysisItem,
+  FavoriteAuthor,
+  AuthorNote,
+  HelpfulInsight,
+  DeletedItem,
+  HistoryData,
+} from '../lib/types'
+import { loadAllHistoryData } from '../lib/localStorage'
 
 /**
  * Custom hook for loading and memoizing history data from localStorage
@@ -89,32 +36,10 @@ export function useHistoryData() {
   const loadAllData = useMemo(() => {
     return () => {
       try {
-        // Batch read from localStorage (single reflow)
-        const recentSearches = safeJSONParse(localStorage.getItem('recentSearches'), [])
-        const savedSearches = safeJSONParse(localStorage.getItem('savedSearches'), [])
-        const savedAnalyses = safeJSONParse(localStorage.getItem('savedAIEditorAnalyses'), [])
-        const favoriteAuthors = safeJSONParse(localStorage.getItem('favoriteAuthors'), [])
-        const authorNotes = safeJSONParse(localStorage.getItem('authorNotes'), [])
-        const helpfulInsights = safeJSONParse(localStorage.getItem('helpfulInsights'), [])
-
-        // Clean up deleted items older than 30 days
-        const deleted = safeJSONParse(localStorage.getItem('recentlyDeletedItems'), [])
-        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-        const validDeleted = deleted.filter((item: DeletedItem) =>
-          new Date(item.deletedAt).getTime() > thirtyDaysAgo
-        )
-        if (validDeleted.length !== deleted.length) {
-          localStorage.setItem('recentlyDeletedItems', JSON.stringify(validDeleted))
-        }
-
+        // Use centralized localStorage loader
+        const loadedData = loadAllHistoryData()
         return {
-          recentSearches,
-          savedSearches,
-          savedAnalyses,
-          favoriteAuthors,
-          authorNotes,
-          helpfulInsights,
-          deletedItems: validDeleted,
+          ...loadedData,
           authorDetails: {},
         }
       } catch (error) {
@@ -192,16 +117,4 @@ export function useHistoryData() {
   }
 
   return { data, loading, reloadData }
-}
-
-/**
- * Safe JSON parse with fallback
- */
-function safeJSONParse<T>(value: string | null, fallback: T): T {
-  if (!value) return fallback
-  try {
-    return JSON.parse(value)
-  } catch {
-    return fallback
-  }
 }
