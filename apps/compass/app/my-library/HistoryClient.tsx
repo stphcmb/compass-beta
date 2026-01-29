@@ -1,7 +1,6 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { Suspense } from 'react'
 
 /**
  * Lazy load the massive history page implementation
@@ -10,9 +9,9 @@ import { Suspense } from 'react'
  */
 const HistoryPageContent = dynamic(() => import('./HistoryPageContent'), {
   loading: () => (
-    <div className="h-screen flex items-center justify-center">
+    <div className="h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-page-bg)' }}>
       <div className="text-center">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent" />
         <p className="mt-4 text-gray-600">Loading your library...</p>
       </div>
     </div>
@@ -21,9 +20,5 @@ const HistoryPageContent = dynamic(() => import('./HistoryPageContent'), {
 })
 
 export default function HistoryClient() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <HistoryPageContent />
-    </Suspense>
-  )
+  return <HistoryPageContent />
 }

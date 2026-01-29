@@ -1,40 +1,28 @@
-import { Suspense } from 'react'
-import { currentUser } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useUser } from '@clerk/nextjs'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect } from 'react'
 import ResearchAssistantClient from './ResearchAssistantClient'
 
 /**
- * Server Component for research assistant page
- * Handles auth on server-side for faster initial load
+ * Client Component for research assistant page
+ * Uses client-side auth for faster initial load (no server roundtrip)
  */
-export default async function ResearchAssistantPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ analysis?: string }>
-}) {
-  // Server-side auth check (much faster than middleware)
-  const user = await currentUser()
+export default function ResearchAssistantPage() {
+  const { isLoaded, isSignedIn } = useUser()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const analysisId = searchParams.get('analysis') || null
 
-  if (!user) {
-    redirect('/sign-in')
-  }
+  // Redirect if not signed in (only after loaded to avoid flash)
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.push('/sign-in')
+    }
+  }, [isLoaded, isSignedIn, router])
 
-  // Next.js 15: searchParams is a Promise
-  const params = await searchParams
-  const analysisId = params.analysis || null
-
-  return (
-    <Suspense
-      fallback={
-        <div
-          className="h-screen flex items-center justify-center"
-          style={{ backgroundColor: 'var(--color-page-bg)' }}
-        >
-          <div className="text-gray-500">Loading...</div>
-        </div>
-      }
-    >
-      <ResearchAssistantClient initialAnalysisId={analysisId} />
-    </Suspense>
-  )
+  // Show component immediately - let internal loading states handle it
+  // This prevents the flash from multiple loading layers
+  return <ResearchAssistantClient initialAnalysisId={analysisId} />
 }

@@ -1,33 +1,26 @@
-import { Suspense } from 'react'
-import { currentUser } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import HistoryClient from './HistoryClient'
 
 /**
- * Server Component for history page
- * Handles auth on server-side for faster initial load
- * This replaces the massive client-side page.tsx
+ * Client Component for history page
+ * Uses client-side auth for faster initial load (no server roundtrip)
  */
-export default async function HistoryPage() {
-  // Server-side auth check (much faster than middleware)
-  const user = await currentUser()
+export default function HistoryPage() {
+  const { isLoaded, isSignedIn } = useUser()
+  const router = useRouter()
 
-  if (!user) {
-    redirect('/sign-in')
-  }
+  // Redirect if not signed in (only after loaded to avoid flash)
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.push('/sign-in')
+    }
+  }, [isLoaded, isSignedIn, router])
 
-  return (
-    <Suspense
-      fallback={
-        <div
-          className="h-screen flex items-center justify-center"
-          style={{ backgroundColor: 'var(--color-page-bg)' }}
-        >
-          <div className="text-gray-500">Loading your library...</div>
-        </div>
-      }
-    >
-      <HistoryClient />
-    </Suspense>
-  )
+  // Show component immediately - let internal loading states handle it
+  // This prevents the flash from multiple loading layers
+  return <HistoryClient />
 }
