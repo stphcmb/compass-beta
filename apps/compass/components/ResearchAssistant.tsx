@@ -6,12 +6,23 @@ import { ResearchAssistantAnalyzeResponse } from '@/lib/research-assistant'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
-import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, ThumbsDown, Minus, Quote, ExternalLink, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Share2 } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, Quote, ExternalLink, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Share2 } from 'lucide-react'
 import { LoadingPhaseIndicator } from '@/components/research-assistant/LoadingPhaseIndicator'
 import { useResearchState } from '@/hooks/useResearchState'
 import { useAnalysisActions } from '@/hooks/useAnalysisActions'
-import { LOADING_PHASES, STORAGE_KEYS, CONFIG, EVENTS } from '@/components/research-assistant/lib/constants'
-import type { ResearchAssistantProps, LoadTextEventDetail, PendingAnalysis } from '@/components/research-assistant/lib/types'
+import {
+  LOADING_PHASES,
+  STORAGE_KEYS,
+  CONFIG,
+  EVENTS,
+  getStanceColor,
+  getStanceIcon,
+  getStanceLabel,
+  buildAuthorMap,
+  formatAnalysisAsText,
+  escapeRegex,
+} from '@/components/research-assistant/lib'
+import type { ResearchAssistantProps, LoadTextEventDetail, PendingAnalysis, Stance } from '@/components/research-assistant/lib'
 
 export default function ResearchAssistant({ showTitle = false, initialAnalysisId }: ResearchAssistantProps) {
   const { openPanel } = useAuthorPanel()
@@ -270,92 +281,11 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     showToast('Removed from helpful insights')
   }
 
-  const formatAnalysisAsText = () => {
-    if (!state.result) return ''
-
-    const lines: string[] = []
-
-    // Header
-    lines.push('═══════════════════════════════════════')
-    lines.push('AI EDITOR ANALYSIS')
-    lines.push('═══════════════════════════════════════')
-    lines.push('')
-
-    // Original text snippet
-    const textPreview = state.text.length > 200 ? state.text.substring(0, 200) + '...' : state.text
-    lines.push('📝 ANALYZED TEXT:')
-    lines.push(textPreview)
-    lines.push('')
-
-    // Summary
-    lines.push('───────────────────────────────────────')
-    lines.push('📊 SUMMARY')
-    lines.push('───────────────────────────────────────')
-    lines.push(state.result.summary)
-    lines.push('')
-
-    // Editorial Suggestions
-    lines.push('───────────────────────────────────────')
-    lines.push('💡 EDITORIAL SUGGESTIONS')
-    lines.push('───────────────────────────────────────')
-    lines.push('')
-
-    lines.push('✓ PERSPECTIVES YOU\'RE USING:')
-    state.result.editorialSuggestions.presentPerspectives.forEach((p) => {
-      lines.push(`  • ${p}`)
-    })
-    lines.push('')
-
-    lines.push('⚠ PERSPECTIVES YOU\'RE MISSING:')
-    state.result.editorialSuggestions.missingPerspectives.forEach((p) => {
-      lines.push(`  • ${p}`)
-    })
-    lines.push('')
-
-    // Thought Leaders
-    if (state.result.matchedCamps.length > 0) {
-      lines.push('───────────────────────────────────────')
-      lines.push(`👥 RELEVANT THOUGHT LEADERS (${state.result.matchedCamps.length} perspectives)`)
-      lines.push('───────────────────────────────────────')
-      lines.push('')
-
-      state.result.matchedCamps.forEach((camp) => {
-        lines.push(`■ ${camp.campLabel}`)
-        lines.push(`  ${camp.explanation}`)
-        lines.push('')
-
-        camp.topAuthors.forEach((author) => {
-          const stanceLabel = author.stance === 'agrees' ? '👍 Agrees' :
-            author.stance === 'disagrees' ? '👎 Disagrees' : '↔ Partial'
-          lines.push(`  • ${author.name} [${stanceLabel}]`)
-          lines.push(`    Position: ${author.position}`)
-          if (author.draftConnection) {
-            lines.push(`    Connection to draft: ${author.draftConnection}`)
-          }
-          if (author.quote) {
-            lines.push(`    Quote: "${author.quote}"`)
-            if (author.sourceUrl) {
-              lines.push(`    Source: ${author.sourceUrl}`)
-            }
-          }
-          lines.push('')
-        })
-      })
-    }
-
-    lines.push('───────────────────────────────────────')
-    lines.push('Generated by Compass Research Assistant')
-    lines.push(`Date: ${new Date().toLocaleDateString()}`)
-    lines.push('───────────────────────────────────────')
-
-    return lines.join('\n')
-  }
-
   const handleCopy = async () => {
     if (!state.result || state.copying) return
     dispatch({ type: 'SET_COPYING', payload: true })
     try {
-      const formattedText = formatAnalysisAsText()
+      const formattedText = formatAnalysisAsText(state.text, state.result)
       await navigator.clipboard.writeText(formattedText)
       showToast('Analysis copied to clipboard')
     } catch (err) {
@@ -628,58 +558,10 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     }
   }
 
-  const getStanceColor = (stance: 'agrees' | 'disagrees' | 'partial') => {
-    switch (stance) {
-      case 'agrees': return { bg: 'rgba(16, 185, 129, 0.08)', border: 'var(--color-success)', text: 'var(--color-success)' }
-      case 'disagrees': return { bg: 'rgba(239, 68, 68, 0.08)', border: 'var(--color-error)', text: 'var(--color-error)' }
-      case 'partial': return { bg: 'rgba(245, 158, 11, 0.08)', border: 'var(--color-warning)', text: 'var(--color-warning)' }
-    }
-  }
-
-  const getStanceIcon = (stance: 'agrees' | 'disagrees' | 'partial') => {
-    switch (stance) {
-      case 'agrees': return <ThumbsUp className="w-4 h-4" />
-      case 'disagrees': return <ThumbsDown className="w-4 h-4" />
-      case 'partial': return <Minus className="w-4 h-4" />
-    }
-  }
-
-  const getStanceLabel = (stance: 'agrees' | 'disagrees' | 'partial') => {
-    switch (stance) {
-      case 'agrees': return 'Agrees with you'
-      case 'disagrees': return 'Challenges your view'
-      case 'partial': return 'Partially aligns'
-    }
-  }
-
-  // Build author name to ID map from matched camps
-  const buildAuthorMap = () => {
-    const map = new Map<string, string>()
-
-    // Add all authors from the database for comprehensive linkification
-    state.allAuthors.forEach(author => {
-      if (author.id && author.name) {
-        map.set(author.name, author.id)
-      }
-    })
-
-    // Also add authors from matched camps (in case they have different data)
-    if (state.result?.matchedCamps) {
-      state.result.matchedCamps.forEach(camp => {
-        camp.topAuthors.forEach(author => {
-          if (author.id && author.name) {
-            map.set(author.name, author.id)
-          }
-        })
-      })
-    }
-
-    return map
-  }
-
   // Parse text and linkify author mentions (both bracketed and plain names)
+  // Uses extracted buildAuthorMap utility but keeps JSX rendering in component
   const linkifyAuthors = (text: string) => {
-    const authorMap = buildAuthorMap()
+    const authorMap = buildAuthorMap(state.allAuthors, state.result?.matchedCamps)
 
     // Build regex pattern for all author names in the map
     const authorNames = Array.from(authorMap.keys())
@@ -689,7 +571,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
 
     // Escape special regex characters in author names and sort by length (longest first)
     const escapedNames = authorNames
-      .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .map(name => escapeRegex(name))
       .sort((a, b) => b.length - a.length)
 
     // Create pattern that matches author names OR bracketed content

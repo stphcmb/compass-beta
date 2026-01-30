@@ -6,6 +6,30 @@
 import type { ResearchAssistantAnalyzeResponse } from '@/lib/research-assistant'
 
 /**
+ * Stance type for author alignment with draft
+ */
+export type Stance = 'agrees' | 'disagrees' | 'partial'
+
+/**
+ * Color configuration for stance display (CSS variables)
+ */
+export interface StanceColors {
+  bg: string
+  border: string
+  text: string
+}
+
+/**
+ * Extended color configuration with Tailwind classes and hex values
+ * Used by components that need both Tailwind and inline styles
+ */
+export interface StanceColorsExtended extends StanceColors {
+  bgHex: string
+  borderHex: string
+  textHex: string
+}
+
+/**
  * Loading phase configuration
  */
 export interface LoadingPhase {

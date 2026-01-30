@@ -1,10 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import {
-  ThumbsUp,
-  ThumbsDown,
-  Minus,
   Quote,
   ExternalLink,
   User,
@@ -15,6 +12,11 @@ import { Button } from '@/components/ui/button'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
 import { useToast } from '@/components/Toast'
 import { cn } from '@/lib/utils'
+import {
+  getStanceColorExtended,
+  getStanceIcon,
+  getStanceLabel,
+} from '@/components/research-assistant/lib'
 
 export interface EnhancedAuthorCardAuthor {
   id?: string
@@ -54,60 +56,6 @@ export function EnhancedAuthorCard({
 }: EnhancedAuthorCardProps) {
   const { openPanel } = useAuthorPanel()
   const { showToast } = useToast()
-
-  const getStanceColor = (stance: 'agrees' | 'disagrees' | 'partial') => {
-    switch (stance) {
-      case 'agrees':
-        return {
-          bg: 'bg-emerald-50',
-          border: 'border-emerald-500',
-          text: 'text-emerald-600',
-          bgHex: 'rgba(16, 185, 129, 0.08)',
-          borderHex: '#10b981',
-          textHex: '#059669',
-        }
-      case 'disagrees':
-        return {
-          bg: 'bg-red-50',
-          border: 'border-red-500',
-          text: 'text-red-600',
-          bgHex: 'rgba(239, 68, 68, 0.08)',
-          borderHex: '#ef4444',
-          textHex: '#dc2626',
-        }
-      case 'partial':
-        return {
-          bg: 'bg-amber-50',
-          border: 'border-amber-500',
-          text: 'text-amber-600',
-          bgHex: 'rgba(245, 158, 11, 0.08)',
-          borderHex: '#f59e0b',
-          textHex: '#d97706',
-        }
-    }
-  }
-
-  const getStanceIcon = (stance: 'agrees' | 'disagrees' | 'partial') => {
-    switch (stance) {
-      case 'agrees':
-        return <ThumbsUp className="w-4 h-4" />
-      case 'disagrees':
-        return <ThumbsDown className="w-4 h-4" />
-      case 'partial':
-        return <Minus className="w-4 h-4" />
-    }
-  }
-
-  const getStanceLabel = (stance: 'agrees' | 'disagrees' | 'partial') => {
-    switch (stance) {
-      case 'agrees':
-        return 'Agrees with you'
-      case 'disagrees':
-        return 'Challenges your view'
-      case 'partial':
-        return 'Partially aligns'
-    }
-  }
 
   const getConnectionLabel = (stance: 'agrees' | 'disagrees' | 'partial') => {
     switch (stance) {
@@ -178,7 +126,7 @@ export function EnhancedAuthorCard({
     }
   }, [author.id, author.name, onSaveForComparison, showToast])
 
-  const colors = getStanceColor(author.stance)
+  const colors = getStanceColorExtended(author.stance)
 
   return (
     <div
