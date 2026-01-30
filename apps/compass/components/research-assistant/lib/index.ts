@@ -36,3 +36,6 @@ export {
   formatAnalysisAsText,
   escapeRegex,
 } from './utils'
+
+// PDF Export
+export { generatePrintHTML } from './pdfExport'
