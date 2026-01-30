@@ -23,7 +23,7 @@ export function EmptySection({
     }}>
       <p style={{
         fontSize: '13px',
-        color: '#9ca3af',
+        color: '#6b7280',
         margin: 0,
         lineHeight: 1.5
       }}>

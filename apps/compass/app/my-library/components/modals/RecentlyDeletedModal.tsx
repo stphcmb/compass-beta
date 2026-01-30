@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import {
   Trash2,
   X,
@@ -28,8 +29,27 @@ export function RecentlyDeletedModal({
   onClose,
   timeAgo
 }: RecentlyDeletedModalProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Focus trap and keyboard handling
+  useEffect(() => {
+    closeButtonRef.current?.focus()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="deleted-modal-title"
       style={{
         position: 'fixed',
         inset: 0,
@@ -42,6 +62,7 @@ export function RecentlyDeletedModal({
     >
       <div
         onClick={onClose}
+        aria-hidden="true"
         style={{
           position: 'absolute',
           inset: 0,
@@ -65,7 +86,9 @@ export function RecentlyDeletedModal({
         }}
       >
         <button
+          ref={closeButtonRef}
           onClick={onClose}
+          aria-label="Close dialog"
           style={{
             position: 'absolute',
             top: '16px',
@@ -77,6 +100,13 @@ export function RecentlyDeletedModal({
             cursor: 'pointer',
             color: '#64748b',
             zIndex: 10,
+            outline: 'none',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 0 2px #6366f1'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.boxShadow = 'none'
           }}
         >
           <X size={20} />
@@ -89,7 +119,7 @@ export function RecentlyDeletedModal({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <Trash2 size={20} style={{ color: '#ef4444' }} />
-            <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+            <h2 id="deleted-modal-title" style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
               Recently Deleted
             </h2>
           </div>
@@ -100,7 +130,7 @@ export function RecentlyDeletedModal({
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
           {items.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: '#9ca3af' }}>
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: '#6b7280' }}>
               <Trash2 size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
               <p style={{ margin: 0, fontSize: '14px' }}>No recently deleted items</p>
             </div>
@@ -143,7 +173,7 @@ export function RecentlyDeletedModal({
                     <div style={{ fontSize: '13px', fontWeight: 500, color: '#374151' }}>
                       {item.name}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ fontSize: '11px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{
                         textTransform: 'uppercase',
                         fontSize: '10px',
@@ -172,6 +202,7 @@ export function RecentlyDeletedModal({
                   <div style={{ display: 'flex', gap: '4px' }}>
                     <button
                       onClick={() => onRestore(item)}
+                      aria-label={`Restore ${item.name}`}
                       style={{
                         padding: '6px 10px',
                         borderRadius: '6px',
@@ -183,7 +214,14 @@ export function RecentlyDeletedModal({
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        gap: '4px',
+                        outline: 'none',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 0 2px white, 0 0 0 4px #10b981'
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.boxShadow = 'none'
                       }}
                       title="Restore"
                     >
@@ -192,13 +230,21 @@ export function RecentlyDeletedModal({
                     </button>
                     <button
                       onClick={() => onDelete(item.id)}
+                      aria-label={`Permanently delete ${item.name}`}
                       style={{
                         padding: '6px',
                         borderRadius: '6px',
                         border: 'none',
                         background: '#fee2e2',
                         color: '#dc2626',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 0 2px white, 0 0 0 4px #dc2626'
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.boxShadow = 'none'
                       }}
                       title="Delete permanently"
                     >
@@ -231,6 +277,13 @@ export function RecentlyDeletedModal({
                 fontSize: '13px',
                 fontWeight: '500',
                 cursor: 'pointer',
+                outline: 'none',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 0 2px white, 0 0 0 4px #dc2626'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.boxShadow = 'none'
               }}
             >
               Delete All Permanently
@@ -248,6 +301,13 @@ export function RecentlyDeletedModal({
               fontSize: '13px',
               fontWeight: '500',
               cursor: 'pointer',
+              outline: 'none',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 0 2px white, 0 0 0 4px #6366f1'
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.boxShadow = 'none'
             }}
           >
             Close

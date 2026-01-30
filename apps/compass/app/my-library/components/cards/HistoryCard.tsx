@@ -104,7 +104,7 @@ export function HistoryCard({
             marginTop: '4px',
             flexWrap: 'wrap'
           }}>
-            <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+            <span style={{ fontSize: '11px', color: '#6b7280' }}>
               {subtitle}
             </span>
             {meta && (
@@ -162,7 +162,7 @@ export function HistoryCard({
               border: 'none',
               background: note ? '#e0e7ff' : 'transparent',
               cursor: 'pointer',
-              color: note ? '#4f46e5' : '#9ca3af',
+              color: note ? '#4f46e5' : '#6b7280',
               transition: 'all 0.2s'
             }}
             title={note ? 'Edit note' : 'Add note'}

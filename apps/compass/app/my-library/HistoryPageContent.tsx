@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   BookMarked,
@@ -88,17 +88,17 @@ export default function HistoryPage() {
     ui.searchQuery
   )
 
-  // Calculate filtered author count
-  const getFilteredAuthorsCount = () => {
+  // Memoized calculation of filtered author count - prevents recalculation on every render
+  const filteredAuthorsCount = useMemo(() => {
     const authorNames = new Set([
       ...filteredFavorites.map(f => f.name),
       ...filteredAuthorNotes.map(n => n.name)
     ])
     return authorNames.size
-  }
+  }, [filteredFavorites, filteredAuthorNotes])
 
-  // Navigation handlers (keep these - not part of CRUD actions)
-  const handleSearchClick = (query: string, cachedResult?: any) => {
+  // Memoized navigation handlers to prevent unnecessary re-renders of child components
+  const handleSearchClick = useCallback((query: string, cachedResult?: any) => {
     if (cachedResult) {
       sessionStorage.setItem('pending-search-cache', JSON.stringify({
         query,
@@ -107,9 +107,9 @@ export default function HistoryPage() {
       }))
     }
     router.push(`/explore?q=${encodeURIComponent(query)}`)
-  }
+  }, [router])
 
-  const handleAnalysisClick = (id: string, text: string, cachedResult?: any) => {
+  const handleAnalysisClick = useCallback((id: string, text: string, cachedResult?: any) => {
     if (cachedResult) {
       // Navigate directly to results page
       router.push(`/research-assistant/results/${id}`)
@@ -122,9 +122,9 @@ export default function HistoryPage() {
         }))
       }, 100)
     }
-  }
+  }, [router])
 
-  const handleAuthorClick = async (name: string) => {
+  const handleAuthorClick = useCallback(async (name: string) => {
     // Find author ID by name and open the author panel
     if (!supabase) {
       router.push(`/authors?author=${encodeURIComponent(name)}`)
@@ -147,18 +147,67 @@ export default function HistoryPage() {
     } catch {
       router.push(`/authors?author=${encodeURIComponent(name)}`)
     }
-  }
+  }, [router, openPanel])
 
-
-
-  // Use filtered counts for tabs when filter is applied
-  const tabs = [
-    { id: 'all' as TabType, label: 'All Activity', count: filteredAnalyses.length + filteredInsights.length + getFilteredAuthorsCount() + filteredRecentSearches.length + filteredSavedSearches.length },
+  // Memoized tabs array - prevents recreation on every render
+  const tabs = useMemo(() => [
+    { id: 'all' as TabType, label: 'All Activity', count: filteredAnalyses.length + filteredInsights.length + filteredAuthorsCount + filteredRecentSearches.length + filteredSavedSearches.length },
     { id: 'analyses' as TabType, label: 'Analyses', count: filteredAnalyses.length },
     { id: 'insights' as TabType, label: 'Helpful Insights', count: filteredInsights.length },
-    { id: 'authors' as TabType, label: 'Authors', count: getFilteredAuthorsCount() },
+    { id: 'authors' as TabType, label: 'Authors', count: filteredAuthorsCount },
     { id: 'searches' as TabType, label: 'Searches', count: filteredRecentSearches.length + filteredSavedSearches.length },
-  ]
+  ], [filteredAnalyses.length, filteredInsights.length, filteredAuthorsCount, filteredRecentSearches.length, filteredSavedSearches.length])
+
+  // Memoized unified authors computation - extracts heavy IIFE logic
+  const { unifiedAuthors, favoritesCount } = useMemo(() => {
+    const authorMap = new Map<string, {
+      name: string
+      isFavorite: boolean
+      note?: string
+      addedAt?: string
+      noteUpdatedAt?: string
+      timestamp: string
+    }>()
+
+    data.favoriteAuthors.forEach(fav => {
+      authorMap.set(fav.name, {
+        name: fav.name,
+        isFavorite: true,
+        addedAt: fav.addedAt,
+        timestamp: fav.addedAt || ''
+      })
+    })
+
+    data.authorNotes.forEach(noteItem => {
+      const existing = authorMap.get(noteItem.name)
+      if (existing) {
+        existing.note = noteItem.note
+        existing.noteUpdatedAt = noteItem.updatedAt
+        existing.timestamp = noteItem.updatedAt || existing.timestamp
+      } else {
+        authorMap.set(noteItem.name, {
+          name: noteItem.name,
+          isFavorite: false,
+          note: noteItem.note,
+          noteUpdatedAt: noteItem.updatedAt,
+          timestamp: noteItem.updatedAt || ''
+        })
+      }
+    })
+
+    let authors = Array.from(authorMap.values())
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+    // Apply favorites filter
+    if (ui.favoritesOnly) {
+      authors = authors.filter(a => a.isFavorite)
+    }
+
+    return {
+      unifiedAuthors: authors,
+      favoritesCount: authors.filter(a => a.isFavorite).length
+    }
+  }, [data.favoriteAuthors, data.authorNotes, ui.favoritesOnly])
 
   if (!mounted) return null
 
@@ -447,7 +496,7 @@ export default function HistoryPage() {
                   ))}
                 </div>
                 {(filteredSavedSearches.length + filteredRecentSearches.length > 6) && (
-                  <div style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
+                  <div style={{ fontSize: '10px', color: '#6b7280', textAlign: 'center', marginTop: '8px' }}>
                     <button
                       onClick={() => ui.setActiveTab('searches')}
                       style={{
@@ -537,7 +586,7 @@ export default function HistoryPage() {
                     ))}
                   </div>
                   {filteredAnalyses.length > 3 && (
-                    <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
+                    <div style={{ fontSize: '11px', color: '#6b7280', textAlign: 'center', marginTop: '8px' }}>
                       Scroll to see {filteredAnalyses.length - 3} more
                     </div>
                   )}
@@ -611,7 +660,7 @@ export default function HistoryPage() {
                     ))}
                   </div>
                   {filteredInsights.length > 3 && (
-                    <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
+                    <div style={{ fontSize: '11px', color: '#6b7280', textAlign: 'center', marginTop: '8px' }}>
                       Scroll to see {filteredInsights.length - 3} more
                     </div>
                   )}
@@ -627,105 +676,75 @@ export default function HistoryPage() {
             </CollapsibleSection>
 
             {/* Saved Authors - Collapsible with filter (always visible) */}
-            {(() => {
-              const authorMap = new Map<string, any>()
-              data.favoriteAuthors.forEach(fav => {
-                authorMap.set(fav.name, { name: fav.name, isFavorite: true, addedAt: fav.addedAt })
-              })
-              data.authorNotes.forEach(noteItem => {
-                const existing = authorMap.get(noteItem.name)
-                if (existing) {
-                  existing.note = noteItem.note
-                  existing.noteUpdatedAt = noteItem.updatedAt
-                } else {
-                  authorMap.set(noteItem.name, { name: noteItem.name, isFavorite: false, note: noteItem.note, noteUpdatedAt: noteItem.updatedAt })
-                }
-              })
-              let unifiedAuthors = Array.from(authorMap.values())
-                .map(a => ({ ...a, timestamp: a.noteUpdatedAt || a.addedAt || '' }))
-                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-
-              // Note: Time filter already applied via useHistoryFilters for filteredFavorites and filteredAuthorNotes
-
-              // Apply favorites filter
-              if (ui.favoritesOnly) {
-                unifiedAuthors = unifiedAuthors.filter(a => a.isFavorite)
-              }
-
-              const favoritesCount = unifiedAuthors.filter(a => a.isFavorite).length
-
-              return (
-                <CollapsibleSection
-                  id="authors"
-                  title="Saved Authors"
-                  icon={<Users size={16} style={{ color: '#059669' }} />}
-                  count={unifiedAuthors.length}
-                  isCollapsed={ui.collapsedSections['authors']}
-                  onToggle={() => ui.toggleSection('authors')}
-                  onClear={() => { actions.clearAllByType('favorites'); actions.clearAllByType('notes') }}
-                  color="#059669"
-                  headerExtra={unifiedAuthors.length > 0 ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        ui.setFavoritesOnly(!ui.favoritesOnly)
-                      }}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: ui.favoritesOnly ? '#fef3c7' : '#f3f4f6',
-                        color: ui.favoritesOnly ? '#d97706' : '#6b7280',
-                        fontSize: '11px',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Star size={12} style={{ fill: ui.favoritesOnly ? '#f59e0b' : 'none' }} />
-                      {ui.favoritesOnly ? 'Showing Favorites' : `Favorites (${favoritesCount})`}
-                    </button>
-                  ) : undefined}
+            <CollapsibleSection
+              id="authors"
+              title="Saved Authors"
+              icon={<Users size={16} style={{ color: '#059669' }} />}
+              count={unifiedAuthors.length}
+              isCollapsed={ui.collapsedSections['authors']}
+              onToggle={() => ui.toggleSection('authors')}
+              onClear={() => { actions.clearAllByType('favorites'); actions.clearAllByType('notes') }}
+              color="#059669"
+              headerExtra={unifiedAuthors.length > 0 ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    ui.setFavoritesOnly(!ui.favoritesOnly)
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: ui.favoritesOnly ? '#fef3c7' : '#f3f4f6',
+                    color: ui.favoritesOnly ? '#d97706' : '#6b7280',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
                 >
-                  {unifiedAuthors.length === 0 ? (
-                    <EmptySection
-                      message={ui.favoritesOnly ? 'No favorite authors yet' : (ui.timeFilter !=='all' ? 'No authors saved in this time period' : 'Star authors or add notes from the Authors page')}
-                      actionLabel="Discover Authors"
-                      actionIcon={<Users size={14} />}
-                      onAction={() => router.push('/authors')}
-                    />
-                  ) : (
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(200px, 1fr))' : '1fr',
-                      gap: ui.viewMode === 'grid' ? '10px' : '0',
-                      maxHeight: '240px',
-                      overflowY: 'auto',
-                      border: ui.viewMode === 'list' ? '1px solid #e5e7eb' : 'none',
-                      borderRadius: ui.viewMode === 'list' ? '8px' : '0',
-                      paddingRight: '4px'
-                    }}>
-                      {unifiedAuthors.map(author => {
-                        const details = data.authorDetails[author.name]
-                        return (
-                          <MiniAuthorCard
-                            key={author.name}
-                            name={author.name}
-                            affiliation={details?.affiliation || details?.primary_domain}
-                            isFavorite={author.isFavorite}
-                            note={author.note}
-                            onClick={() => handleAuthorClick(author.name)}
-                            viewMode={ui.viewMode}
-                          />
-                        )
-                      })}
-                    </div>
-                  )}
-                </CollapsibleSection>
-              )
-            })()}
+                  <Star size={12} style={{ fill: ui.favoritesOnly ? '#f59e0b' : 'none' }} />
+                  {ui.favoritesOnly ? 'Showing Favorites' : `Favorites (${favoritesCount})`}
+                </button>
+              ) : undefined}
+            >
+              {unifiedAuthors.length === 0 ? (
+                <EmptySection
+                  message={ui.favoritesOnly ? 'No favorite authors yet' : (ui.timeFilter !=='all' ? 'No authors saved in this time period' : 'Star authors or add notes from the Authors page')}
+                  actionLabel="Discover Authors"
+                  actionIcon={<Users size={14} />}
+                  onAction={() => router.push('/authors')}
+                />
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(200px, 1fr))' : '1fr',
+                  gap: ui.viewMode === 'grid' ? '10px' : '0',
+                  maxHeight: '240px',
+                  overflowY: 'auto',
+                  border: ui.viewMode === 'list' ? '1px solid #e5e7eb' : 'none',
+                  borderRadius: ui.viewMode === 'list' ? '8px' : '0',
+                  paddingRight: '4px'
+                }}>
+                  {unifiedAuthors.map(author => {
+                    const details = data.authorDetails[author.name]
+                    return (
+                      <MiniAuthorCard
+                        key={author.name}
+                        name={author.name}
+                        affiliation={details?.affiliation || details?.primary_domain}
+                        isFavorite={author.isFavorite}
+                        note={author.note}
+                        onClick={() => handleAuthorClick(author.name)}
+                        viewMode={ui.viewMode}
+                      />
+                    )
+                  })}
+                </div>
+              )}
+            </CollapsibleSection>
           </div>
           </div>
           )
@@ -879,7 +898,7 @@ export default function HistoryPage() {
                           }}>
                             {insight.type === 'summary' ? 'Summary' : insight.campLabel || 'Perspective'}
                           </span>
-                          <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+                          <span style={{ fontSize: '11px', color: '#6b7280' }}>
                             {timeAgo(insight.timestamp)}
                           </span>
                         </div>
@@ -898,7 +917,7 @@ export default function HistoryPage() {
                         {insight.originalText && (
                           <p style={{
                             fontSize: '11px',
-                            color: '#9ca3af',
+                            color: '#6b7280',
                             margin: '6px 0 0',
                             fontStyle: 'italic'
                           }}>
@@ -918,7 +937,7 @@ export default function HistoryPage() {
                           borderRadius: '4px',
                           border: 'none',
                           background: 'none',
-                          color: '#9ca3af',
+                          color: '#6b7280',
                           cursor: 'pointer'
                         }}
                         title="Remove insight"
@@ -932,106 +951,57 @@ export default function HistoryPage() {
             </Section>
           )}
 
-          {/* Combined Authors Section (single view) */}
-          {ui.activeTab ==='authors' && (() => {
-            // Build unified author list from favorites and notes
-            const authorMap = new Map<string, {
-              name: string
-              isFavorite: boolean
-              note?: string
-              addedAt?: string
-              noteUpdatedAt?: string
-            }>()
-
-            // Add favorites
-            data.favoriteAuthors.forEach(fav => {
-              authorMap.set(fav.name, {
-                name: fav.name,
-                isFavorite: true,
-                addedAt: fav.addedAt
-              })
-            })
-
-            // Add/merge notes
-            data.authorNotes.forEach(noteItem => {
-              const existing = authorMap.get(noteItem.name)
-              if (existing) {
-                existing.note = noteItem.note
-                existing.noteUpdatedAt = noteItem.updatedAt
-              } else {
-                authorMap.set(noteItem.name, {
-                  name: noteItem.name,
-                  isFavorite: false,
-                  note: noteItem.note,
-                  noteUpdatedAt: noteItem.updatedAt
-                })
-              }
-            })
-
-            // Convert to array and sort by most recent activity
-            const unifiedAuthors = Array.from(authorMap.values())
-              .map(author => ({
-                ...author,
-                timestamp: author.noteUpdatedAt || author.addedAt || ''
-              }))
-              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-
-            // Time filter already applied via useHistoryFilters to filteredFavorites and filteredAuthorNotes
-            const filteredAuthors = unifiedAuthors
-
-            if (filteredAuthors.length === 0) return null
-
-            return (
-              <Section
-                title="Saved Authors"
-                icon={<Users size={16} style={{ color: '#6366f1' }} />}
-                count={filteredAuthors.length}
-                onClear={() => {
-                  actions.clearAllByType('favorites')
-                  actions.clearAllByType('notes')
-                }}
-              >
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(320px, 1fr))' : '1fr',
-                  gap: ui.viewMode === 'grid' ? '12px' : '8px'
-                }}>
-                  {filteredAuthors.map(author => {
-                    const details = data.authorDetails[author.name]
-                    return (
-                      <UnifiedAuthorCard
-                        key={author.name}
-                        name={author.name}
-                        affiliation={details?.affiliation || details?.primary_domain}
-                        isFavorite={author.isFavorite}
-                        note={author.note}
-                        timestamp={author.timestamp}
-                        onClick={() => handleAuthorClick(author.name)}
-                        onToggleFavorite={() => {
-                          if (author.isFavorite) {
-                            actions.removeFavoriteAuthor(author.name)
-                          } else {
-                            // Add to favorites
-                            const newFavorite = {
-                              id: `fav-${Date.now()}`,
-                              name: author.name,
-                              addedAt: new Date().toISOString()
-                            }
-                            const updated = [newFavorite, ...data.favoriteAuthors]
-                            localStorage.setItem('favoriteAuthors', JSON.stringify(updated))
-                            reloadData()
+          {/* Combined Authors Section (single view) - uses memoized unifiedAuthors */}
+          {ui.activeTab ==='authors' && unifiedAuthors.length > 0 && (
+            <Section
+              title="Saved Authors"
+              icon={<Users size={16} style={{ color: '#6366f1' }} />}
+              count={unifiedAuthors.length}
+              onClear={() => {
+                actions.clearAllByType('favorites')
+                actions.clearAllByType('notes')
+              }}
+            >
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: ui.viewMode === 'grid' ? 'repeat(auto-fill, minmax(320px, 1fr))' : '1fr',
+                gap: ui.viewMode === 'grid' ? '12px' : '8px'
+              }}>
+                {unifiedAuthors.map(author => {
+                  const details = data.authorDetails[author.name]
+                  return (
+                    <UnifiedAuthorCard
+                      key={author.name}
+                      name={author.name}
+                      affiliation={details?.affiliation || details?.primary_domain}
+                      isFavorite={author.isFavorite}
+                      note={author.note}
+                      timestamp={author.timestamp}
+                      onClick={() => handleAuthorClick(author.name)}
+                      onToggleFavorite={() => {
+                        if (author.isFavorite) {
+                          actions.removeFavoriteAuthor(author.name)
+                        } else {
+                          // Add to favorites
+                          const newFavorite = {
+                            id: `fav-${Date.now()}`,
+                            name: author.name,
+                            addedAt: new Date().toISOString()
                           }
-                        }}
-                        onDeleteNote={() => actions.deleteAuthorNote(author.name)}
-                        onUpdateNote={(note) => actions.updateAuthorNote(author.name, note)}
-                        timeAgo={timeAgo}
-                      />
-                    )
-                  })}
-                </div>
-              </Section>
-            )
-          })()}
+                          const updated = [newFavorite, ...data.favoriteAuthors]
+                          localStorage.setItem('favoriteAuthors', JSON.stringify(updated))
+                          reloadData()
+                        }
+                      }}
+                      onDeleteNote={() => actions.deleteAuthorNote(author.name)}
+                      onUpdateNote={(note) => actions.updateAuthorNote(author.name, note)}
+                      timeAgo={timeAgo}
+                    />
+                  )
+                })}
+              </div>
+            </Section>
+          )}
 
           {/* Tab-specific Empty States */}
           {ui.activeTab ==='searches' && filteredRecentSearches.length === 0 && filteredSavedSearches.length === 0 && (
@@ -1082,7 +1052,7 @@ export default function HistoryPage() {
             />
           )}
 
-          {ui.activeTab ==='authors' && getFilteredAuthorsCount() === 0 && (
+          {ui.activeTab ==='authors' && filteredAuthorsCount === 0 && (
             <EmptyStateComponent
               icon={Users}
               iconColor="#6366f1"

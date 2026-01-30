@@ -50,7 +50,7 @@ export function SearchCard({
           marginRight: '12px',
           flexShrink: 0
         }}>
-          <Search size={16} style={{ color: isSaved ? '#3b82f6' : '#9ca3af' }} />
+          <Search size={16} style={{ color: isSaved ? '#3b82f6' : '#6b7280' }} />
         </div>
 
         {/* Query text - flex-1 */}
@@ -127,7 +127,7 @@ export function SearchCard({
             borderRadius: '4px',
             border: 'none',
             background: 'transparent',
-            color: '#9ca3af',
+            color: '#6b7280',
             cursor: 'pointer',
             flexShrink: 0,
             transition: 'all 0.12s ease-out'
@@ -138,7 +138,7 @@ export function SearchCard({
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = '#9ca3af'
+            e.currentTarget.style.color = '#6b7280'
           }}
         >
           <X size={14} />
@@ -181,7 +181,7 @@ export function SearchCard({
           justifyContent: 'center',
           flexShrink: 0
         }}>
-          <Search size={14} style={{ color: isSaved ? '#3b82f6' : '#9ca3af' }} />
+          <Search size={14} style={{ color: isSaved ? '#3b82f6' : '#6b7280' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
@@ -198,7 +198,7 @@ export function SearchCard({
           }}>
             {query}
           </div>
-          <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+          <div style={{ fontSize: '12px', color: '#6b7280' }}>
             {timestamp}{isSaved && ' · Saved'}
           </div>
         </div>

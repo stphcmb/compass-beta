@@ -185,7 +185,7 @@ export function MiniAuthorCard({
           {affiliation && (
             <div style={{
               fontSize: '12px',
-              color: '#9ca3af',
+              color: '#6b7280',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'

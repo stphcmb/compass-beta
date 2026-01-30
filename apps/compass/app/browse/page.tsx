@@ -183,7 +183,7 @@ function ExplorePageContent() {
             ) : !exploreMode && !activeDomain ? (
               /* WELCOME STATE: Options to search or browse */
               <div className="bg-gradient-to-br from-indigo-50 via-white to-blue-50 border border-indigo-100 rounded-xl p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
                   {/* Search Option - Clickable with sample query */}
                   <a
                     href="/explore?q=future+of+work"

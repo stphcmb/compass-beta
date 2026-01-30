@@ -150,7 +150,7 @@ export function AnalysisCard({
             borderRadius: '4px',
             border: 'none',
             background: 'transparent',
-            color: '#9ca3af',
+            color: '#6b7280',
             cursor: 'pointer',
             flexShrink: 0,
             transition: 'all 0.12s ease-out'
@@ -161,7 +161,7 @@ export function AnalysisCard({
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = '#9ca3af'
+            e.currentTarget.style.color = '#6b7280'
           }}
         >
           <X size={14} />
@@ -208,7 +208,7 @@ export function AnalysisCard({
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Top row: type + timestamp + badges */}
-          <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
             <span style={{ fontWeight: 600, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Analysis</span>
             {' · '}{timestamp}
             {campCount > 0 && ` · ${campCount} perspectives`}

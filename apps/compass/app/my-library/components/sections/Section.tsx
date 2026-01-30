@@ -52,7 +52,7 @@ export function Section({
             borderRadius: '6px',
             border: 'none',
             background: 'transparent',
-            color: '#9ca3af',
+            color: '#6b7280',
             fontSize: '12px',
             cursor: 'pointer',
             display: 'flex',
@@ -65,7 +65,7 @@ export function Section({
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = '#9ca3af'
+            e.currentTarget.style.color = '#6b7280'
           }}
         >
           <Trash2 size={12} />

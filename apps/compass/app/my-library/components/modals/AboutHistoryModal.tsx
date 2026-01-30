@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import {
   History,
   Search,
@@ -15,6 +16,23 @@ export interface AboutHistoryModalProps {
 }
 
 export function AboutHistoryModal({ onClose }: AboutHistoryModalProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Focus trap and keyboard handling
+  useEffect(() => {
+    // Focus close button on mount
+    closeButtonRef.current?.focus()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   const steps = [
     { icon: Search, title: 'Revisit past searches', color: '#2563eb' },
     { icon: Sparkles, title: 'Reload saved analyses', color: '#7c3aed' },
@@ -24,6 +42,9 @@ export function AboutHistoryModal({ onClose }: AboutHistoryModalProps) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="about-history-title"
       style={{
         position: 'fixed',
         inset: 0,
@@ -36,6 +57,7 @@ export function AboutHistoryModal({ onClose }: AboutHistoryModalProps) {
     >
       <div
         onClick={onClose}
+        aria-hidden="true"
         style={{
           position: 'absolute',
           inset: 0,
@@ -57,7 +79,9 @@ export function AboutHistoryModal({ onClose }: AboutHistoryModalProps) {
         }}
       >
         <button
+          ref={closeButtonRef}
           onClick={onClose}
+          aria-label="Close dialog"
           style={{
             position: 'absolute',
             top: '16px',
@@ -69,6 +93,13 @@ export function AboutHistoryModal({ onClose }: AboutHistoryModalProps) {
             cursor: 'pointer',
             color: '#64748b',
             zIndex: 10,
+            outline: 'none',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 0 2px #6366f1'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.boxShadow = 'none'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)'
@@ -87,7 +118,7 @@ export function AboutHistoryModal({ onClose }: AboutHistoryModalProps) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <History size={20} style={{ color: '#6366f1' }} />
-            <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+            <h2 id="about-history-title" style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
               How History Works
             </h2>
           </div>
@@ -155,6 +186,13 @@ export function AboutHistoryModal({ onClose }: AboutHistoryModalProps) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
+              outline: 'none',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 0 2px white, 0 0 0 4px #6366f1'
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.boxShadow = 'none'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = '#4f46e5'

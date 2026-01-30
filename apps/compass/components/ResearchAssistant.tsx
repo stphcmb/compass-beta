@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { ResearchAssistantAnalyzeResponse } from '@/lib/research-assistant'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
@@ -344,7 +344,8 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
 
   // Parse text and linkify author mentions (both bracketed and plain names)
   // Uses extracted buildAuthorMap utility but keeps JSX rendering in component
-  const linkifyAuthors = (text: string) => {
+  // Memoized to prevent recreation on every render
+  const linkifyAuthors = useCallback((text: string) => {
     const authorMap = buildAuthorMap(state.allAuthors, state.result?.matchedCamps)
 
     // Build regex pattern for all author names in the map
@@ -362,7 +363,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     const pattern = `\\[([^\\]]+)\\]|\\b(${escapedNames.join('|')})\\b`
     const regex = new RegExp(pattern, 'g')
 
-    const parts = []
+    const parts: (string | JSX.Element)[] = []
     let lastIndex = 0
     let match
     let linkKey = 0
@@ -417,7 +418,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     }
 
     return parts.length > 0 ? parts : text
-  }
+  }, [state.allAuthors, state.result?.matchedCamps, openPanel])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {

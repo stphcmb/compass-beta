@@ -47,7 +47,7 @@ export function InputSection({
       </div>
 
       {/* Input Card */}
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <div
           style={{
             borderRadius: '12px',
@@ -170,7 +170,7 @@ export function InputSection({
           </div>
 
           {/* Analysis Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-4xl mx-auto">
             {savedAnalyses.slice(0, 4).map((analysis) => (
               <button
                 key={analysis.id}

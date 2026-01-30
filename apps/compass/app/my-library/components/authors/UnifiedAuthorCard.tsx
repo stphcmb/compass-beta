@@ -112,7 +112,7 @@ export function UnifiedAuthorCard({
           )}
           <div style={{
             fontSize: '11px',
-            color: '#9ca3af',
+            color: '#6b7280',
             marginTop: '4px',
             display: 'flex',
             alignItems: 'center',
@@ -165,7 +165,7 @@ export function UnifiedAuthorCard({
             border: 'none',
             background: isFavorite ? '#fef3c7' : 'transparent',
             cursor: 'pointer',
-            color: isFavorite ? '#f59e0b' : '#9ca3af',
+            color: isFavorite ? '#f59e0b' : '#6b7280',
             transition: 'all 0.2s'
           }}
           title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
@@ -183,7 +183,7 @@ export function UnifiedAuthorCard({
             border: 'none',
             background: note ? '#e0e7ff' : 'transparent',
             cursor: 'pointer',
-            color: note ? '#6366f1' : '#9ca3af',
+            color: note ? '#6366f1' : '#6b7280',
             transition: 'all 0.2s'
           }}
           title={note ? 'Edit note' : 'Add note'}
@@ -202,7 +202,7 @@ export function UnifiedAuthorCard({
               border: 'none',
               background: 'transparent',
               cursor: 'pointer',
-              color: '#9ca3af'
+              color: '#6b7280'
             }}
             title="Delete note"
           >

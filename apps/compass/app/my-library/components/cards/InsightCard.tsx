@@ -84,7 +84,7 @@ export function InsightCard({
         {originalText && (
           <div style={{
             fontSize: '12px',
-            color: '#9ca3af',
+            color: '#6b7280',
             fontStyle: 'italic',
             marginLeft: '12px',
             flexShrink: 0,
@@ -121,7 +121,7 @@ export function InsightCard({
             borderRadius: '4px',
             border: 'none',
             background: 'transparent',
-            color: '#9ca3af',
+            color: '#6b7280',
             cursor: 'pointer',
             flexShrink: 0,
             transition: 'all 0.12s ease-out'
@@ -132,7 +132,7 @@ export function InsightCard({
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = '#9ca3af'
+            e.currentTarget.style.color = '#6b7280'
           }}
         >
           <X size={14} />
@@ -186,8 +186,8 @@ export function InsightCard({
             }}>
               {type}
             </span>
-            <span style={{ fontSize: '12px', color: '#9ca3af' }}>·</span>
-            <span style={{ fontSize: '12px', color: '#9ca3af' }}>{timestamp}</span>
+            <span style={{ fontSize: '12px', color: '#6b7280' }}>·</span>
+            <span style={{ fontSize: '12px', color: '#6b7280' }}>{timestamp}</span>
           </div>
           <p style={{
             fontSize: '13px',
@@ -205,7 +205,7 @@ export function InsightCard({
           {originalText && (
             <p style={{
               fontSize: '12px',
-              color: '#9ca3af',
+              color: '#6b7280',
               margin: 0,
               fontStyle: 'italic',
               lineHeight: 1.4,
