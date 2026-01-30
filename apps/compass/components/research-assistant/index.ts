@@ -11,3 +11,19 @@ export { AllAuthorsSection } from './AllAuthorsSection'
 
 export { useAuthorComparison } from './useAuthorComparison'
 export type { ComparisonListItem, UseAuthorComparisonReturn } from './useAuthorComparison'
+
+// Display components (extracted from ResearchAssistant.tsx)
+export {
+  AnalyzedTextPreview,
+  ResultsToolbar,
+  SummarySection,
+  EditorialSuggestionsSection,
+} from './components'
+export type {
+  AnalyzedTextPreviewProps,
+  ResultsToolbarProps,
+  ScrollRefs,
+  SummarySectionProps,
+  EditorialSuggestionsSectionProps,
+  EditorialSuggestions,
+} from './components'

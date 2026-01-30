@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { ResearchAssistantAnalyzeResponse } from '@/lib/research-assistant'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
 import { useAuthorPanel } from '@/contexts/AuthorPanelContext'
-import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, Quote, ExternalLink, Lightbulb, Users, Bookmark, Copy, FileDown, History, Clock, ArrowLeft, Share2 } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle, Loader2, ThumbsUp, Quote, ExternalLink, Users, History, Clock, ArrowLeft } from 'lucide-react'
 import { LoadingPhaseIndicator } from '@/components/research-assistant/LoadingPhaseIndicator'
 import { useResearchState } from '@/hooks/useResearchState'
 import { useAnalysisActions } from '@/hooks/useAnalysisActions'
@@ -23,6 +23,12 @@ import {
   escapeRegex,
 } from '@/components/research-assistant/lib'
 import type { ResearchAssistantProps, LoadTextEventDetail, PendingAnalysis, Stance } from '@/components/research-assistant/lib'
+import {
+  AnalyzedTextPreview,
+  ResultsToolbar,
+  SummarySection,
+  EditorialSuggestionsSection,
+} from '@/components/research-assistant/components'
 
 export default function ResearchAssistant({ showTitle = false, initialAnalysisId }: ResearchAssistantProps) {
   const { openPanel } = useAuthorPanel()
@@ -45,9 +51,6 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
 
   // Centralized action handlers via useAnalysisActions hook
   const actions = useAnalysisActions({ state, dispatch, showToast })
-
-  // Local UI state for text expansion
-  const [showFullText, setShowFullText] = useState(false)
 
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const authorsRef = useRef<HTMLDivElement>(null)
@@ -226,10 +229,6 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
     window.addEventListener(EVENTS.RESEARCH_ASSISTANT_SAVED, handleNewSave)
     return () => window.removeEventListener(EVENTS.RESEARCH_ASSISTANT_SAVED, handleNewSave)
   }, [dispatch])
-
-  const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
-    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
 
   // Save a helpful insight to history
   const saveHelpfulInsight = (type: 'summary' | 'camp', content: string, campLabel?: string, campIdx?: number) => {
@@ -555,6 +554,17 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
       console.error('Failed to export PDF:', err)
       showToast('Failed to generate PDF', 'error')
       dispatch({ type: 'SET_EXPORTING', payload: false })
+    }
+  }
+
+  const handleShareUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      dispatch({ type: 'SET_URL_COPIED', payload: true })
+      showToast('Link copied!')
+      setTimeout(() => dispatch({ type: 'SET_URL_COPIED', payload: false }), 2000)
+    } catch (e) {
+      showToast('Failed to copy link', 'error')
     }
   }
 
@@ -903,70 +913,7 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
         </div>
       ) : (
         /* View Mode - Analyzed text preview */
-        <div
-          style={{
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #DCF2FA 0%, #AADAF9 100%)',
-            border: '1px solid #48AFF0',
-            padding: '20px',
-            marginBottom: 'var(--space-6)',
-            position: 'relative'
-          }}
-        >
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '12px'
-          }}>
-            <Quote style={{
-              width: '24px',
-              height: '24px',
-              color: '#0158AE',
-              flexShrink: 0,
-              marginTop: '2px'
-            }} />
-            <div style={{ flex: 1 }}>
-              <p style={{
-                fontSize: '15px',
-                lineHeight: '1.7',
-                color: '#162950',
-                margin: 0,
-                fontStyle: 'italic'
-              }}>
-                {showFullText ? state.text : (state.text.length > 300 ? state.text.substring(0, 300) + '...' : state.text)}
-              </p>
-              {state.text.length > 300 && (
-                <button
-                  onClick={() => setShowFullText(!showFullText)}
-                  style={{
-                    marginTop: '8px',
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    color: '#1075DC',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  {showFullText ? 'Show less' : 'Show more'}
-                </button>
-              )}
-            </div>
-          </div>
-          <div style={{
-            marginTop: '12px',
-            paddingTop: '12px',
-            borderTop: '1px solid #48AFF0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <span style={{ fontSize: '12px', color: '#0158AE', fontWeight: 500 }}>
-              {state.text.length.toLocaleString()} characters analyzed
-            </span>
-          </div>
-        </div>
+        <AnalyzedTextPreview text={state.text} />
       )}
 
       {/* Loading Progress Indicator - Memoized for smooth performance */}
@@ -1011,527 +958,42 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
       {state.result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
           {/* Results Toolbar */}
-          <div style={{
-            backgroundColor: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '12px',
-            padding: '12px 16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              flexWrap: 'wrap'
-            }}>
-              {/* Left: Back button */}
-              <button
-                onClick={actions.startNewAnalysis}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 12px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#6b7280',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6'
-                  e.currentTarget.style.color = '#374151'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = '#6b7280'
-                }}
-              >
-                <ArrowLeft style={{ width: '16px', height: '16px' }} />
-                New Analysis
-              </button>
-
-              {/* Center: Navigation - Jump to section */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px',
-                backgroundColor: '#DCF2FA',
-                borderRadius: '10px'
-              }}>
-                <span style={{ fontSize: '11px', color: '#64748b', padding: '0 8px' }}>Jump to:</span>
-                <button
-                  onClick={() => scrollToSection(summaryRef)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    color: '#0158AE',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  Summary
-                </button>
-                <button
-                  onClick={() => scrollToSection(suggestionsRef)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    color: '#162950',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.7)'
-                    e.currentTarget.style.color = '#0158AE'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                    e.currentTarget.style.color = '#162950'
-                  }}
-                >
-                  Editorial Tips
-                </button>
-                <button
-                  onClick={() => scrollToSection(authorsRef)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    color: '#162950',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.7)'
-                    e.currentTarget.style.color = '#0158AE'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                    e.currentTarget.style.color = '#162950'
-                  }}
-                >
-                  {state.result.matchedCamps.reduce((total, camp) => total + camp.topAuthors.length, 0)} Authors
-                </button>
-              </div>
-
-              {/* Right: Action buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
-                  onClick={handleCopy}
-                  disabled={state.copying}
-                  title="Copy analysis"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
-                    backgroundColor: 'transparent',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    color: '#6b7280',
-                    cursor: state.copying ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!state.copying) {
-                      e.currentTarget.style.backgroundColor = '#f9fafb'
-                      e.currentTarget.style.borderColor = '#d1d5db'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                    e.currentTarget.style.borderColor = '#e5e7eb'
-                  }}
-                >
-                  <Copy style={{ width: '16px', height: '16px' }} />
-                </button>
-                <button
-                  onClick={handleExportPDF}
-                  disabled={state.exporting}
-                  title="Export as PDF"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
-                    backgroundColor: 'transparent',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    color: '#6b7280',
-                    cursor: state.exporting ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!state.exporting) {
-                      e.currentTarget.style.backgroundColor = '#f9fafb'
-                      e.currentTarget.style.borderColor = '#d1d5db'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                    e.currentTarget.style.borderColor = '#e5e7eb'
-                  }}
-                >
-                  <FileDown style={{ width: '16px', height: '16px' }} />
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(window.location.href)
-                      dispatch({ type: 'SET_URL_COPIED', payload: true })
-                      showToast('Link copied!')
-                      setTimeout(() => dispatch({ type: 'SET_URL_COPIED', payload: false }), 2000)
-                    } catch (e) {
-                      showToast('Failed to copy link', 'error')
-                    }
-                  }}
-                  title="Copy link to share"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
-                    backgroundColor: state.urlCopied ? '#dcfce7' : 'transparent',
-                    border: state.urlCopied ? '1px solid #86efac' : '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    color: state.urlCopied ? '#16a34a' : '#6b7280',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!state.urlCopied) {
-                      e.currentTarget.style.backgroundColor = '#f9fafb'
-                      e.currentTarget.style.borderColor = '#d1d5db'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!state.urlCopied) {
-                      e.currentTarget.style.backgroundColor = 'transparent'
-                      e.currentTarget.style.borderColor = '#e5e7eb'
-                    }
-                  }}
-                >
-                  <Share2 style={{ width: '16px', height: '16px' }} />
-                </button>
-                <button
-                  onClick={actions.handleSave}
-                  disabled={state.saving}
-                  title={state.savedOnce ? 'Saved' : 'Save analysis'}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 14px',
-                    backgroundColor: state.savedOnce ? '#0158AE' : 'transparent',
-                    border: state.savedOnce ? '1px solid #0158AE' : '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    color: state.savedOnce ? 'white' : '#0158AE',
-                    cursor: state.saving ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!state.saving && !state.savedOnce) {
-                      e.currentTarget.style.backgroundColor = '#DCF2FA'
-                      e.currentTarget.style.borderColor = '#48AFF0'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!state.saving && !state.savedOnce) {
-                      e.currentTarget.style.backgroundColor = 'transparent'
-                      e.currentTarget.style.borderColor = '#e5e7eb'
-                    }
-                  }}
-                >
-                  <Bookmark style={{ width: '14px', height: '14px', fill: state.savedOnce ? 'white' : 'none' }} />
-                  {state.savedOnce ? 'Saved' : 'Save'}
-                </button>
-                <Link
-                  href={`/studio/builder?thesis=${encodeURIComponent(state.text.substring(0, 200))}`}
-                  title="Start drafting content based on this analysis"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 14px',
-                    background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    textDecoration: 'none',
-                    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.35)'
-                    e.currentTarget.style.transform = 'translateY(-1px)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(124, 58, 237, 0.25)'
-                    e.currentTarget.style.transform = 'translateY(0)'
-                  }}
-                >
-                  <Sparkles style={{ width: '14px', height: '14px' }} />
-                  Start Drafting
-                </Link>
-              </div>
-            </div>
-          </div>
+          <ResultsToolbar
+            text={state.text}
+            authorCount={state.result.matchedCamps.reduce((total, camp) => total + camp.topAuthors.length, 0)}
+            scrollRefs={{ summaryRef, suggestionsRef, authorsRef }}
+            savedOnce={state.savedOnce}
+            saving={state.saving}
+            copying={state.copying}
+            exporting={state.exporting}
+            urlCopied={state.urlCopied}
+            onNewAnalysis={actions.startNewAnalysis}
+            onCopy={handleCopy}
+            onExportPDF={handleExportPDF}
+            onShareUrl={handleShareUrl}
+            onSave={actions.handleSave}
+          />
 
           {/* PDF Export Container - wraps all exportable content */}
           <div ref={resultsRef}>
           {/* Summary */}
-          <div ref={summaryRef} style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            padding: 'var(--card-padding-desktop)',
-            boxShadow: '0 2px 12px rgba(22, 41, 80, 0.06)',
-            border: '1px solid #AADAF9',
-            scrollMarginTop: '96px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              marginBottom: 'var(--space-3)'
-            }}>
-              <h2 style={{
-                margin: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-2)',
-                color: '#162950'
-              }}>
-                <CheckCircle style={{ width: '20px', height: '20px', color: '#10b981' }} />
-                Summary
-              </h2>
-              <button
-                onClick={() => state.likedSummary
-                  ? removeHelpfulInsight('summary')
-                  : saveHelpfulInsight('summary', state.result!.summary)
-                }
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  borderRadius: '16px',
-                  border: state.likedSummary ? '1px solid #10b981' : '1px solid #e5e7eb',
-                  backgroundColor: state.likedSummary ? '#d1fae5' : 'white',
-                  color: state.likedSummary ? '#059669' : '#6b7280',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                title={state.likedSummary ? 'Remove from helpful insights' : 'Save as helpful'}
-              >
-                <ThumbsUp style={{ width: '14px', height: '14px', fill: state.likedSummary ? '#059669' : 'none' }} />
-                {state.likedSummary ? 'Helpful!' : 'This is helpful'}
-              </button>
-            </div>
-            <p style={{
-              color: '#374151',
-              lineHeight: '1.75',
-              margin: 0,
-              fontSize: '15px'
-            }}>
-              {state.result.summary}
-            </p>
-          </div>
+          <SummarySection
+            ref={summaryRef}
+            summary={state.result.summary}
+            isLiked={state.likedSummary}
+            onToggleLike={() =>
+              state.likedSummary
+                ? removeHelpfulInsight('summary')
+                : saveHelpfulInsight('summary', state.result!.summary)
+            }
+          />
 
           {/* PROMINENT Editorial Suggestions */}
-          <div ref={suggestionsRef} style={{ scrollMarginTop: '96px', marginTop: 'var(--space-6)' }}>
-            <div style={{
-              backgroundColor: '#FFFFFF',
-              border: '2px solid #1075DC',
-              borderRadius: '12px',
-              padding: 'var(--space-8)',
-              boxShadow: '0 4px 24px rgba(22, 41, 80, 0.08)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-3)',
-                marginBottom: 'var(--space-6)'
-              }}>
-                <div style={{
-                  padding: 'var(--space-3)',
-                  background: 'linear-gradient(135deg, #0158AE 0%, #1075DC 100%)',
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 8px rgba(1, 88, 174, 0.25)'
-                }}>
-                  <Lightbulb style={{ width: '28px', height: '28px', color: 'white' }} />
-                </div>
-                <div>
-                  <h2 style={{ marginBottom: '4px', color: '#162950' }}>Editorial Suggestions</h2>
-                  <p style={{
-                    fontSize: 'var(--text-small)',
-                    color: '#64748b',
-                    margin: 0
-                  }}>
-                    Key insights to strengthen your content
-                  </p>
-                </div>
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: 'var(--space-6)'
-              }}>
-                {/* Present Perspectives */}
-                <div style={{
-                  backgroundColor: 'var(--color-bone)',
-                  borderRadius: 'var(--radius-base)',
-                  padding: 'var(--card-padding-desktop)',
-                  boxShadow: 'var(--shadow-sm)',
-                  border: '1px solid var(--color-success)'
-                }}>
-                  <h3 style={{
-                    fontSize: 'var(--text-h3)',
-                    fontWeight: 'var(--weight-semibold)',
-                    color: 'var(--color-success)',
-                    marginBottom: 'var(--space-3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-2)'
-                  }}>
-                    <CheckCircle style={{ width: '20px', height: '20px' }} />
-                    What You're Already Using
-                  </h3>
-                  <p style={{
-                    fontSize: 'var(--text-caption)',
-                    color: 'var(--color-mid-gray)',
-                    fontWeight: 'var(--weight-medium)',
-                    marginBottom: 'var(--space-4)'
-                  }}>
-                    Your content includes these perspectives:
-                  </p>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                    {state.result.editorialSuggestions.presentPerspectives.map((perspective, idx) => (
-                      <li key={idx} style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 'var(--space-3)',
-                        padding: 'var(--space-3)',
-                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                        borderRadius: 'var(--radius-base)',
-                        border: '1px solid rgba(16, 185, 129, 0.2)'
-                      }}>
-                        <span style={{
-                          color: 'var(--color-success)',
-                          marginTop: '2px',
-                          fontSize: '20px',
-                          flexShrink: 0
-                        }}>+</span>
-                        <span style={{
-                          color: 'var(--color-soft-black)',
-                          fontSize: 'var(--text-small)',
-                          lineHeight: 'var(--leading-relaxed)',
-                          fontWeight: 'var(--weight-medium)'
-                        }}>
-                          {linkifyAuthors(perspective)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Missing Perspectives */}
-                <div style={{
-                  backgroundColor: 'var(--color-bone)',
-                  borderRadius: 'var(--radius-base)',
-                  padding: 'var(--card-padding-desktop)',
-                  boxShadow: 'var(--shadow-sm)',
-                  border: '1px solid var(--color-warning)'
-                }}>
-                  <h3 style={{
-                    fontSize: 'var(--text-h3)',
-                    fontWeight: 'var(--weight-semibold)',
-                    color: 'var(--color-warning)',
-                    marginBottom: 'var(--space-3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-2)'
-                  }}>
-                    <AlertCircle style={{ width: '20px', height: '20px' }} />
-                    What You're Missing
-                  </h3>
-                  <p style={{
-                    fontSize: 'var(--text-caption)',
-                    color: 'var(--color-mid-gray)',
-                    fontWeight: 'var(--weight-medium)',
-                    marginBottom: 'var(--space-4)'
-                  }}>
-                    Consider adding these to strengthen your argument:
-                  </p>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                    {state.result.editorialSuggestions.missingPerspectives.map((perspective, idx) => (
-                      <li key={idx} style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 'var(--space-3)',
-                        padding: 'var(--space-3)',
-                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
-                        borderRadius: 'var(--radius-base)',
-                        border: '1px solid rgba(245, 158, 11, 0.2)'
-                      }}>
-                        <span style={{
-                          color: 'var(--color-warning)',
-                          marginTop: '2px',
-                          fontSize: '20px',
-                          flexShrink: 0
-                        }}>!</span>
-                        <span style={{
-                          color: 'var(--color-soft-black)',
-                          fontSize: 'var(--text-small)',
-                          lineHeight: 'var(--leading-relaxed)',
-                          fontWeight: 'var(--weight-medium)'
-                        }}>
-                          {linkifyAuthors(perspective)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
+          <EditorialSuggestionsSection
+            ref={suggestionsRef}
+            editorialSuggestions={state.result.editorialSuggestions}
+            linkifyAuthors={linkifyAuthors}
+          />
 
           {/* Thought Leaders */}
           {state.result.matchedCamps.length > 0 && (
