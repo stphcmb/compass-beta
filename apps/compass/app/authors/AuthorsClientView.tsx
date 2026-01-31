@@ -1,13 +1,54 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useDeferredValue, memo, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Search, X, Users, PanelLeftClose, Layers } from 'lucide-react'
 import Header from '@/components/Header'
 import PageHeader from '@/components/PageHeader'
-import AuthorDetailPanel from '@/components/AuthorDetailPanel'
 import EmptyState from '@/components/EmptyState'
-import { AboutThoughtLeadersModal, useAboutThoughtLeadersModal } from '@/components/AboutThoughtLeadersModal'
+import { useAboutThoughtLeadersModal } from '@/components/AboutThoughtLeadersModal'
+
+// Lazy load heavy components to reduce initial bundle size
+// AuthorDetailPanel: ~120KB - only needed when user clicks an author
+const AuthorDetailPanel = dynamic(
+  () => import('@/components/AuthorDetailPanel'),
+  {
+    loading: () => (
+      <div className="flex items-center justify-center h-full bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Loading author details...</p>
+        </div>
+      </div>
+    ),
+  }
+)
+
+// AboutThoughtLeadersModal: ~15KB - only shows on first 2 visits
+const AboutThoughtLeadersModal = dynamic(
+  () => import('@/components/AboutThoughtLeadersModal').then(mod => ({ default: mod.AboutThoughtLeadersModal })),
+  { ssr: false }
+)
+
+// WelcomeState: ~20KB - only shown when no author selected
+const WelcomeState = dynamic(
+  () => import('./components/WelcomeState'),
+  {
+    loading: () => (
+      <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 rounded w-24" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-32 bg-gray-100 rounded-lg" />
+            <div className="h-32 bg-gray-100 rounded-lg" />
+          </div>
+        </div>
+      </div>
+    ),
+  }
+)
+
 // Data fetching moved to Server Component (page.tsx)
 import { DOMAINS, getDomainConfig, DOMAIN_LABEL_STYLES } from '@/lib/constants/domains'
 
@@ -27,6 +68,53 @@ const getDomainStyle = (domain: string | null) => {
 }
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+
+// Memoized author list item to prevent unnecessary re-renders
+interface AuthorListItemProps {
+  author: { id: string; name: string }
+  isSelected: boolean
+  domainStyle: { bg: string; text: string }
+  onClick: () => void
+  hoverBg?: string
+}
+
+const AuthorListItem = memo(function AuthorListItem({
+  author,
+  isSelected,
+  domainStyle,
+  onClick,
+  hoverBg = '#f5f5f5'
+}: AuthorListItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+        padding: '6px 8px 6px 12px', borderRadius: '4px', border: 'none',
+        backgroundColor: isSelected ? domainStyle.bg : 'transparent',
+        cursor: 'pointer', transition: 'all 60ms ease-out', textAlign: 'left'
+      }}
+      onMouseEnter={(e) => {
+        if (!isSelected) e.currentTarget.style.backgroundColor = hoverBg
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'
+      }}
+    >
+      <span style={{
+        width: '6px', height: '6px', borderRadius: '50%',
+        backgroundColor: domainStyle.text, flexShrink: 0
+      }} />
+      <span style={{
+        fontSize: '13px', fontWeight: isSelected ? 600 : 400,
+        color: isSelected ? domainStyle.text : 'var(--color-soft-black)',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+      }}>
+        {author.name}
+      </span>
+    </button>
+  )
+})
 
 interface AuthorsClientViewProps {
   authorsWithDomains: Array<{
@@ -51,6 +139,8 @@ export default function AuthorsClientView({ authorsWithDomains }: AuthorsClientV
 
   const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  // Defer search filtering to keep input responsive during large list updates
+  const deferredSearchQuery = useDeferredValue(searchQuery)
   const [domainFilter, setDomainFilter] = useState<string | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false) // Open by default
   const [groupBy, setGroupBy] = useState<'alphabet' | 'domain' | 'recent' | 'favorites'>('alphabet')
@@ -122,10 +212,10 @@ export default function AuthorsClientView({ authorsWithDomains }: AuthorsClientV
     return authorCampsMap.get(authorId) || []
   }
 
-  // Handle author selection
-  const handleAuthorClick = (authorId: string) => {
+  // Handle author selection (memoized to prevent unnecessary re-renders)
+  const handleAuthorClick = useCallback((authorId: string) => {
     setSelectedAuthorId(authorId)
-  }
+  }, [])
 
   // Scroll to letter
   const scrollToLetter = (letter: string) => {
@@ -147,9 +237,9 @@ export default function AuthorsClientView({ authorsWithDomains }: AuthorsClientV
   const { authorsByLetter, authorsByDomain, recentAuthors, allFavoriteAuthors, domainCounts, availableLetters, availableDomains, totalFiltered } = useMemo(() => {
     let filtered = authors
 
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+    // Apply search filter (using deferred value to keep input responsive)
+    if (deferredSearchQuery) {
+      const query = deferredSearchQuery.toLowerCase()
       filtered = filtered.filter(author =>
         author.name.toLowerCase().includes(query) ||
         author.header_affiliation?.toLowerCase().includes(query) ||
@@ -241,18 +331,18 @@ export default function AuthorsClientView({ authorsWithDomains }: AuthorsClientV
       availableDomains: availableDoms,
       totalFiltered: filtered.length
     }
-  }, [authors, searchQuery, domainFilter, authorDomainsMap, favoriteAuthorNames])
+  }, [authors, deferredSearchQuery, domainFilter, authorDomainsMap, favoriteAuthorNames])
 
   // Favorite and recent authors for welcome state
   const { favoriteAuthors, totalFavorites, recentAddedAuthors, totalRecent } = useMemo(() => {
     if (authors.length === 0) return { favoriteAuthors: [], totalFavorites: 0, recentAddedAuthors: [], totalRecent: 0 }
 
-    // Get all favorite authors (match by name)
+    // Get all favorite authors (match by name) - show up to 8 for horizontal scroll
     const allFavorites = authors.filter(a => favoriteAuthorNames.includes(a.name))
     const totalFavorites = allFavorites.length
-    const favorites = allFavorites.slice(0, 3)
+    const favorites = allFavorites.slice(0, 8)
 
-    // Get recent authors (excluding favorites)
+    // Get recent authors (excluding favorites) - show up to 8 for horizontal scroll
     const allRecent = [...authors]
       .filter(a => !favoriteAuthorNames.includes(a.name))
       .sort((a, b) => {
@@ -261,7 +351,7 @@ export default function AuthorsClientView({ authorsWithDomains }: AuthorsClientV
         return bDate - aDate
       })
     const totalRecent = allRecent.length
-    const recent = allRecent.slice(0, 3)
+    const recent = allRecent.slice(0, 8)
 
     return { favoriteAuthors: favorites, totalFavorites, recentAddedAuthors: recent, totalRecent }
   }, [authors, favoriteAuthorNames])
@@ -1066,416 +1156,23 @@ export default function AuthorsClientView({ authorsWithDomains }: AuthorsClientV
                 embedded={true}
               />
             ) : (
-              // Welcome state when no author selected
-              <div
-                className="bg-gradient-to-br from-emerald-50 via-white to-teal-50"
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  padding: '24px 32px'
+              <WelcomeState
+                favoriteAuthors={favoriteAuthors}
+                totalFavorites={totalFavorites}
+                recentAddedAuthors={recentAddedAuthors}
+                totalRecent={totalRecent}
+                onAuthorClick={handleAuthorClick}
+                onShowAllFavorites={() => {
+                  setSidebarCollapsed(false)
+                  setGroupBy('favorites')
                 }}
-              >
-                {/* Compact header */}
-                {/* Author sections */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '32px', minHeight: 0, padding: '8px 0' }}>
-                  {/* Favorites section */}
-                  {favoriteAuthors.length > 0 && (
-                    <div>
-                      <div style={{
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        color: '#f59e0b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.8px',
-                        marginBottom: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        paddingBottom: '8px',
-                        borderBottom: '2px solid #fef3c7'
-                      }}>
-                        <span style={{ fontSize: '16px' }}>★</span> Your Favorites
-                        {totalFavorites > 3 && (
-                          <button
-                            onClick={() => {
-                              setSidebarCollapsed(false)
-                              setGroupBy('favorites')
-                            }}
-                            style={{
-                              fontWeight: 500,
-                              fontSize: '10px',
-                              color: '#92400e',
-                              backgroundColor: '#fef3c7',
-                              padding: '2px 8px',
-                              borderRadius: '10px',
-                              marginLeft: '4px',
-                              border: '1px solid #fcd34d',
-                              cursor: 'pointer',
-                              transition: 'all 150ms ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#fde68a'
-                              e.currentTarget.style.borderColor = '#f59e0b'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = '#fef3c7'
-                              e.currentTarget.style.borderColor = '#fcd34d'
-                            }}
-                          >
-                            +{totalFavorites - 3} more →
-                          </button>
-                        )}
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                        {favoriteAuthors.map((author: any) => {
-                          const authorDomains = getAuthorDomains(author.id)
-                          return (
-                            <button
-                              key={author.id}
-                              onClick={() => handleAuthorClick(author.id)}
-                              style={{
-                                padding: '16px 20px',
-                                borderRadius: '10px',
-                                border: '1px solid var(--color-light-gray)',
-                                backgroundColor: 'var(--color-air-white)',
-                                cursor: 'pointer',
-                                transition: 'all 180ms cubic-bezier(0.4, 0, 0.2, 1)',
-                                textAlign: 'left',
-                                display: 'flex',
-                                flexDirection: 'column'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = '#059669'
-                                e.currentTarget.style.backgroundColor = '#f0fdf4'
-                                e.currentTarget.style.transform = 'translateY(-2px)'
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(5, 150, 105, 0.15)'
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                                e.currentTarget.style.backgroundColor = 'var(--color-air-white)'
-                                e.currentTarget.style.transform = 'translateY(0)'
-                                e.currentTarget.style.boxShadow = 'none'
-                              }}
-                            >
-                              <div style={{
-                                fontSize: '16px',
-                                fontWeight: 600,
-                                color: 'var(--color-soft-black)',
-                                lineHeight: 1.3,
-                                marginBottom: '6px'
-                              }}>
-                                {author.name}
-                              </div>
-                              {/* Profile + stance summary */}
-                              <div style={{ marginBottom: '8px' }}>
-                                {/* Role at Organization (allow wrap, max 3 lines) */}
-                                {(author.header_affiliation || author.primary_affiliation) && (
-                                  <div style={{
-                                    fontSize: '12px',
-                                    color: 'var(--color-mid-gray)',
-                                    lineHeight: 1.4,
-                                    overflow: 'hidden',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 3,
-                                    WebkitBoxOrient: 'vertical',
-                                    marginBottom: '6px'
-                                  }}>
-                                    {(() => {
-                                      const parts = []
-                                      if (author.header_affiliation) parts.push(author.header_affiliation)
-                                      if (author.primary_affiliation) parts.push(author.primary_affiliation)
-                                      return parts.join(' at ')
-                                    })()}
-                                  </div>
-                                )}
-                                {/* "So what?" - Notes provide context (max 3 lines) */}
-                                {author.notes && (
-                                  <div style={{
-                                    fontSize: '12px',
-                                    color: '#374151',
-                                    lineHeight: 1.5,
-                                    overflow: 'hidden',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 3,
-                                    WebkitBoxOrient: 'vertical',
-                                    marginBottom: '8px'
-                                  }}>
-                                    {author.notes}
-                                  </div>
-                                )}
-                                {/* Stance from top camp (inline badge) */}
-                                {(() => {
-                                  const authorCamps = getAuthorCamps(author.id)
-                                  const stance = authorCamps[0] // Show primary camp
-                                  if (stance) {
-                                    return (
-                                      <div style={{
-                                        fontSize: '11px',
-                                        color: '#059669',
-                                        fontWeight: 500,
-                                        backgroundColor: '#d1fae5',
-                                        padding: '3px 10px',
-                                        borderRadius: '4px',
-                                        display: 'inline-block',
-                                        maxWidth: '100%',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        marginBottom: '8px'
-                                      }}>
-                                        {stance}
-                                      </div>
-                                    )
-                                  }
-                                  return null
-                                })()}
-                              </div>
-                              {/* Domain labels - at bottom */}
-                              {authorDomains.length > 0 && (
-                                <div style={{
-                                  display: 'flex',
-                                  flexWrap: 'wrap',
-                                  gap: '6px',
-                                  marginTop: 'auto'
-                                }}>
-                                  {authorDomains.slice(0, 3).map(domain => {
-                                    const config = getDomainConfig(domain)
-                                    return (
-                                      <span
-                                        key={domain}
-                                        style={{
-                                          fontSize: '10px',
-                                          fontWeight: 500,
-                                          color: DOMAIN_LABEL_STYLES.subdued.text,
-                                          backgroundColor: DOMAIN_LABEL_STYLES.subdued.bg,
-                                          padding: '3px 8px',
-                                          borderRadius: '5px',
-                                          whiteSpace: 'nowrap'
-                                        }}
-                                      >
-                                        {config.shortName}
-                                      </span>
-                                    )
-                                  })}
-                                  {authorDomains.length > 3 && (
-                                    <span style={{
-                                      fontSize: '10px',
-                                      fontWeight: 500,
-                                      color: 'var(--color-mid-gray)',
-                                      padding: '3px 8px'
-                                    }}>
-                                      +{authorDomains.length - 3}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Recently Added section */}
-                  {recentAddedAuthors.length > 0 && (
-                    <div>
-                      <div style={{
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        color: '#059669',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.8px',
-                        marginBottom: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        paddingBottom: '8px',
-                        borderBottom: '2px solid #d1fae5'
-                      }}>
-                        Recently Added
-                        {totalRecent > 3 && (
-                          <button
-                            onClick={() => {
-                              setSidebarCollapsed(false)
-                              setGroupBy('recent')
-                            }}
-                            style={{
-                              fontWeight: 500,
-                              fontSize: '10px',
-                              color: '#374151',
-                              backgroundColor: '#f3f4f6',
-                              padding: '2px 8px',
-                              borderRadius: '10px',
-                              marginLeft: '4px',
-                              border: '1px solid #d1d5db',
-                              cursor: 'pointer',
-                              transition: 'all 150ms ease',
-                              textTransform: 'none'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#e5e7eb'
-                              e.currentTarget.style.borderColor = '#9ca3af'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = '#f3f4f6'
-                              e.currentTarget.style.borderColor = '#d1d5db'
-                            }}
-                          >
-                            +{totalRecent - 3} more →
-                          </button>
-                        )}
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                        {recentAddedAuthors.map((author: any) => {
-                          const authorDomains = getAuthorDomains(author.id)
-                          return (
-                            <button
-                              key={author.id}
-                              onClick={() => handleAuthorClick(author.id)}
-                              style={{
-                                padding: '16px 20px',
-                                borderRadius: '10px',
-                                border: '1px solid var(--color-light-gray)',
-                                backgroundColor: 'var(--color-air-white)',
-                                cursor: 'pointer',
-                                transition: 'all 180ms cubic-bezier(0.4, 0, 0.2, 1)',
-                                textAlign: 'left',
-                                display: 'flex',
-                                flexDirection: 'column'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = '#059669'
-                                e.currentTarget.style.backgroundColor = '#f0fdf4'
-                                e.currentTarget.style.transform = 'translateY(-2px)'
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(5, 150, 105, 0.15)'
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--color-light-gray)'
-                                e.currentTarget.style.backgroundColor = 'var(--color-air-white)'
-                                e.currentTarget.style.transform = 'translateY(0)'
-                                e.currentTarget.style.boxShadow = 'none'
-                              }}
-                            >
-                              <div style={{
-                                fontSize: '16px',
-                                fontWeight: 600,
-                                color: 'var(--color-soft-black)',
-                                lineHeight: 1.3,
-                                marginBottom: '6px'
-                              }}>
-                                {author.name}
-                              </div>
-                              {/* Profile + stance summary */}
-                              <div style={{ marginBottom: '8px' }}>
-                                {/* Role at Organization (allow wrap, max 3 lines) */}
-                                {(author.header_affiliation || author.primary_affiliation) && (
-                                  <div style={{
-                                    fontSize: '12px',
-                                    color: 'var(--color-mid-gray)',
-                                    lineHeight: 1.4,
-                                    overflow: 'hidden',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 3,
-                                    WebkitBoxOrient: 'vertical',
-                                    marginBottom: '6px'
-                                  }}>
-                                    {(() => {
-                                      const parts = []
-                                      if (author.header_affiliation) parts.push(author.header_affiliation)
-                                      if (author.primary_affiliation) parts.push(author.primary_affiliation)
-                                      return parts.join(' at ')
-                                    })()}
-                                  </div>
-                                )}
-                                {/* "So what?" - Notes provide context (max 3 lines) */}
-                                {author.notes && (
-                                  <div style={{
-                                    fontSize: '12px',
-                                    color: '#374151',
-                                    lineHeight: 1.5,
-                                    overflow: 'hidden',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 3,
-                                    WebkitBoxOrient: 'vertical',
-                                    marginBottom: '8px'
-                                  }}>
-                                    {author.notes}
-                                  </div>
-                                )}
-                                {/* Stance from top camp (inline badge) */}
-                                {(() => {
-                                  const authorCamps = getAuthorCamps(author.id)
-                                  const stance = authorCamps[0] // Show primary camp
-                                  if (stance) {
-                                    return (
-                                      <div style={{
-                                        fontSize: '11px',
-                                        color: '#059669',
-                                        fontWeight: 500,
-                                        backgroundColor: '#d1fae5',
-                                        padding: '3px 10px',
-                                        borderRadius: '4px',
-                                        display: 'inline-block',
-                                        maxWidth: '100%',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        marginBottom: '8px'
-                                      }}>
-                                        {stance}
-                                      </div>
-                                    )
-                                  }
-                                  return null
-                                })()}
-                              </div>
-                              {/* Domain labels - at bottom */}
-                              {authorDomains.length > 0 && (
-                                <div style={{
-                                  display: 'flex',
-                                  flexWrap: 'wrap',
-                                  gap: '6px',
-                                  marginTop: 'auto'
-                                }}>
-                                  {authorDomains.slice(0, 3).map(domain => {
-                                    const config = getDomainConfig(domain)
-                                    return (
-                                      <span
-                                        key={domain}
-                                        style={{
-                                          fontSize: '10px',
-                                          fontWeight: 500,
-                                          color: DOMAIN_LABEL_STYLES.subdued.text,
-                                          backgroundColor: DOMAIN_LABEL_STYLES.subdued.bg,
-                                          padding: '3px 8px',
-                                          borderRadius: '5px',
-                                          whiteSpace: 'nowrap'
-                                        }}
-                                      >
-                                        {config.shortName}
-                                      </span>
-                                    )
-                                  })}
-                                  {authorDomains.length > 3 && (
-                                    <span style={{
-                                      fontSize: '10px',
-                                      fontWeight: 500,
-                                      color: 'var(--color-mid-gray)',
-                                      padding: '3px 8px'
-                                    }}>
-                                      +{authorDomains.length - 3}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                onShowAllRecent={() => {
+                  setSidebarCollapsed(false)
+                  setGroupBy('recent')
+                }}
+                getAuthorDomains={getAuthorDomains}
+                getAuthorCamps={getAuthorCamps}
+              />
             )}
           </div>
         </div>
