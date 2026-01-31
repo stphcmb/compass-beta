@@ -109,6 +109,7 @@ interface CampAccordionProps {
   authors?: string[]
   onCampsLoaded?: (camps: any[]) => void
   scrollToCampId?: string | null
+  initialCamps?: any[]  // Optional: pre-fetched camps data to avoid duplicate fetch
 }
 
 export default function CampAccordion({
@@ -119,7 +120,8 @@ export default function CampAccordion({
   camps: campFilter = [],
   authors: authorFilter = [],
   onCampsLoaded,
-  scrollToCampId
+  scrollToCampId,
+  initialCamps
 }: CampAccordionProps) {
   const { openPanel } = useAuthorPanel()
   const [camps, setCamps] = useState<any[]>([])
@@ -130,6 +132,17 @@ export default function CampAccordion({
   const campRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   useEffect(() => {
+    // Use initial camps if provided (from page-level fetch to avoid duplicates)
+    if (initialCamps && initialCamps.length > 0 && !query) {
+      setCamps(initialCamps)
+      setExpandedCamps({})
+      setLoading(false)
+      if (onCampsLoaded) {
+        onCampsLoaded(initialCamps)
+      }
+      return
+    }
+
     const fetchCamps = async () => {
       setLoading(true)
 
@@ -200,7 +213,7 @@ export default function CampAccordion({
     }
 
     fetchCamps()
-  }, [query, domain, onCampsLoaded])
+  }, [query, domain, onCampsLoaded, initialCamps])
 
   // Scroll to specific camp when requested
   useEffect(() => {

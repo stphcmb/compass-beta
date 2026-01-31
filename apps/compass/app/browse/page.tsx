@@ -40,9 +40,38 @@ function ExplorePageContent() {
 
   // Explicit explore mode - only show perspectives when user clicks to explore
   const [exploreMode, setExploreMode] = useState(false)
+  const [campsLoading, setCampsLoading] = useState(false)
 
   // Modal for teaching users how perspectives work
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useHowPerspectivesWorkModal()
+
+  // Fetch camps data once at page level when entering explore mode (deduplicates API calls)
+  useEffect(() => {
+    if (!exploreMode || loadedCamps.length > 0 || campsLoading) return
+
+    const fetchCamps = async () => {
+      setCampsLoading(true)
+      try {
+        const params = new URLSearchParams()
+        if (domain) params.set('domain', domain)
+
+        const response = await fetch(`/api/camps?${params}`)
+        if (response.ok) {
+          const data = await response.json()
+          setLoadedCamps(data.camps || [])
+          if (data.expandedQueries) {
+            setExpandedQueries(data.expandedQueries)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching camps:', error)
+      } finally {
+        setCampsLoading(false)
+      }
+    }
+
+    fetchCamps()
+  }, [exploreMode, domain, loadedCamps.length, campsLoading])
 
   // Handle camps loaded from CampAccordion
   const handleCampsLoaded = useCallback((camps: any[], expandedQueriesData?: any[] | null) => {
@@ -289,6 +318,7 @@ function ExplorePageContent() {
                       onDomainFilter={setActiveDomain}
                       activeDomain={activeDomain}
                       inline={true}
+                      camps={loadedCamps}
                     />
                   </Suspense>
                 </div>
@@ -339,6 +369,7 @@ function ExplorePageContent() {
                       authors={authors}
                       onCampsLoaded={handleCampsLoaded}
                       scrollToCampId={scrollToCampId}
+                      initialCamps={loadedCamps}
                     />
                   </Suspense>
                 </div>

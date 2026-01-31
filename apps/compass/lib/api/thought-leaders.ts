@@ -452,8 +452,7 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
             primary_affiliation,
             credibility_tier,
             author_type,
-            notes,
-            sources
+            notes
           )
         )
       `)
@@ -479,7 +478,6 @@ export async function getCampsWithAuthors(query?: string, domain?: string): Prom
         credibilityTier: mapping.authors?.credibility_tier,
         authorType: mapping.authors?.author_type,
         relevance: mapping.relevance,
-        sources: mapping.authors?.sources || [],
         key_quote: mapping.key_quote,
         quote_source_url: mapping.quote_source_url
       })).filter((a: any) => a.id) || []
