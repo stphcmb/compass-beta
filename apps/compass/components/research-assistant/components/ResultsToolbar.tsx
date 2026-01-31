@@ -7,9 +7,9 @@ import { ArrowLeft, Copy, FileDown, Share2, Bookmark, Sparkles } from 'lucide-re
  * Ref targets for section scrolling
  */
 export interface ScrollRefs {
-  summaryRef: React.RefObject<HTMLDivElement | null>
-  suggestionsRef: React.RefObject<HTMLDivElement | null>
-  authorsRef: React.RefObject<HTMLDivElement | null>
+  summaryRef: React.RefObject<HTMLDivElement>
+  suggestionsRef: React.RefObject<HTMLDivElement>
+  authorsRef: React.RefObject<HTMLDivElement>
 }
 
 /**
@@ -63,7 +63,7 @@ export function ResultsToolbar({
   onShareUrl,
   onSave
 }: ResultsToolbarProps) {
-  const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
+  const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { ResearchAssistantAnalyzeResponse } from '@/lib/research-assistant'
 import { getThoughtLeaders } from '@/lib/api/thought-leaders'
 import { useToast } from '@/components/Toast'
@@ -20,14 +21,30 @@ import {
   generatePrintHTML,
 } from '@/components/research-assistant/lib'
 import type { ResearchAssistantProps, LoadTextEventDetail, PendingAnalysis } from '@/components/research-assistant/lib'
-import {
-  AnalyzedTextPreview,
-  ResultsToolbar,
-  SummarySection,
-  EditorialSuggestionsSection,
-  ThoughtLeadersSection,
-  InputSection,
-} from '@/components/research-assistant/components'
+import { InputSection } from '@/components/research-assistant/components'
+
+/**
+ * Lazy-loaded ResultsSection component
+ * Only loaded after analysis completes to reduce initial bundle size
+ * Estimated savings: 50-80 KB
+ */
+const ResultsSection = dynamic(
+  () => import('@/components/research-assistant/components/ResultsSection').then(mod => ({ default: mod.ResultsSection })),
+  {
+    loading: () => (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 'var(--space-8)',
+        minHeight: '200px'
+      }}>
+        <Loader2 className="animate-spin" style={{ width: '32px', height: '32px', color: '#1075DC' }} />
+      </div>
+    ),
+    ssr: false
+  }
+)
 
 export default function ResearchAssistant({ showTitle = false, initialAnalysisId }: ResearchAssistantProps) {
   const { openPanel } = useAuthorPanel()
@@ -503,8 +520,8 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
         </div>
       )}
 
-      {/* Input Section - Two modes: Edit (no result) and View (has result) */}
-      {!state.result ? (
+      {/* Input Section - Only shown when no result yet */}
+      {!state.result && (
         <InputSection
           text={state.text}
           loading={state.loading}
@@ -516,8 +533,6 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
           onAnalyze={() => actions.handleAnalyze()}
           onLoadSavedAnalysis={actions.loadSavedAnalysis}
         />
-      ) : (
-        <AnalyzedTextPreview text={state.text} />
       )}
 
       {/* Loading Progress Indicator - Memoized for smooth performance */}
@@ -558,64 +573,41 @@ export default function ResearchAssistant({ showTitle = false, initialAnalysisId
         </div>
       )}
 
-      {/* Results Display */}
+      {/* Results Display - Lazy loaded */}
       {state.result && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-          {/* Results Toolbar */}
-          <ResultsToolbar
-            text={state.text}
-            authorCount={state.result.matchedCamps.reduce((total, camp) => total + camp.topAuthors.length, 0)}
-            scrollRefs={{ summaryRef, suggestionsRef, authorsRef }}
-            savedOnce={state.savedOnce}
-            saving={state.saving}
-            copying={state.copying}
-            exporting={state.exporting}
-            urlCopied={state.urlCopied}
-            onNewAnalysis={actions.startNewAnalysis}
-            onCopy={handleCopy}
-            onExportPDF={handleExportPDF}
-            onShareUrl={handleShareUrl}
-            onSave={actions.handleSave}
-          />
-
-          {/* PDF Export Container - wraps all exportable content */}
-          <div ref={resultsRef}>
-          {/* Summary */}
-          <SummarySection
-            ref={summaryRef}
-            summary={state.result.summary}
-            isLiked={state.likedSummary}
-            onToggleLike={() =>
-              state.likedSummary
-                ? removeHelpfulInsight('summary')
-                : saveHelpfulInsight('summary', state.result!.summary)
+        <ResultsSection
+          text={state.text}
+          result={state.result}
+          likedSummary={state.likedSummary}
+          likedCamps={state.likedCamps}
+          savedOnce={state.savedOnce}
+          saving={state.saving}
+          copying={state.copying}
+          exporting={state.exporting}
+          urlCopied={state.urlCopied}
+          resultsRef={resultsRef}
+          scrollRefs={{ summaryRef, suggestionsRef, authorsRef }}
+          linkifyAuthors={linkifyAuthors}
+          onNewAnalysis={actions.startNewAnalysis}
+          onCopy={handleCopy}
+          onExportPDF={handleExportPDF}
+          onShareUrl={handleShareUrl}
+          onSave={actions.handleSave}
+          onToggleSummaryLike={() =>
+            state.likedSummary
+              ? removeHelpfulInsight('summary')
+              : saveHelpfulInsight('summary', state.result!.summary)
+          }
+          onToggleCampLike={(idx) => {
+            if (state.likedCamps.has(idx)) {
+              removeHelpfulInsight('camp', idx)
+            } else {
+              const camp = state.result!.matchedCamps[idx]
+              saveHelpfulInsight('camp', camp.explanation, camp.campLabel, idx)
             }
-          />
-
-          {/* PROMINENT Editorial Suggestions */}
-          <EditorialSuggestionsSection
-            ref={suggestionsRef}
-            editorialSuggestions={state.result.editorialSuggestions}
-            linkifyAuthors={linkifyAuthors}
-          />
-
-          {/* Thought Leaders */}
-          <ThoughtLeadersSection
-            ref={authorsRef}
-            matchedCamps={state.result.matchedCamps}
-            likedCamps={state.likedCamps}
-            onToggleCampLike={(idx) => {
-              if (state.likedCamps.has(idx)) {
-                removeHelpfulInsight('camp', idx)
-              } else {
-                const camp = state.result!.matchedCamps[idx]
-                saveHelpfulInsight('camp', camp.explanation, camp.campLabel, idx)
-              }
-            }}
-            onAuthorClick={openPanel}
-          />
-          </div>{/* End of PDF Export Container */}
-        </div>
+          }}
+          onAuthorClick={openPanel}
+        />
       )}
     </div>
   )

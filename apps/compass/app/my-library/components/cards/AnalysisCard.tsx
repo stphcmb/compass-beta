@@ -19,7 +19,7 @@ export interface AnalysisCardProps {
   viewMode?: 'grid' | 'list'
 }
 
-export function AnalysisCard({
+function AnalysisCard({
   inputPreview,
   cachedResult,
   timestamp,
@@ -275,3 +275,6 @@ export function AnalysisCard({
     </div>
   )
 }
+
+export { AnalysisCard }
+export default AnalysisCard

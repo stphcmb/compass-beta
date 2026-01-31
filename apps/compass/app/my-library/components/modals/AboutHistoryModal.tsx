@@ -15,7 +15,7 @@ export interface AboutHistoryModalProps {
   onClose: () => void
 }
 
-export function AboutHistoryModal({ onClose }: AboutHistoryModalProps) {
+function AboutHistoryModal({ onClose }: AboutHistoryModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   // Focus trap and keyboard handling
@@ -209,3 +209,9 @@ export function AboutHistoryModal({ onClose }: AboutHistoryModalProps) {
     </div>
   )
 }
+
+// Named export for backward compatibility
+export { AboutHistoryModal }
+
+// Default export for dynamic imports
+export default AboutHistoryModal

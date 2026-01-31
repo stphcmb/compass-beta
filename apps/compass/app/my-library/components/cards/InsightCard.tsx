@@ -12,7 +12,7 @@ export interface InsightCardProps {
   viewMode?: 'grid' | 'list'
 }
 
-export function InsightCard({
+function InsightCard({
   content,
   type,
   timestamp,
@@ -247,3 +247,6 @@ export function InsightCard({
     </div>
   )
 }
+
+export { InsightCard }
+export default InsightCard

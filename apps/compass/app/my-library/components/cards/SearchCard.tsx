@@ -12,7 +12,7 @@ export interface SearchCardProps {
   viewMode?: 'grid' | 'list'
 }
 
-export function SearchCard({
+function SearchCard({
   query,
   timestamp,
   isSaved,
@@ -256,3 +256,6 @@ export function SearchCard({
     </div>
   )
 }
+
+export { SearchCard }
+export default SearchCard

@@ -21,7 +21,7 @@ export interface RecentlyDeletedModalProps {
   timeAgo: (ts: string) => string
 }
 
-export function RecentlyDeletedModal({
+function RecentlyDeletedModal({
   items,
   onRestore,
   onDelete,
@@ -317,3 +317,9 @@ export function RecentlyDeletedModal({
     </div>
   )
 }
+
+// Named export for backward compatibility
+export { RecentlyDeletedModal }
+
+// Default export for dynamic imports
+export default RecentlyDeletedModal

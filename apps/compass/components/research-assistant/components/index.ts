@@ -28,3 +28,6 @@ export type { ThoughtLeadersSectionProps } from './ThoughtLeadersSection'
 
 export { InputSection } from './InputSection'
 export type { InputSectionProps } from './InputSection'
+
+export { ResultsSection } from './ResultsSection'
+export type { ResultsSectionProps } from './ResultsSection'

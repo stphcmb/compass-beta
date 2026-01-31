@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import {
   BookMarked,
   History,
@@ -31,20 +32,31 @@ import ViewToggle, { ViewMode as ViewModeType } from '@/components/library/ViewT
 import { useHistoryData, useHistoryActions, useHistoryUI, useHistoryEvents, useHistoryFilters, timeAgo, formatDate } from './hooks'
 import type { TabType, DeletedItem, TimeFilter, HelpfulInsight } from './lib/types'
 
-// Import extracted components
+// Import section components (always needed for layout)
 import {
   CollapsibleSection,
   Section,
   EmptySection,
-  SearchCard,
-  AnalysisCard,
-  InsightCard,
-  HistoryCard,
   MiniAuthorCard,
-  UnifiedAuthorCard,
-  AboutHistoryModal,
-  RecentlyDeletedModal
+  UnifiedAuthorCard
 } from './components'
+
+// Dynamic imports for card components (code splitting optimization)
+const SearchCard = dynamic(() => import('./components/cards/SearchCard'))
+const AnalysisCard = dynamic(() => import('./components/cards/AnalysisCard'))
+const InsightCard = dynamic(() => import('./components/cards/InsightCard'))
+const HistoryCard = dynamic(() => import('./components/cards/HistoryCard'))
+
+// Dynamic imports for modal components (loaded on demand)
+const AboutHistoryModal = dynamic(
+  () => import('./components/modals/AboutHistoryModal'),
+  { ssr: false }
+)
+
+const RecentlyDeletedModal = dynamic(
+  () => import('./components/modals/RecentlyDeletedModal'),
+  { ssr: false }
+)
 
 export default function HistoryPage() {
   const router = useRouter()

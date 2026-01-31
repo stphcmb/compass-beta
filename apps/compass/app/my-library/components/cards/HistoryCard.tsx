@@ -16,7 +16,7 @@ export interface HistoryCardProps {
   saved?: boolean
 }
 
-export function HistoryCard({
+function HistoryCard({
   icon,
   title,
   subtitle,
@@ -292,3 +292,6 @@ export function HistoryCard({
     </div>
   )
 }
+
+export { HistoryCard }
+export default HistoryCard
