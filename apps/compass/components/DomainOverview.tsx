@@ -83,7 +83,7 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
       } else {
         params.set('domain', domainName)
       }
-      router.push(`/explore?${params.toString()}`)
+      router.push(`/browse?${params.toString()}`)
     }
   }
 

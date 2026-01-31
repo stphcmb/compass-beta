@@ -8,13 +8,12 @@ import SearchBar from '@/components/SearchBar'
 import CampAccordion from '@/components/CampAccordion'
 import SearchResults from '@/components/SearchResults'
 import BackToTop from '@/components/BackToTop'
-// Note: ExpandedQueries component removed - using "Also searching for" in SearchResults instead
 import { FeatureHint } from '@/components/FeatureHint'
 import { HowPerspectivesWorkModal, useHowPerspectivesWorkModal } from '@/components/HowPerspectivesWorkModal'
 import DomainOverview from '@/components/DomainOverview'
 // import DomainSpectrum from '@/components/DomainSpectrum' // Temporarily hidden
 import { TERMINOLOGY } from '@/lib/constants/terminology'
-import { Compass, Search as SearchIcon, Grid3X3, ArrowLeft } from 'lucide-react'
+import { Compass, Search as SearchIcon, Grid3X3, ArrowLeft, Sparkles } from 'lucide-react'
 
 function ExplorePageContent() {
   const searchParams = useSearchParams()
@@ -142,6 +141,43 @@ function ExplorePageContent() {
             />
           )}
 
+          {/* Query Expansion Panel - Show when search has expanded queries */}
+          {query && expandedQueries && expandedQueries.length > 0 && (
+            <div className="mt-3 px-4 py-3 bg-gradient-to-r from-indigo-50/90 via-blue-50/80 to-purple-50/70 rounded-xl border border-indigo-100/80">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[13px] font-semibold text-gray-800">Smart Query Expansion</span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide bg-indigo-100 text-indigo-600 rounded">
+                      n8n + Gemini
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mb-2">
+                    Your search is automatically expanded to include semantically related concepts, synonyms, and adjacent topics to surface relevant perspectives you might otherwise miss.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] text-indigo-600 font-medium mr-1">Expanded to:</span>
+                    {expandedQueries.map((eq: any, idx: number) => {
+                      const queryText = eq?.query || (typeof eq === 'string' ? eq : '')
+                      if (!queryText) return null
+                      return (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 text-[11px] bg-white text-gray-700 rounded-full border border-indigo-200 shadow-sm"
+                        >
+                          {queryText}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* How Perspectives Work Modal */}
           <HowPerspectivesWorkModal isOpen={isModalOpen} onClose={closeModal} />
 
@@ -150,19 +186,15 @@ function ExplorePageContent() {
             {query ? (
               /* SEARCH MODE: Flat, author-focused results */
               <div>
-                {/* Search Mode Header with Back Button */}
-                <div className="flex items-center justify-between mb-3">
+                {/* Back Button */}
+                <div className="mb-3">
                   <a
-                    href={`/explore${domain ? `?domain=${encodeURIComponent(domain)}` : ''}`}
+                    href={`/browse${domain ? `?domain=${encodeURIComponent(domain)}` : ''}`}
                     className="inline-flex items-center gap-2 px-3 py-1.5 text-[13px] text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>Browse All Perspectives</span>
                   </a>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
-                    <SearchIcon className="w-4 h-4 text-blue-600" />
-                    <span className="text-[13px] font-medium text-blue-700">Search Mode</span>
-                  </div>
                 </div>
 
                 {/* Search Results - Flat author list */}
@@ -186,7 +218,7 @@ function ExplorePageContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
                   {/* Search Option - Clickable with sample query */}
                   <a
-                    href="/explore?q=future+of+work"
+                    href="/browse?q=future+of+work"
                     className="p-4 bg-white rounded-xl border border-blue-200 text-center hover:border-blue-400 hover:shadow-md transition-all group"
                   >
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-200 transition-colors">

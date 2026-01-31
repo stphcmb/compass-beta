@@ -20,7 +20,7 @@ interface BreadcrumbItem {
 const routeLabels: Record<string, string> = {
   '/': 'Home',
   '/research-assistant': TERMINOLOGY.researchAssistant,
-  '/explore': TERMINOLOGY.search,
+  '/browse': TERMINOLOGY.search,
   '/history': TERMINOLOGY.history,
   '/authors': TERMINOLOGY.authors,
   '/admin': 'Admin',

@@ -43,7 +43,7 @@ export default function SearchBar({ initialQuery = '', showEdit = false, onQuery
     if (query.trim()) params.set('q', query.trim())
     if (selectedDomain) params.set('domain', selectedDomain)
 
-    router.push(`/explore?${params.toString()}`)
+    router.push(`/browse?${params.toString()}`)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

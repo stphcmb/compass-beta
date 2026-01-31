@@ -176,7 +176,7 @@ export default function Sidebar() {
           timestamp: Date.now()
         }))
       }
-      router.push(`/explore?q=${encodeURIComponent(query)}`)
+      router.push(`/browse?q=${encodeURIComponent(query)}`)
     }
   }
 
@@ -460,7 +460,7 @@ export default function Sidebar() {
                 </p>
                 <div className="mt-4 space-y-2">
                   <a
-                    href="/explore"
+                    href="/browse"
                     className="flex items-center gap-2 px-3 py-2 text-[10px] font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                   >
                     <SearchIcon className="w-3.5 h-3.5" />

@@ -153,7 +153,7 @@ export default function ContentHelperPage() {
                 AI Editor
               </Link>
               <Link
-                href="/explore"
+                href="/browse"
                 style={{
                   padding: '10px 20px',
                   background: 'white',

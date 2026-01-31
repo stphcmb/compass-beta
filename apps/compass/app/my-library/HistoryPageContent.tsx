@@ -118,7 +118,7 @@ export default function HistoryPage() {
         timestamp: Date.now()
       }))
     }
-    router.push(`/explore?q=${encodeURIComponent(query)}`)
+    router.push(`/browse?q=${encodeURIComponent(query)}`)
   }, [router])
 
   const handleAnalysisClick = useCallback((id: string, text: string, cachedResult?: any) => {
@@ -445,7 +445,7 @@ export default function HistoryPage() {
               description="As you explore perspectives, analyze content, and bookmark authors, your activity will be tracked here."
               action={{
                 label: "Explore Perspectives",
-                onClick: () => router.push('/explore'),
+                onClick: () => router.push('/browse'),
                 icon: Compass
               }}
               size="lg"
@@ -541,7 +541,7 @@ export default function HistoryPage() {
                   {ui.timeFilter !=='all' ? 'No searches in this time period' : 'Your search history will appear here'}
                 </div>
                 <button
-                  onClick={() => router.push('/explore')}
+                  onClick={() => router.push('/browse')}
                   style={{
                     padding: '6px 12px',
                     background: '#3b82f6',
@@ -1026,7 +1026,7 @@ export default function HistoryPage() {
               description="When you search for topics and save them, they'll appear here for quick access."
               action={{
                 label: "Start Exploring",
-                onClick: () => router.push('/explore'),
+                onClick: () => router.push('/browse'),
                 icon: Compass
               }}
             />

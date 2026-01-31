@@ -147,7 +147,7 @@ interface SearchResultsProps {
   onResultsLoaded?: (camps: any[], expandedQueries: any[] | null) => void
 }
 
-type SortOption = 'relevance' | 'name-asc' | 'name-desc' | 'domain-asc'
+type SortOption = 'relevance' | 'name-asc' | 'name-desc' | 'domain-asc' | 'domain-desc'
 
 function getInitials(name?: string) {
   if (!name) return 'A'
@@ -479,8 +479,12 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
         case 'name-desc':
           return (b.name || '').localeCompare(a.name || '')
         case 'domain-asc':
-          const domainCompare = (a.domainName || '').localeCompare(b.domainName || '')
-          if (domainCompare !== 0) return domainCompare
+          const domainCompareAsc = (a.domainName || '').localeCompare(b.domainName || '')
+          if (domainCompareAsc !== 0) return domainCompareAsc
+          return (a.name || '').localeCompare(b.name || '')
+        case 'domain-desc':
+          const domainCompareDesc = (b.domainName || '').localeCompare(a.domainName || '')
+          if (domainCompareDesc !== 0) return domainCompareDesc
           return (a.name || '').localeCompare(b.name || '')
         case 'relevance':
         default:
@@ -569,7 +573,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
           We couldn't find any authors matching "{query}". Try different keywords or browse all perspectives.
         </p>
         <a
-          href="/explore"
+          href="/browse"
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
         >
           Browse all perspectives
@@ -621,6 +625,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
                 <option value="name-asc">Name: A → Z</option>
                 <option value="name-desc">Name: Z → A</option>
                 <option value="domain-asc">Domain: A → Z</option>
+                <option value="domain-desc">Domain: Z → A</option>
               </select>
               <ArrowUpDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
@@ -719,139 +724,117 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
 
       </div>
 
-      {/* Results organized by sections */}
-      <div className="space-y-4">
-        {/* Section 1: Direct Matches - always show container */}
-        <div className={`bg-gradient-to-b ${groupedAuthors.direct.length > 0 ? 'from-emerald-50 to-emerald-50/30' : 'from-gray-50 to-gray-50/30'} border ${groupedAuthors.direct.length > 0 ? 'border-emerald-200' : 'border-gray-200'} rounded-lg p-3`}>
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`w-7 h-7 rounded-md ${groupedAuthors.direct.length > 0 ? 'bg-emerald-500' : 'bg-gray-300'} flex items-center justify-center`}>
-              <Search className="w-3.5 h-3.5 text-white" />
+      {/* Results - grouped by relevance OR flat list for other sorts */}
+      {sortBy === 'relevance' ? (
+        /* RELEVANCE MODE: Grouped by match type */
+        <div className="space-y-4">
+          {/* Section 1: Direct Matches - always show container */}
+          <div className={`bg-gradient-to-b ${groupedAuthors.direct.length > 0 ? 'from-emerald-50 to-emerald-50/30' : 'from-gray-50 to-gray-50/30'} border ${groupedAuthors.direct.length > 0 ? 'border-emerald-200' : 'border-gray-200'} rounded-lg p-3`}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-7 h-7 rounded-md ${groupedAuthors.direct.length > 0 ? 'bg-emerald-500' : 'bg-gray-300'} flex items-center justify-center`}>
+                <Search className="w-3.5 h-3.5 text-white" />
+              </div>
+              <h3 className="text-[14px] font-semibold text-gray-900">
+                Direct Matches <span className="font-normal text-gray-500">(quotes mentioning "{query}")</span>
+              </h3>
+              <span className={`ml-auto text-[12px] font-semibold ${groupedAuthors.direct.length > 0 ? 'text-emerald-700 bg-emerald-100' : 'text-gray-500 bg-gray-200'} px-2 py-0.5 rounded-full`}>
+                {groupedAuthors.direct.length}
+              </span>
             </div>
-            <h3 className="text-[14px] font-semibold text-gray-900">
-              Direct Matches <span className="font-normal text-gray-500">(quotes mentioning "{query}")</span>
-            </h3>
-            <span className={`ml-auto text-[12px] font-semibold ${groupedAuthors.direct.length > 0 ? 'text-emerald-700 bg-emerald-100' : 'text-gray-500 bg-gray-200'} px-2 py-0.5 rounded-full`}>
-              {groupedAuthors.direct.length}
-            </span>
+            {groupedAuthors.direct.length === 0 ? (
+              <p className="text-[12px] text-gray-500 pl-9">No exact matches. See related results below.</p>
+            ) : (
+              <div className="space-y-2 mt-2">
+                {groupedAuthors.direct.map((author) => (
+                  <SearchResultCard
+                    key={author.id}
+                    author={author}
+                    query={query}
+                    expandedQueries={expandedQueries || []}
+                    campName={author.campName}
+                    domainName={author.domainName}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-          {groupedAuthors.direct.length === 0 ? (
-            <p className="text-[12px] text-gray-500 pl-9">No exact matches. See related results below.</p>
-          ) : (
-            <div className="space-y-2 mt-2">
-              {groupedAuthors.direct.map((author) => (
-                <SearchResultCard
-                  key={author.id}
-                  author={author}
-                  query={query}
-                  expandedQueries={expandedQueries || []}
-                  campName={author.campName}
-                  domainName={author.domainName}
-                />
-              ))}
+
+          {/* Section 2: Related Topics (Semantic) */}
+          {groupedAuthors.semantic.length > 0 && (
+            <div className="bg-gradient-to-b from-blue-50 to-indigo-50/30 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5 text-white" />
+                </div>
+                <h3 className="text-[14px] font-semibold text-gray-900">
+                  Related Topics <span className="font-normal text-gray-500">(semantically related concepts)</span>
+                </h3>
+                <span className="ml-auto text-[12px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                  {groupedAuthors.semantic.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {groupedAuthors.semantic.map((author) => (
+                  <SearchResultCard
+                    key={author.id}
+                    author={author}
+                    query={query}
+                    expandedQueries={expandedQueries || []}
+                    campName={author.campName}
+                    domainName={author.domainName}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Related Perspectives */}
+          {groupedAuthors.perspective.length > 0 && (
+            <div className="bg-gradient-to-b from-purple-50 to-violet-50/30 border border-purple-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-md bg-purple-500 flex items-center justify-center">
+                  <Layers className="w-3.5 h-3.5 text-white" />
+                </div>
+                <h3 className="text-[14px] font-semibold text-gray-900">
+                  Related Perspectives <span className="font-normal text-gray-500">(aligned position summaries)</span>
+                </h3>
+                <span className="ml-auto text-[12px] font-semibold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                  {groupedAuthors.perspective.length}
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-400 italic pl-9 mb-2">
+                Based on AI-analyzed camp themes related to "{query}"
+              </p>
+              <div className="space-y-2">
+                {groupedAuthors.perspective.map((author) => (
+                  <SearchResultCard
+                    key={author.id}
+                    author={author}
+                    query={query}
+                    expandedQueries={expandedQueries || []}
+                    campName={author.campName}
+                    domainName={author.domainName}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
-
-        {/* Section 2: Related Topics (Semantic) */}
-        {groupedAuthors.semantic.length > 0 && (
-          <div className="bg-gradient-to-b from-blue-50 to-indigo-50/30 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
-                <Sparkles className="w-3.5 h-3.5 text-white" />
-              </div>
-              <h3 className="text-[14px] font-semibold text-gray-900">
-                Related Topics <span className="font-normal text-gray-500">(semantically related concepts)</span>
-              </h3>
-              <span className="ml-auto text-[12px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
-                {groupedAuthors.semantic.length}
-              </span>
-            </div>
-            {/* Search Expansion panel - shows method and expanded queries */}
-            {expandedQueries && expandedQueries.length > 0 && (
-              <div className={`mb-2 rounded-md px-3 py-2 border ${
-                expansionMeta?.method === 'ai'
-                  ? 'bg-gradient-to-r from-indigo-100 via-blue-100 to-purple-100 border-indigo-200'
-                  : 'bg-gradient-to-r from-slate-100 via-gray-100 to-slate-100 border-gray-200'
-              }`}>
-                <div className="flex items-start gap-1.5">
-                  <Sparkles className={`w-3 h-3 mt-0.5 ${expansionMeta?.method === 'ai' ? 'text-indigo-600' : 'text-gray-500'}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] font-semibold uppercase tracking-wide ${
-                        expansionMeta?.method === 'ai' ? 'text-indigo-700' : 'text-gray-600'
-                      }`}>
-                        {expansionMeta?.method === 'ai' ? 'AI-Expanded' : 'Smart Search'}:
-                      </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                        expansionMeta?.method === 'ai'
-                          ? 'bg-indigo-200/50 text-indigo-600'
-                          : 'bg-gray-200/50 text-gray-500'
-                      }`}>
-                        {expansionMeta?.description || 'Pattern matching'}
-                      </span>
-                    </div>
-                    <p className={`text-[12px] mt-1 ${expansionMeta?.method === 'ai' ? 'text-indigo-800' : 'text-gray-700'}`}>
-                      {expandedQueries
-                        .map(eq => eq?.query || (typeof eq === 'string' ? eq : ''))
-                        .filter(q => q && q.trim())
-                        .map((queryText, i) => (
-                          <span key={i}>
-                            {i > 0 && <span className="mx-1 text-gray-400">•</span>}
-                            <span className="font-medium">{queryText}</span>
-                          </span>
-                        ))}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div className="space-y-2">
-              {groupedAuthors.semantic.map((author) => (
-                <SearchResultCard
-                  key={author.id}
-                  author={author}
-                  query={query}
-                  expandedQueries={expandedQueries || []}
-                  campName={author.campName}
-                  domainName={author.domainName}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Section 3: Related Perspectives */}
-        {groupedAuthors.perspective.length > 0 && (
-          <div className="bg-gradient-to-b from-purple-50 to-violet-50/30 border border-purple-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 rounded-md bg-purple-500 flex items-center justify-center">
-                <Layers className="w-3.5 h-3.5 text-white" />
-              </div>
-              <h3 className="text-[14px] font-semibold text-gray-900">
-                Related Perspectives <span className="font-normal text-gray-500">(aligned position summaries)</span>
-              </h3>
-              <span className="ml-auto text-[12px] font-semibold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
-                {groupedAuthors.perspective.length}
-              </span>
-            </div>
-            <p className="text-[11px] text-gray-400 italic pl-9 mb-2">
-              Based on AI-analyzed camp themes related to "{query}"
-            </p>
-            <div className="space-y-2">
-              {groupedAuthors.perspective.map((author) => (
-                <SearchResultCard
-                  key={author.id}
-                  author={author}
-                  query={query}
-                  expandedQueries={expandedQueries || []}
-                  campName={author.campName}
-                  domainName={author.domainName}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      ) : (
+        /* SORTED MODE: Flat list sorted by name or domain */
+        <div className="space-y-2">
+          {uniqueAuthors.map((author) => (
+            <SearchResultCard
+              key={author.id}
+              author={author}
+              query={query}
+              expandedQueries={expandedQueries || []}
+              campName={author.campName}
+              domainName={author.domainName}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Show More Button */}
       {hasMore && (
