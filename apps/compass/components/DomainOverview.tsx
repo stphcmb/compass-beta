@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronRight, Layers, X, PanelLeftClose } from 'lucide-react'
 import { DOMAINS, getDomainConfig } from '@/lib/constants/domains'
@@ -17,9 +17,10 @@ interface DomainOverviewProps {
   isCollapsed?: boolean
   onToggleCollapse?: () => void
   inline?: boolean  // When true, displays as inline grid in main content
+  camps?: any[]     // Optional: pass camps data to avoid duplicate fetch
 }
 
-export default function DomainOverview({ onDomainFilter, activeDomain, isCollapsed = false, onToggleCollapse, inline = false }: DomainOverviewProps) {
+export default function DomainOverview({ onDomainFilter, activeDomain, isCollapsed = false, onToggleCollapse, inline = false, camps: propCamps }: DomainOverviewProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [domainData, setDomainData] = useState<Record<string, DomainData>>({})
@@ -30,44 +31,51 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
   const [totalPerspectives, setTotalPerspectives] = useState(0)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Fetch domain/camp data
+  // Process camps data (either from props or fetched)
+  const processCamps = useCallback((camps: any[]) => {
+    const grouped: Record<string, DomainData> = {}
+    let authors = 0
+    let perspectives = 0
+
+    camps.forEach((camp: any) => {
+      const domain = camp.domain || 'Other'
+      if (!grouped[domain]) {
+        grouped[domain] = { name: domain, perspectives: [], authorCount: 0 }
+      }
+      grouped[domain].perspectives.push(camp.name)
+      grouped[domain].authorCount += camp.authorCount || camp.authors?.length || 0
+      authors += camp.authorCount || camp.authors?.length || 0
+      perspectives++
+    })
+
+    setDomainData(grouped)
+    setTotalAuthors(authors)
+    setTotalPerspectives(perspectives)
+    setLoading(false)
+  }, [])
+
+  // Use props camps if provided, otherwise fetch
   useEffect(() => {
+    if (propCamps && propCamps.length > 0) {
+      processCamps(propCamps)
+      return
+    }
+
     const fetchData = async () => {
       try {
         const response = await fetch('/api/camps')
         if (response.ok) {
           const data = await response.json()
-          const camps = data.camps || []
-
-          // Group by domain
-          const grouped: Record<string, DomainData> = {}
-          let authors = 0
-          let perspectives = 0
-
-          camps.forEach((camp: any) => {
-            const domain = camp.domain || 'Other'
-            if (!grouped[domain]) {
-              grouped[domain] = { name: domain, perspectives: [], authorCount: 0 }
-            }
-            grouped[domain].perspectives.push(camp.name)
-            grouped[domain].authorCount += camp.authorCount || camp.authors?.length || 0
-            authors += camp.authorCount || camp.authors?.length || 0
-            perspectives++
-          })
-
-          setDomainData(grouped)
-          setTotalAuthors(authors)
-          setTotalPerspectives(perspectives)
+          processCamps(data.camps || [])
         }
       } catch (error) {
         console.error('Error fetching domain data:', error)
-      } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [])
+  }, [propCamps, processCamps])
 
   const handleDomainClick = (domainName: string) => {
     if (onDomainFilter) {
@@ -174,14 +182,16 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                 <button
                   key={domain.name}
                   onClick={() => handleDomainClick(domain.name)}
+                  aria-expanded={isActive}
+                  aria-controls={isActive ? `domain-details-${domain.name}` : undefined}
                   className="text-left transition-all duration-300 group"
                   style={{
-                    padding: isActive ? '16px' : '12px 14px',
+                    padding: isActive ? '20px 24px' : '12px 14px',
                     borderRadius: '12px',
                     border: `1px solid ${isActive ? colors.bgSolid : '#e5e7eb'}`,
                     backgroundColor: isActive ? colors.bgLight : 'white',
-                    boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
-                    gridColumn: isActive ? 'span 1' : 'span 1'
+                    boxShadow: isActive ? '0 4px 16px rgba(0,0,0,0.1)' : 'none',
+                    gridColumn: isActive ? '1 / -1' : 'span 1'
                   }}
                 >
                   {/* Domain Header */}
@@ -218,101 +228,111 @@ export default function DomainOverview({ onDomainFilter, activeDomain, isCollaps
                     {domain.coreQuestion}
                   </p>
 
-                  {/* Expanded Details - Only when active */}
+                  {/* Expanded Details - Only when active (horizontal layout for full-width) */}
                   {isActive && (
-                    <div style={{
-                      marginTop: '12px',
-                      paddingTop: '12px',
-                      borderTop: `1px solid ${colors.bgSolid}30`
-                    }}>
-                      {/* Description */}
-                      <p style={{
-                        fontSize: '12px',
-                        lineHeight: '1.6',
-                        color: '#374151',
-                        marginBottom: '12px'
-                      }}>
-                        {domain.description}
-                      </p>
-
-                      {/* You'll Find */}
-                      <div style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        backgroundColor: `${colors.bgLight}`,
-                        border: `1px solid ${colors.bgSolid}30`,
-                        marginBottom: '12px'
-                      }}>
-                        <div style={{
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          color: colors.text,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          marginBottom: '4px'
-                        }}>
-                          You'll Find
-                        </div>
-                        <p style={{
-                          fontSize: '11px',
-                          lineHeight: '1.5',
-                          color: '#4b5563',
-                          margin: 0
-                        }}>
-                          {domain.youWillFind}
-                        </p>
-                      </div>
-
-                      {/* The Debate Spectrum */}
-                      <div>
-                        <div style={{
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          color: '#6b7280',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          marginBottom: '8px'
-                        }}>
-                          The Debate
-                        </div>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '10px'
-                        }}>
-                          <span style={{
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            color: colors.text,
-                            whiteSpace: 'nowrap',
-                            minWidth: 'fit-content'
+                    <div
+                      id={`domain-details-${domain.name}`}
+                      role="region"
+                      aria-label={`${domain.shortName} details`}
+                      style={{
+                        marginTop: '16px',
+                        paddingTop: '16px',
+                        borderTop: `1px solid ${colors.bgSolid}30`
+                      }}
+                    >
+                      {/* Two-column layout for wider viewport, single column on mobile */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                        {/* Left column: Description */}
+                        <div>
+                          <p style={{
+                            fontSize: '13px',
+                            lineHeight: '1.6',
+                            color: '#374151',
+                            margin: 0
                           }}>
-                            {leftLabel}
-                          </span>
+                            {domain.description}
+                          </p>
+                        </div>
+
+                        {/* Right column: You'll Find + Debate */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {/* You'll Find */}
                           <div style={{
-                            flex: 1,
-                            height: '6px',
-                            borderRadius: '3px',
-                            background: `linear-gradient(90deg, ${colors.bgSolid} 0%, #fbbf24 50%, #9ca3af 100%)`
-                          }} />
-                          <span style={{
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            color: '#6b7280',
-                            whiteSpace: 'nowrap',
-                            minWidth: 'fit-content'
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: 'white',
+                            border: `1px solid ${colors.bgSolid}30`
                           }}>
-                            {rightLabel}
-                          </span>
+                            <div style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              color: colors.text,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              marginBottom: '4px'
+                            }}>
+                              You'll Find
+                            </div>
+                            <p style={{
+                              fontSize: '11px',
+                              lineHeight: '1.5',
+                              color: '#4b5563',
+                              margin: 0
+                            }}>
+                              {domain.youWillFind}
+                            </p>
+                          </div>
+
+                          {/* The Debate Spectrum */}
+                          <div>
+                            <div style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              marginBottom: '6px'
+                            }}>
+                              The Debate
+                            </div>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px'
+                            }}>
+                              <span style={{
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                color: colors.text,
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {leftLabel}
+                              </span>
+                              <div style={{
+                                flex: 1,
+                                height: '6px',
+                                borderRadius: '3px',
+                                background: `linear-gradient(90deg, ${colors.bgSolid} 0%, #fbbf24 50%, #9ca3af 100%)`
+                              }} />
+                              <span style={{
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                color: '#6b7280',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {rightLabel}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Stats row */}
-                      <div className="flex items-center gap-4 mt-3 pt-3 border-t" style={{ borderColor: `${colors.bgSolid}30` }}>
-                        <span style={{ fontSize: '11px', color: colors.text, fontWeight: 500 }}>
+                      {/* Stats row - full width */}
+                      <div className="flex items-center gap-4 mt-4 pt-3 border-t" style={{ borderColor: `${colors.bgSolid}30` }}>
+                        <span style={{ fontSize: '12px', color: colors.text, fontWeight: 600 }}>
                           {data.perspectives.length} perspectives
                         </span>
-                        <span style={{ fontSize: '11px', color: colors.text, fontWeight: 500 }}>
+                        <span style={{ fontSize: '12px', color: colors.text, fontWeight: 600 }}>
                           {data.authorCount} authors
                         </span>
                       </div>
