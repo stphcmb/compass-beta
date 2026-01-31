@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { unstable_cache } from 'next/cache'
 import { supabase } from '@/lib/supabase'
 
 // Topics that are known to be fast-moving (evolve quickly, need frequent updates)
@@ -18,6 +19,18 @@ const FAST_MOVING_TOPICS = [
   'regulation',
   'safety',
 ]
+
+// Types for database function returns
+interface TopicCoverage {
+  id: string
+  topic: string
+  domain_id: number
+  author_count: number
+  source_count: number
+  most_recent_date: string | null
+  days_since_most_recent: number | null
+  avg_days_since_update: number | null
+}
 
 // Calculate coverage strength
 function calculateCoverageStrength(
@@ -107,149 +120,60 @@ function generateInsight(
   return `Well-covered topic with ${authorCount} authors and recent sources. High confidence in analysis.`
 }
 
-export async function GET() {
-  if (!supabase) {
-    return NextResponse.json(
-      { error: 'Database not configured' },
-      { status: 500 }
-    )
-  }
+// Cached data fetcher - revalidates every 5 minutes
+const getTopicCoverageMetrics = unstable_cache(
+  async () => {
+    if (!supabase) {
+      throw new Error('Database not configured')
+    }
 
-  try {
-    const now = new Date()
+    // Fetch topic coverage using database function
+    const { data: topics, error } = await supabase.rpc('get_topic_coverage')
 
-    // Fetch camps with their authors and domain
-    const { data: camps, error: campsError } = await supabase
-      .from('camps')
-      .select(`
-        id,
-        label,
-        domain_id,
-        camp_authors (
-          author_id
-        )
-      `)
+    if (error) {
+      console.error('Error fetching topic coverage:', error)
+      throw error
+    }
 
-    if (campsError) throw campsError
-
-    // Fetch all sources
-    const { data: sources, error: sourcesError } = await supabase
-      .from('sources')
-      .select('id, author_id, published_date')
-
-    const allSources = sources || []
-
-    // Fetch authors with inline sources
-    const { data: authors, error: authorsError } = await supabase
+    // Get total author count for percentage calculations
+    const { count: totalAuthors } = await supabase
       .from('authors')
-      .select('id, sources')
+      .select('*', { count: 'exact', head: true })
 
-    if (authorsError) throw authorsError
+    const topicData = (topics || []) as TopicCoverage[]
+    const authorTotal = totalAuthors || 0
 
-    const totalAuthors = authors?.length || 0
-
-    // Build author sources map
-    const authorSourcesMap = new Map<string, { count: number; mostRecent: Date | null }>()
-
-    allSources.forEach(source => {
-      if (!source.author_id) return
-      const existing = authorSourcesMap.get(source.author_id) || { count: 0, mostRecent: null }
-      existing.count++
-      if (source.published_date) {
-        const pubDate = new Date(source.published_date)
-        if (!existing.mostRecent || pubDate > existing.mostRecent) {
-          existing.mostRecent = pubDate
-        }
-      }
-      authorSourcesMap.set(source.author_id, existing)
-    })
-
-    // Also count inline sources
-    authors?.forEach(author => {
-      if (author.sources && Array.isArray(author.sources)) {
-        const existing = authorSourcesMap.get(author.id) || { count: 0, mostRecent: null }
-        author.sources.forEach((src: any) => {
-          existing.count++
-          // Handle different date formats including year-only
-          let pubDate = src.published_date || src.date || src.publishedDate
-          if (!pubDate && src.year) {
-            pubDate = `${src.year}-01-01`
-          }
-          if (pubDate) {
-            const date = new Date(pubDate)
-            if (!isNaN(date.getTime())) {
-              if (!existing.mostRecent || date > existing.mostRecent) {
-                existing.mostRecent = date
-              }
-            }
-          }
-        })
-        authorSourcesMap.set(author.id, existing)
-      }
-    })
-
-    // Calculate topic coverage for each camp (treating camps as topics)
-    const topicCoverage = (camps || []).map(camp => {
-      const campAuthorIds = camp.camp_authors?.map((ca: any) => ca.author_id) || []
-      const authorCount = campAuthorIds.length
-
-      let totalSources = 0
-      let mostRecentTimestamp = 0
-      let totalDays = 0
-      let authorsWithDates = 0
-
-      for (const authorId of campAuthorIds) {
-        const authorData = authorSourcesMap.get(authorId)
-        if (authorData) {
-          totalSources += authorData.count
-          if (authorData.mostRecent) {
-            const timestamp = authorData.mostRecent.getTime()
-            if (timestamp > mostRecentTimestamp) {
-              mostRecentTimestamp = timestamp
-            }
-            const days = Math.floor((now.getTime() - timestamp) / (1000 * 60 * 60 * 24))
-            totalDays += days
-            authorsWithDates++
-          }
-        }
-      }
-
-      const hasMostRecent = mostRecentTimestamp > 0
-      const avgDaysSinceUpdate = authorsWithDates > 0 ? Math.round(totalDays / authorsWithDates) : null
-      const daysSinceMostRecent = hasMostRecent
-        ? Math.floor((now.getTime() - mostRecentTimestamp) / (1000 * 60 * 60 * 24))
-        : null
-
-      // Check if topic is fast-moving
-      const topicLower = camp.label.toLowerCase()
+    // Process topics with coverage calculations
+    const topicCoverage = topicData.map(topic => {
+      const topicLower = topic.topic.toLowerCase()
       const isFastMoving = FAST_MOVING_TOPICS.some(ft => topicLower.includes(ft))
 
       const coverage = calculateCoverageStrength(
-        authorCount,
-        totalSources,
-        daysSinceMostRecent,
+        topic.author_count,
+        topic.source_count,
+        topic.days_since_most_recent,
         isFastMoving
       )
 
       const insight = generateInsight(
-        camp.label,
+        topic.topic,
         coverage,
-        daysSinceMostRecent,
+        topic.days_since_most_recent,
         isFastMoving,
-        authorCount,
-        totalAuthors
+        topic.author_count,
+        authorTotal
       )
 
       return {
-        id: camp.id,
-        topic: camp.label,
-        domainId: camp.domain_id,
-        authorCount,
-        totalAuthors,
-        sourceCount: totalSources,
-        mostRecentDate: hasMostRecent ? new Date(mostRecentTimestamp).toISOString().split('T')[0] : null,
-        daysSinceMostRecent,
-        avgDaysSinceUpdate,
+        id: topic.id,
+        topic: topic.topic,
+        domainId: topic.domain_id,
+        authorCount: topic.author_count,
+        totalAuthors: authorTotal,
+        sourceCount: topic.source_count,
+        mostRecentDate: topic.most_recent_date,
+        daysSinceMostRecent: topic.days_since_most_recent,
+        avgDaysSinceUpdate: topic.avg_days_since_update,
         isFastMoving,
         coverage,
         insight,
@@ -272,13 +196,195 @@ export async function GET() {
       .filter(t => t.isFastMoving && (t.coverage.level === 'weak' || t.coverage.level === 'moderate'))
       .sort((a, b) => (a.daysSinceMostRecent || 999) - (b.daysSinceMostRecent || 999))
 
-    return NextResponse.json({
+    return {
       summary,
       topicsNeedingAttention: sortedByNeed.slice(0, 10),
       fastMovingTopics: fastMovingNeedingAttention.slice(0, 5),
       allTopics: topicCoverage,
+    }
+  },
+  ['topic-coverage-metrics'],
+  {
+    revalidate: 300, // 5 minutes
+    tags: ['admin-metrics', 'topic-coverage']
+  }
+)
+
+// Fallback to original implementation if database function doesn't exist yet
+// NOTE: Sources are stored only in authors.sources JSONB (no separate sources table)
+async function getTopicCoverageMetricsFallback() {
+  if (!supabase) {
+    throw new Error('Database not configured')
+  }
+
+  const now = new Date()
+
+  // Fetch camps with their authors and domain
+  const { data: camps, error: campsError } = await supabase
+    .from('camps')
+    .select(`
+      id,
+      label,
+      domain_id,
+      camp_authors (
+        author_id
+      )
+    `)
+
+  if (campsError) throw campsError
+
+  // Fetch authors with their JSONB sources
+  const { data: authors, error: authorsError } = await supabase
+    .from('authors')
+    .select('id, sources')
+
+  if (authorsError) throw authorsError
+
+  const totalAuthors = authors?.length || 0
+
+  // Build author sources map from JSONB sources only
+  const authorSourcesMap = new Map<string, { count: number; mostRecent: Date | null }>()
+
+  authors?.forEach(author => {
+    const sources = (author.sources || []) as Array<{ published_date?: string; date?: string; publishedDate?: string; year?: number }>
+    const existing = { count: sources.length, mostRecent: null as Date | null }
+
+    sources.forEach((src) => {
+      let pubDate = src.published_date || src.date || src.publishedDate
+      if (!pubDate && src.year) {
+        pubDate = `${src.year}-01-01`
+      }
+      if (pubDate) {
+        const date = new Date(pubDate)
+        if (!isNaN(date.getTime())) {
+          if (!existing.mostRecent || date > existing.mostRecent) {
+            existing.mostRecent = date
+          }
+        }
+      }
     })
+
+    authorSourcesMap.set(author.id, existing)
+  })
+
+  // Calculate topic coverage for each camp
+  const topicCoverage = (camps || []).map(camp => {
+    const campAuthorIds = camp.camp_authors?.map((ca: { author_id: string }) => ca.author_id) || []
+    const authorCount = campAuthorIds.length
+
+    let totalSources = 0
+    let mostRecentTimestamp = 0
+    let totalDays = 0
+    let authorsWithDates = 0
+
+    for (const authorId of campAuthorIds) {
+      const authorData = authorSourcesMap.get(authorId)
+      if (authorData) {
+        totalSources += authorData.count
+        if (authorData.mostRecent) {
+          const timestamp = authorData.mostRecent.getTime()
+          if (timestamp > mostRecentTimestamp) {
+            mostRecentTimestamp = timestamp
+          }
+          const days = Math.floor((now.getTime() - timestamp) / (1000 * 60 * 60 * 24))
+          totalDays += days
+          authorsWithDates++
+        }
+      }
+    }
+
+    const hasMostRecent = mostRecentTimestamp > 0
+    const avgDaysSinceUpdate = authorsWithDates > 0 ? Math.round(totalDays / authorsWithDates) : null
+    const daysSinceMostRecent = hasMostRecent
+      ? Math.floor((now.getTime() - mostRecentTimestamp) / (1000 * 60 * 60 * 24))
+      : null
+
+    const topicLower = camp.label.toLowerCase()
+    const isFastMoving = FAST_MOVING_TOPICS.some(ft => topicLower.includes(ft))
+
+    const coverage = calculateCoverageStrength(
+      authorCount,
+      totalSources,
+      daysSinceMostRecent,
+      isFastMoving
+    )
+
+    const insight = generateInsight(
+      camp.label,
+      coverage,
+      daysSinceMostRecent,
+      isFastMoving,
+      authorCount,
+      totalAuthors
+    )
+
+    return {
+      id: camp.id,
+      topic: camp.label,
+      domainId: camp.domain_id,
+      authorCount,
+      totalAuthors,
+      sourceCount: totalSources,
+      mostRecentDate: hasMostRecent ? new Date(mostRecentTimestamp).toISOString().split('T')[0] : null,
+      daysSinceMostRecent,
+      avgDaysSinceUpdate,
+      isFastMoving,
+      coverage,
+      insight,
+    }
+  })
+
+  // Sort by coverage score (weakest first)
+  const sortedByNeed = [...topicCoverage].sort((a, b) => a.coverage.score - b.coverage.score)
+
+  const summary = {
+    strong: topicCoverage.filter(t => t.coverage.level === 'strong').length,
+    moderate: topicCoverage.filter(t => t.coverage.level === 'moderate').length,
+    weak: topicCoverage.filter(t => t.coverage.level === 'weak').length,
+    none: topicCoverage.filter(t => t.coverage.level === 'none').length,
+  }
+
+  const fastMovingNeedingAttention = topicCoverage
+    .filter(t => t.isFastMoving && (t.coverage.level === 'weak' || t.coverage.level === 'moderate'))
+    .sort((a, b) => (a.daysSinceMostRecent || 999) - (b.daysSinceMostRecent || 999))
+
+  return {
+    summary,
+    topicsNeedingAttention: sortedByNeed.slice(0, 10),
+    fastMovingTopics: fastMovingNeedingAttention.slice(0, 5),
+    allTopics: topicCoverage,
+  }
+}
+
+export async function GET() {
+  if (!supabase) {
+    return NextResponse.json(
+      { error: 'Database not configured' },
+      { status: 500 }
+    )
+  }
+
+  try {
+    // Try optimized path first (uses database function)
+    const metrics = await getTopicCoverageMetrics()
+    return NextResponse.json(metrics)
   } catch (error) {
+    // Check if it's a "function does not exist" error (migration not applied yet)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    if (errorMessage.includes('does not exist') || errorMessage.includes('could not find')) {
+      console.warn('Topic coverage function not found, falling back to original implementation')
+      try {
+        const metrics = await getTopicCoverageMetricsFallback()
+        return NextResponse.json(metrics)
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError)
+        return NextResponse.json(
+          { error: 'Failed to fetch topic coverage metrics' },
+          { status: 500 }
+        )
+      }
+    }
+
     console.error('Error in topic-coverage API:', error)
     return NextResponse.json(
       { error: 'Failed to fetch topic coverage metrics' },
