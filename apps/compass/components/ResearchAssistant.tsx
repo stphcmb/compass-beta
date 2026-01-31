@@ -29,7 +29,7 @@ import { InputSection } from '@/components/research-assistant/components'
  * Estimated savings: 50-80 KB
  */
 const ResultsSection = dynamic(
-  () => import('@/components/research-assistant/components/ResultsSection').then(mod => ({ default: mod.ResultsSection })),
+  () => import('@/components/research-assistant/components/ResultsSection'),
   {
     loading: () => (
       <div style={{

@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useCallback, type ReactNode, type RefObject } from 'react'
+import { useCallback, type ReactNode, type RefObject } from 'react'
 import { AnalyzedTextPreview } from './AnalyzedTextPreview'
 import { ResultsToolbar } from './ResultsToolbar'
 import type { ScrollRefs } from './ResultsToolbar'
@@ -74,93 +74,93 @@ export interface ResultsSectionProps {
  *
  * Estimated bundle savings: 50-80 KB by deferring these components
  */
-export const ResultsSection = forwardRef<HTMLDivElement, ResultsSectionProps>(
-  function ResultsSection(
-    {
-      text,
-      result,
-      likedSummary,
-      likedCamps,
-      savedOnce,
-      saving,
-      copying,
-      exporting,
-      urlCopied,
-      resultsRef,
-      scrollRefs,
-      linkifyAuthors,
-      onNewAnalysis,
-      onCopy,
-      onExportPDF,
-      onShareUrl,
-      onSave,
-      onToggleSummaryLike,
-      onToggleCampLike,
-      onAuthorClick,
-    },
-    ref
-  ) {
-    const authorCount = result.matchedCamps.reduce(
-      (total, camp) => total + camp.topAuthors.length,
-      0
-    )
+export function ResultsSection({
+  text,
+  result,
+  likedSummary,
+  likedCamps,
+  savedOnce,
+  saving,
+  copying,
+  exporting,
+  urlCopied,
+  resultsRef,
+  scrollRefs,
+  linkifyAuthors,
+  onNewAnalysis,
+  onCopy,
+  onExportPDF,
+  onShareUrl,
+  onSave,
+  onToggleSummaryLike,
+  onToggleCampLike,
+  onAuthorClick,
+}: ResultsSectionProps): React.ReactElement {
+  const authorCount = result.matchedCamps.reduce(
+    (total, camp) => total + camp.topAuthors.length,
+    0
+  )
 
-    // Callback ref to sync with parent's resultsRef
-    const setResultsRef = useCallback((node: HTMLDivElement | null) => {
+  // Callback ref to sync with parent's resultsRef
+  const setResultsRef = useCallback(
+    (node: HTMLDivElement | null) => {
       if (resultsRef && 'current' in resultsRef) {
         (resultsRef as React.MutableRefObject<HTMLDivElement | null>).current = node
       }
-    }, [resultsRef])
+    },
+    [resultsRef]
+  )
 
-    return (
-      <div ref={ref} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-        {/* Analyzed Text Preview */}
-        <AnalyzedTextPreview text={text} />
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+      {/* Analyzed Text Preview */}
+      <AnalyzedTextPreview text={text} />
 
-        {/* Results Toolbar */}
-        <ResultsToolbar
-          text={text}
-          authorCount={authorCount}
-          scrollRefs={scrollRefs}
-          savedOnce={savedOnce}
-          saving={saving}
-          copying={copying}
-          exporting={exporting}
-          urlCopied={urlCopied}
-          onNewAnalysis={onNewAnalysis}
-          onCopy={onCopy}
-          onExportPDF={onExportPDF}
-          onShareUrl={onShareUrl}
-          onSave={onSave}
+      {/* Results Toolbar */}
+      <ResultsToolbar
+        text={text}
+        authorCount={authorCount}
+        scrollRefs={scrollRefs}
+        savedOnce={savedOnce}
+        saving={saving}
+        copying={copying}
+        exporting={exporting}
+        urlCopied={urlCopied}
+        onNewAnalysis={onNewAnalysis}
+        onCopy={onCopy}
+        onExportPDF={onExportPDF}
+        onShareUrl={onShareUrl}
+        onSave={onSave}
+      />
+
+      {/* PDF Export Container - wraps all exportable content */}
+      <div ref={setResultsRef}>
+        {/* Summary */}
+        <SummarySection
+          ref={scrollRefs.summaryRef}
+          summary={result.summary}
+          isLiked={likedSummary}
+          onToggleLike={onToggleSummaryLike}
         />
 
-        {/* PDF Export Container - wraps all exportable content */}
-        <div ref={setResultsRef}>
-          {/* Summary */}
-          <SummarySection
-            ref={scrollRefs.summaryRef}
-            summary={result.summary}
-            isLiked={likedSummary}
-            onToggleLike={onToggleSummaryLike}
-          />
+        {/* Editorial Suggestions */}
+        <EditorialSuggestionsSection
+          ref={scrollRefs.suggestionsRef}
+          editorialSuggestions={result.editorialSuggestions}
+          linkifyAuthors={linkifyAuthors}
+        />
 
-          {/* Editorial Suggestions */}
-          <EditorialSuggestionsSection
-            ref={scrollRefs.suggestionsRef}
-            editorialSuggestions={result.editorialSuggestions}
-            linkifyAuthors={linkifyAuthors}
-          />
-
-          {/* Thought Leaders */}
-          <ThoughtLeadersSection
-            ref={scrollRefs.authorsRef}
-            matchedCamps={result.matchedCamps}
-            likedCamps={likedCamps}
-            onToggleCampLike={onToggleCampLike}
-            onAuthorClick={onAuthorClick}
-          />
-        </div>
+        {/* Thought Leaders */}
+        <ThoughtLeadersSection
+          ref={scrollRefs.authorsRef}
+          matchedCamps={result.matchedCamps}
+          likedCamps={likedCamps}
+          onToggleCampLike={onToggleCampLike}
+          onAuthorClick={onAuthorClick}
+        />
       </div>
-    )
-  }
-)
+    </div>
+  )
+}
+
+export default ResultsSection
