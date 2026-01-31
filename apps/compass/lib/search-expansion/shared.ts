@@ -10,6 +10,18 @@ import { expandQuerySemantics, expandWithSynonyms } from './semantic-provider'
 import { understandQueryWithLLM, hasGoodLocalCoverage } from './llm-query-understanding'
 
 /**
+ * Query expansion cache to avoid redundant AI API calls
+ * Cache TTL: 10 minutes (queries don't change frequently)
+ */
+const EXPANSION_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+const expansionCache = new Map<string, {
+  terms: string[]
+  expandedQueries: any[] | null
+  expansionMeta: ExpansionMetadata
+  timestamp: number
+}>()
+
+/**
  * Expansion method indicator for UI display
  */
 export type ExpansionMethod = 'ai' | 'local' | 'none'
@@ -122,6 +134,17 @@ export async function expandSearchTermsWithQueries(query: string): Promise<{
   }
 
   const queryLower = query.toLowerCase().trim()
+
+  // Check cache first (avoid redundant AI API calls)
+  const cached = expansionCache.get(queryLower)
+  if (cached && Date.now() - cached.timestamp < EXPANSION_CACHE_TTL) {
+    return {
+      terms: cached.terms,
+      expandedQueries: cached.expandedQueries,
+      expansionMeta: cached.expansionMeta
+    }
+  }
+
   let expandedQueriesResult: any[] | null = null
 
   // Always get synonyms for the query (used in both paths)
@@ -141,14 +164,22 @@ export async function expandSearchTermsWithQueries(query: string): Promise<{
         .filter(word => word.length > 2)
 
       const terms = Array.from(new Set([...n8nTerms, ...originalWords, ...synonymTerms]))
-      return {
+      const result = {
         terms,
         expandedQueries: expandedQueriesResult,
         expansionMeta: {
-          method: 'ai',
+          method: 'ai' as const,
           description: 'n8n and Gemini'
         }
       }
+      // Cache the result
+      expansionCache.set(queryLower, { ...result, timestamp: Date.now() })
+      // Limit cache size to prevent memory leaks
+      if (expansionCache.size > 500) {
+        const oldestKey = expansionCache.keys().next().value
+        if (oldestKey) expansionCache.delete(oldestKey)
+      }
+      return result
     }
   } catch {
     // n8n expansion failed, will use semantic fallback
@@ -231,12 +262,20 @@ export async function expandSearchTermsWithQueries(query: string): Promise<{
     description = 'Semantic pattern matching'
   }
 
-  return {
+  const result = {
     terms,
     expandedQueries: expandedQueriesResult,
     expansionMeta: {
-      method: llmEnhanced ? 'ai' : 'local',
+      method: (llmEnhanced ? 'ai' : 'local') as ExpansionMethod,
       description
     }
   }
+  // Cache the result
+  expansionCache.set(queryLower, { ...result, timestamp: Date.now() })
+  // Limit cache size to prevent memory leaks
+  if (expansionCache.size > 500) {
+    const oldestKey = expansionCache.keys().next().value
+    if (oldestKey) expansionCache.delete(oldestKey)
+  }
+  return result
 }

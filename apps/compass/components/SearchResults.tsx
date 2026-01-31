@@ -183,15 +183,11 @@ function getSourceTitle(url: string, sources: any[]): string {
 // Single-column author card with prominent quote highlighting
 function SearchResultCard({
   author,
-  query,
-  expandedQueries = [],
-  campName,
+  searchTerms = [],
   domainName
 }: {
   author: any
-  query: string
-  expandedQueries?: any[]
-  campName?: string
+  searchTerms?: string[]
   domainName?: string
 }) {
   const { openPanel } = useAuthorPanel()
@@ -200,8 +196,6 @@ function SearchResultCard({
   const authorType = author?.authorType || author?.author_type || ''
   const hasQuote = author?.key_quote && author.key_quote !== 'Quote coming soon'
   const quoteSourceUrl = author?.quote_source_url || author?.sources?.[0]?.url
-
-  const searchTerms = query ? extractSearchTerms(expandedQueries, query) : []
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent opening panel if clicking on a link
@@ -278,7 +272,6 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
   const [expandedQueries, setExpandedQueries] = useState<any[] | null>(null)
   const [expansionMeta, setExpansionMeta] = useState<ExpansionMeta | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showAll, setShowAll] = useState(false)
   const [sortBy, setSortBy] = useState<SortOption>('relevance')
   const [selectedDomains, setSelectedDomains] = useState<Set<string>>(new Set())
 
@@ -286,8 +279,6 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
   const [isEditingNote, setIsEditingNote] = useState(false)
   const [noteText, setNoteText] = useState('')
   const [savedNote, setSavedNote] = useState<string | null>(null)
-
-  const INITIAL_SHOW_COUNT = 10
 
   // Load existing note for this search query
   useEffect(() => {
@@ -433,46 +424,31 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
     fetchResults()
   }, [query, domain, onResultsLoaded])
 
-  // Flatten authors from all camps with camp/domain info
-  const flattenedAuthors = useMemo(() => camps.flatMap(camp =>
-    (camp.authors || []).map((author: any) => ({
+  // Combined processing pipeline: flatten, filter, sort, deduplicate with cached match reasons
+  // This reduces 5 separate useMemo chains into 1, eliminating intermediate arrays
+  const processedAuthors = useMemo(() => {
+    // Step 1: Flatten authors from camps with domain info
+    const flattened = camps.flatMap(camp =>
+      (camp.authors || []).map((author: any) => ({
+        ...author,
+        campName: camp.name,
+        domainName: camp.domain
+      }))
+    )
+
+    // Step 2: Filter by selected domains
+    const filtered = selectedDomains.size === 0
+      ? flattened
+      : flattened.filter(author => selectedDomains.has(author.domainName || ''))
+
+    // Step 3: Calculate match reason once per author and attach to object (cache for reuse)
+    const withMatchInfo = filtered.map(author => ({
       ...author,
-      campName: camp.name,
-      domainName: camp.domain
+      _matchInfo: getMatchReason(author, query, expandedQueries || [], author.campName)
     }))
-  ), [camps])
 
-  // Extract available domains from results
-  const availableDomains = useMemo(() => {
-    const domains = new Set<string>()
-    flattenedAuthors.forEach(author => {
-      if (author.domainName) domains.add(author.domainName)
-    })
-    return Array.from(domains).sort()
-  }, [flattenedAuthors])
-
-  // Toggle domain filter
-  const toggleDomain = (domain: string) => {
-    setSelectedDomains(prev => {
-      const next = new Set(prev)
-      if (next.has(domain)) {
-        next.delete(domain)
-      } else {
-        next.add(domain)
-      }
-      return next
-    })
-  }
-
-  // Filter authors by selected domains
-  const filteredAuthors = useMemo(() => {
-    if (selectedDomains.size === 0) return flattenedAuthors
-    return flattenedAuthors.filter(author => selectedDomains.has(author.domainName || ''))
-  }, [flattenedAuthors, selectedDomains])
-
-  // Sort based on selected option
-  const sortedAuthors = useMemo(() => {
-    return [...filteredAuthors].sort((a, b) => {
+    // Step 4: Sort based on selected option
+    const sorted = [...withMatchInfo].sort((a, b) => {
       switch (sortBy) {
         case 'name-asc':
           return (a.name || '').localeCompare(b.name || '')
@@ -488,43 +464,47 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
           return (a.name || '').localeCompare(b.name || '')
         case 'relevance':
         default:
-          // Sort by match priority (phrase > multi-word > single-word > semantic > perspective)
-          const aMatch = getMatchReason(a, query, expandedQueries || [], a.campName)
-          const bMatch = getMatchReason(b, query, expandedQueries || [], b.campName)
-
-          // Sort by priority (lower = better)
-          if (aMatch.priority !== bMatch.priority) {
-            return aMatch.priority - bMatch.priority
+          // Use cached match info instead of recalculating
+          if (a._matchInfo.priority !== b._matchInfo.priority) {
+            return a._matchInfo.priority - b._matchInfo.priority
           }
-
-          // Within same priority, alphabetical
           return (a.name || '').localeCompare(b.name || '')
       }
     })
-  }, [filteredAuthors, sortBy, query, expandedQueries])
 
-  // Deduplicate authors (all are relevant since backend already filtered)
-  const uniqueAuthors = useMemo(() => {
+    // Step 5: Deduplicate
     const seenIds = new Set<string>()
-    return sortedAuthors.filter(author => {
+    const unique = sorted.filter(author => {
       if (seenIds.has(author.id)) return false
       seenIds.add(author.id)
       return true
     })
-  }, [sortedAuthors])
 
-  // Group authors by match type for sectioned display
-  // IMPORTANT: This must be before any early returns to maintain hooks order
+    return unique
+  }, [camps, selectedDomains, sortBy, query, expandedQueries])
+
+  // Extract available domains (simplified - no dependency on flattenedAuthors)
+  const availableDomains = useMemo(() => {
+    const domains = new Set<string>()
+    camps.forEach(camp => {
+      if (camp.domain) domains.add(camp.domain)
+    })
+    return Array.from(domains).sort()
+  }, [camps])
+
+  // Group authors by match type ONLY when in relevance mode (conditional computation)
   const groupedAuthors = useMemo(() => {
-    const direct: typeof uniqueAuthors = []
-    const semantic: typeof uniqueAuthors = []
-    const perspective: typeof uniqueAuthors = []
+    if (sortBy !== 'relevance') return null
 
-    uniqueAuthors.forEach(author => {
-      const matchInfo = getMatchReason(author, query, expandedQueries || [], author.campName)
-      if (matchInfo.type === 'direct') {
+    const direct: any[] = []
+    const semantic: any[] = []
+    const perspective: any[] = []
+
+    processedAuthors.forEach(author => {
+      // Reuse cached match info instead of recalculating
+      if (author._matchInfo.type === 'direct') {
         direct.push(author)
-      } else if (matchInfo.type === 'semantic') {
+      } else if (author._matchInfo.type === 'semantic') {
         semantic.push(author)
       } else {
         perspective.push(author)
@@ -532,10 +512,25 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
     })
 
     return { direct, semantic, perspective }
-  }, [uniqueAuthors, query, expandedQueries])
+  }, [processedAuthors, sortBy])
 
-  const displayedAuthors = showAll ? uniqueAuthors : uniqueAuthors.slice(0, INITIAL_SHOW_COUNT)
-  const hasMore = uniqueAuthors.length > INITIAL_SHOW_COUNT
+  // Toggle domain filter
+  const toggleDomain = (domain: string) => {
+    setSelectedDomains(prev => {
+      const next = new Set(prev)
+      if (next.has(domain)) {
+        next.delete(domain)
+      } else {
+        next.add(domain)
+      }
+      return next
+    })
+  }
+
+  // Memoize search terms extraction to avoid repeated processing in SearchResultCard
+  const searchTerms = useMemo(() => {
+    return query ? extractSearchTerms(expandedQueries || [], query) : []
+  }, [query, expandedQueries])
 
   if (loading) {
     return (
@@ -559,7 +554,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
     )
   }
 
-  if (uniqueAuthors.length === 0) {
+  if (processedAuthors.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
         <div
@@ -590,7 +585,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-[14px] font-semibold text-gray-900">
-              {uniqueAuthors.length} {uniqueAuthors.length === 1 ? 'result' : 'results'}
+              {processedAuthors.length} {processedAuthors.length === 1 ? 'result' : 'results'}
             </span>
             <span className="text-[13px] text-gray-500">
               from {camps.length} {camps.length === 1 ? 'perspective' : 'perspectives'}
@@ -725,7 +720,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
       </div>
 
       {/* Results - grouped by relevance OR flat list for other sorts */}
-      {sortBy === 'relevance' ? (
+      {sortBy === 'relevance' && groupedAuthors ? (
         /* RELEVANCE MODE: Grouped by match type */
         <div className="space-y-4">
           {/* Section 1: Direct Matches - always show container */}
@@ -749,9 +744,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
                   <SearchResultCard
                     key={author.id}
                     author={author}
-                    query={query}
-                    expandedQueries={expandedQueries || []}
-                    campName={author.campName}
+                    searchTerms={searchTerms}
                     domainName={author.domainName}
                   />
                 ))}
@@ -778,9 +771,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
                   <SearchResultCard
                     key={author.id}
                     author={author}
-                    query={query}
-                    expandedQueries={expandedQueries || []}
-                    campName={author.campName}
+                    searchTerms={searchTerms}
                     domainName={author.domainName}
                   />
                 ))}
@@ -810,9 +801,7 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
                   <SearchResultCard
                     key={author.id}
                     author={author}
-                    query={query}
-                    expandedQueries={expandedQueries || []}
-                    campName={author.campName}
+                    searchTerms={searchTerms}
                     domainName={author.domainName}
                   />
                 ))}
@@ -823,37 +812,15 @@ export default function SearchResults({ query, domain, onResultsLoaded }: Search
       ) : (
         /* SORTED MODE: Flat list sorted by name or domain */
         <div className="space-y-2">
-          {uniqueAuthors.map((author) => (
+          {processedAuthors.map((author) => (
             <SearchResultCard
               key={author.id}
               author={author}
-              query={query}
-              expandedQueries={expandedQueries || []}
-              campName={author.campName}
+              searchTerms={searchTerms}
               domainName={author.domainName}
             />
           ))}
         </div>
-      )}
-
-      {/* Show More Button */}
-      {hasMore && (
-        <button
-          onClick={() => setShowAll(!showAll)}
-          className="w-full mt-4 py-3 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-[13px] font-medium text-gray-600 flex items-center justify-center gap-2 transition-colors"
-        >
-          {showAll ? (
-            <>
-              <ChevronUp className="w-4 h-4" />
-              Show fewer results
-            </>
-          ) : (
-            <>
-              <ChevronDown className="w-4 h-4" />
-              Show all {uniqueAuthors.length} results
-            </>
-          )}
-        </button>
       )}
     </div>
   )

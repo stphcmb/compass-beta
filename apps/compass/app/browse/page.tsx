@@ -1,19 +1,21 @@
 'use client'
 
-import { Suspense, useState, useRef, useEffect, useCallback } from 'react'
+import { Suspense, useState, useRef, useEffect, useCallback, lazy } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Header from '@/components/Header'
 import PageHeader from '@/components/PageHeader'
 import SearchBar from '@/components/SearchBar'
-import CampAccordion from '@/components/CampAccordion'
-import SearchResults from '@/components/SearchResults'
 import BackToTop from '@/components/BackToTop'
 import { FeatureHint } from '@/components/FeatureHint'
-import { HowPerspectivesWorkModal, useHowPerspectivesWorkModal } from '@/components/HowPerspectivesWorkModal'
-import DomainOverview from '@/components/DomainOverview'
-// import DomainSpectrum from '@/components/DomainSpectrum' // Temporarily hidden
+import { useHowPerspectivesWorkModal } from '@/components/HowPerspectivesWorkModal'
 import { TERMINOLOGY } from '@/lib/constants/terminology'
 import { Compass, Search as SearchIcon, Grid3X3, ArrowLeft, Sparkles } from 'lucide-react'
+
+// Code splitting - lazy load heavy components
+const CampAccordion = lazy(() => import('@/components/CampAccordion'))
+const SearchResults = lazy(() => import('@/components/SearchResults'))
+const DomainOverview = lazy(() => import('@/components/DomainOverview'))
+const HowPerspectivesWorkModal = lazy(() => import('@/components/HowPerspectivesWorkModal').then(mod => ({ default: mod.HowPerspectivesWorkModal })))
 
 function ExplorePageContent() {
   const searchParams = useSearchParams()
@@ -32,7 +34,6 @@ function ExplorePageContent() {
   const mainRef = useRef<HTMLElement>(null)
   const campsRef = useRef<HTMLDivElement>(null)
   const [expandedQueries, setExpandedQueries] = useState<any[] | null>(null)
-  const [loadingQueries, setLoadingQueries] = useState(false)
   const [loadedCamps, setLoadedCamps] = useState<any[]>([])
   const [scrollToCampId, setScrollToCampId] = useState<string | null>(null)
   const [activeCampId, setActiveCampId] = useState<string | null>(null)
@@ -59,26 +60,31 @@ function ExplorePageContent() {
     setTimeout(() => setScrollToCampId(null), 100)
   }, [])
 
-  // Save search to recent searches when query changes
+  // Save search to recent searches when query changes (debounced)
   useEffect(() => {
     if (!query || !query.trim()) return
 
-    try {
-      const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
-      // Remove if already exists
-      const filtered = recent.filter((s: any) => s.query !== query)
-      // Add to beginning
-      filtered.unshift({
-        id: `recent-${Date.now()}`,
-        query,
-        timestamp: new Date().toISOString()
-      })
-      // Keep only last 20
-      const limited = filtered.slice(0, 20)
-      localStorage.setItem('recentSearches', JSON.stringify(limited))
-    } catch (error) {
-      console.error('Error saving recent search:', error)
-    }
+    // Debounce localStorage write to avoid blocking on rapid typing
+    const timeoutId = setTimeout(() => {
+      try {
+        const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]')
+        // Remove if already exists
+        const filtered = recent.filter((s: any) => s.query !== query)
+        // Add to beginning
+        filtered.unshift({
+          id: `recent-${Date.now()}`,
+          query,
+          timestamp: new Date().toISOString()
+        })
+        // Keep only last 20
+        const limited = filtered.slice(0, 20)
+        localStorage.setItem('recentSearches', JSON.stringify(limited))
+      } catch (error) {
+        console.error('Error saving recent search:', error)
+      }
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
   }, [query])
 
   // Reset expanded queries when query is cleared
@@ -178,8 +184,12 @@ function ExplorePageContent() {
             </div>
           )}
 
-          {/* How Perspectives Work Modal */}
-          <HowPerspectivesWorkModal isOpen={isModalOpen} onClose={closeModal} />
+          {/* How Perspectives Work Modal - lazy loaded */}
+          {isModalOpen && (
+            <Suspense fallback={null}>
+              <HowPerspectivesWorkModal isOpen={isModalOpen} onClose={closeModal} />
+            </Suspense>
+          )}
 
           {/* Content Section - Search Results vs Explore Mode */}
           <div ref={campsRef} style={{ marginTop: '16px' }}>
@@ -197,7 +207,7 @@ function ExplorePageContent() {
                   </a>
                 </div>
 
-                {/* Search Results - Flat author list */}
+                {/* Search Results - Flat author list (lazy loaded) */}
                 <div style={{
                   backgroundColor: 'var(--color-air-white)',
                   border: '1px solid var(--color-light-gray)',
@@ -205,11 +215,15 @@ function ExplorePageContent() {
                   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   padding: '16px 20px'
                 }}>
-                  <SearchResults
-                    query={query}
-                    domain={domain}
-                    onResultsLoaded={handleCampsLoaded}
-                  />
+                  <Suspense fallback={
+                    <div className="text-center py-8 text-gray-500">Loading results...</div>
+                  }>
+                    <SearchResults
+                      query={query}
+                      domain={domain}
+                      onResultsLoaded={handleCampsLoaded}
+                    />
+                  </Suspense>
                 </div>
               </div>
             ) : !exploreMode && !activeDomain ? (
@@ -266,13 +280,17 @@ function ExplorePageContent() {
                   </div>
                 </div>
 
-                {/* Core Debates Panel - Inline in browse mode */}
+                {/* Core Debates Panel - Inline in browse mode (lazy loaded) */}
                 <div className="mb-6">
-                  <DomainOverview
-                    onDomainFilter={setActiveDomain}
-                    activeDomain={activeDomain}
-                    inline={true}
-                  />
+                  <Suspense fallback={
+                    <div className="text-center py-8 text-gray-500">Loading domains...</div>
+                  }>
+                    <DomainOverview
+                      onDomainFilter={setActiveDomain}
+                      activeDomain={activeDomain}
+                      inline={true}
+                    />
+                  </Suspense>
                 </div>
 
                 {/* Domain Filter Indicator */}
@@ -301,7 +319,7 @@ function ExplorePageContent() {
                   </div>
                 )}
 
-                {/* Camp Accordion - Hierarchical view */}
+                {/* Camp Accordion - Hierarchical view (lazy loaded) */}
                 <div style={{
                   backgroundColor: 'var(--color-air-white)',
                   border: '1px solid var(--color-light-gray)',
@@ -309,16 +327,20 @@ function ExplorePageContent() {
                   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   padding: '12px 16px'
                 }}>
-                  <CampAccordion
-                    query={query}
-                    domain={domain}
-                    domains={domains}
-                    camp={camp}
-                    camps={camps}
-                    authors={authors}
-                    onCampsLoaded={handleCampsLoaded}
-                    scrollToCampId={scrollToCampId}
-                  />
+                  <Suspense fallback={
+                    <div className="text-center py-8 text-gray-500">Loading perspectives...</div>
+                  }>
+                    <CampAccordion
+                      query={query}
+                      domain={domain}
+                      domains={domains}
+                      camp={camp}
+                      camps={camps}
+                      authors={authors}
+                      onCampsLoaded={handleCampsLoaded}
+                      scrollToCampId={scrollToCampId}
+                    />
+                  </Suspense>
                 </div>
               </div>
             )}
