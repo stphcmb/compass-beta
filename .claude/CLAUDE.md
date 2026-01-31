@@ -242,6 +242,7 @@ Run skills using `/skill-name` in chat:
 - **/review** - Launch code review workflow
 - **/design** - Launch design consultation workflow
 - **/product-manager** - Launch product strategy discussion
+- **/doc-coauthoring** - Structured workflow for co-authoring docs, specs, proposals
 
 Skills provide pre-configured agent workflows for common scenarios.
 
